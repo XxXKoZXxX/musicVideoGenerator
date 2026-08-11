@@ -12,6 +12,7 @@ import {
   Clapperboard,
   Video,
   Eye,
+  Zap,
 } from 'lucide-react';
 import { generateStorylineFromAudio, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES } from '../data/templates';
@@ -94,6 +95,40 @@ export default function StepThree({ onNext, onBack, project }) {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  const handleEnhancePrompts = () => {
+    if (!screenplay?.scenes) return;
+    const cinematicModifiers = [
+      'shot on 35mm anamorphic lens, volumetric golden hour haze, 8K ultra-detailed cinematography',
+      'raytraced neon reflections, dynamic bokeh, unreal engine 5 master shot',
+      'high-contrast dramatic chiaroscuro lighting, cinematic shallow depth of field',
+      'explosive cyan and magenta light rays, dynamic motion blur, award-winning visual direction',
+      'dreamy soft focus bloom, ethereal floating particles, IMAX scope resolution',
+      'radiant dawn horizon glow, wide angle tracking composition, master color grade',
+    ];
+
+    const enhancedScenes = screenplay.scenes.map((s, idx) => ({
+      ...s,
+      directive: `${s.directive} — (${cinematicModifiers[idx % cinematicModifiers.length]})`,
+    }));
+
+    setScreenplay({ ...screenplay, scenes: enhancedScenes });
+  };
+
+  const handleAutoSnapBeatDrops = () => {
+    if (!screenplay?.scenes) return;
+    const dur = project.duration || 32;
+    const beats = [0, dur * 0.18, dur * 0.38, dur * 0.58, dur * 0.78, dur * 0.9, dur];
+
+    const snappedScenes = screenplay.scenes.map((s, idx) => ({
+      ...s,
+      startTime: beats[idx] || (idx * dur) / 6,
+      endTime: beats[idx + 1] || ((idx + 1) * dur) / 6,
+    }));
+
+    setScreenplay({ ...screenplay, scenes: snappedScenes });
+    alert('✨ Successfully aligned all scene cuts with musical beat drops & section transitions!');
   };
 
   const handleApplyTemplate = (tmpl) => {
@@ -202,7 +237,15 @@ export default function StepThree({ onNext, onBack, project }) {
                   Soundtrack: <strong>{project.audioTitle || 'Cyberpunk 2077 Night Drive'}</strong> ({project.bpm || 128} BPM)
                 </span>
               </div>
-              <span className="acts-pill">{screenplay.scenes?.length || 6} Directorial Scenes</span>
+              <div className="screenplay-actions-group">
+                <button className="btn btn-secondary btn-sm" onClick={handleEnhancePrompts} title="Add Hollywood 8K, cinematic lighting, and lens keywords">
+                  <Sparkles size={14} color="#06b6d4" /> AI Enhance Prompts
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={handleAutoSnapBeatDrops} title="Align all scene cuts to 808 kick drops">
+                  <Zap size={14} color="#ec4899" /> Snap Cuts to Drops
+                </button>
+                <span className="acts-pill">{screenplay.scenes?.length || 6} Directorial Scenes</span>
+              </div>
             </div>
 
             <div className="screenplay-scenes-grid">

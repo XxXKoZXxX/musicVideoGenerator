@@ -366,17 +366,40 @@ export default function StepTwo({ onNext, onBack, project }) {
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
 
-            <div className="volume-slider-group">
-              <Volume2 size={16} />
-              <label>Master Audio Boost:</label>
-              <input
-                type="range"
-                min="50"
-                max="200"
-                value={audioBoost}
-                onChange={(e) => setAudioBoost(parseInt(e.target.value))}
-              />
-              <span className="boost-val font-mono">{audioBoost}%</span>
+            <div className="audio-equalizer-strip">
+              <div className="volume-slider-group">
+                <Volume2 size={16} />
+                <label>Audio Gain:</label>
+                <input
+                  type="range"
+                  min="50"
+                  max="200"
+                  value={audioBoost}
+                  onChange={(e) => setAudioBoost(parseInt(e.target.value))}
+                />
+                <span className="boost-val font-mono">{audioBoost}%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Audio Stem & Transient Breakdown */}
+          <div className="audio-stems-card">
+            <div className="stem-item">
+              <div className="stem-icon-dot kick-dot" />
+              <div>
+                <span className="stem-name">808 Sub-Bass & Kick Drops</span>
+                <p className="stem-desc">Drives camera shake, zoom pulsations, and particle explosions</p>
+              </div>
+              <span className="stem-active-pill">ACTIVE</span>
+            </div>
+
+            <div className="stem-item">
+              <div className="stem-icon-dot vocal-dot" />
+              <div>
+                <span className="stem-name">Lead Vocals & Formants</span>
+                <p className="stem-desc">Drives real-time lip-sync mouth deformation, teeth/jaw, and vocal glow</p>
+              </div>
+              <span className="stem-active-pill">LIP-SYNC READY</span>
             </div>
           </div>
         </div>

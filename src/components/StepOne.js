@@ -21,8 +21,13 @@ export default function StepOne({ onNext, project }) {
         ]
   );
   const [tab, setTab] = useState('styles');
+  const [artistName, setArtistName] = useState(project.artistName || 'NEON ARTIST');
   const [transition, setTransition] = useState(project.transition || 'zoom');
   const [motionMode, setMotionMode] = useState(project.motionMode || '3d-parallax');
+  const [motionIntensity, setMotionIntensity] = useState(project.motionIntensity || 100);
+  const [enableTvBroadcastGraphic, setEnableTvBroadcastGraphic] = useState(
+    project.enableTvBroadcastGraphic ?? true
+  );
   const [characterPerformance, setCharacterPerformance] = useState(
     project.characterPerformance ?? true
   );
@@ -88,8 +93,11 @@ export default function StepOne({ onNext, project }) {
         recommendedVisualizer: styleObj.visualizerStyle || 'radial',
         singerImageUrl,
         images,
-        transition,
+        artistName,
         motionMode,
+        motionIntensity,
+        enableTvBroadcastGraphic,
+        transition,
         characterPerformance,
       });
     } else {
@@ -366,7 +374,18 @@ export default function StepOne({ onNext, project }) {
           </div>
 
           <div className="motion-setting">
-            <label>Master Scene Transition:</label>
+            <label>Motion Speed & Depth ({motionIntensity}%):</label>
+            <input
+              type="range"
+              min="30"
+              max="200"
+              value={motionIntensity}
+              onChange={(e) => setMotionIntensity(parseInt(e.target.value))}
+            />
+          </div>
+
+          <div className="motion-setting">
+            <label>Scene Transition Style:</label>
             <select value={transition} onChange={(e) => setTransition(e.target.value)}>
               {TRANSITION_EFFECTS.map((t) => (
                 <option key={t.id} value={t.id}>
@@ -374,6 +393,36 @@ export default function StepOne({ onNext, project }) {
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="motion-setting">
+            <label>Artist / Performer Name (MTV/VEVO Card):</label>
+            <input
+              type="text"
+              className="text-input-field"
+              value={artistName}
+              onChange={(e) => setArtistName(e.target.value)}
+              placeholder="e.g. THE NEON PROTOCOL"
+            />
+          </div>
+
+          <div className="performance-toggle-card">
+            <label className="toggle-switch">
+              <input
+                type="checkbox"
+                checked={enableTvBroadcastGraphic}
+                onChange={(e) => setEnableTvBroadcastGraphic(e.target.checked)}
+              />
+              <span className="slider-round"></span>
+            </label>
+            <div className="toggle-info">
+              <span className="toggle-label">
+                📺 MTV / VEVO 4K Broadcast Graphic
+              </span>
+              <p className="toggle-sub">
+                Displays cinematic MTV/VEVO artist credits overlay at video intro & outro
+              </p>
+            </div>
           </div>
 
           <div className="performance-toggle-card">
@@ -387,10 +436,10 @@ export default function StepOne({ onNext, project }) {
             </label>
             <div className="toggle-info">
               <span className="toggle-label">
-                <UserCheck size={16} /> Viseme Lip-Sync & Face Performance Active
+                <UserCheck size={16} /> Viseme Lip-Sync & Face Morphing
               </span>
               <p className="toggle-sub">
-                Mouth deformation, vowel shaping, jaw drop, and blinking synchronized to vocals
+                Mouth deformation, vowel shaping, jaw drop, and natural eye blinking
               </p>
             </div>
           </div>

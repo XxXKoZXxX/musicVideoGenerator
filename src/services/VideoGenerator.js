@@ -526,10 +526,15 @@ export class VideoGenerator {
       );
     }
 
-    // 5. Cinematic Post-FX Shaders (VHS, Film Grain, Light Flare, White Strobe Cut)
+    // 5. Stage Spotlights & Arena Lasers
+    if (this.settings.enableStageSpotlights !== false) {
+      this.paintStageSpotlights(ctx, elapsed, audioMetrics, width, height);
+    }
+
+    // 6. Cinematic Post-FX Shaders (VHS, Film Grain, Light Flare, White Strobe Cut)
     this.paintPostEffects(ctx, elapsed, isKick, blend, width, height);
 
-    // 6. Television Broadcast Lower-Third Graphic (MTV / VEVO 4K Graphic)
+    // 7. Television Broadcast Lower-Third Graphic (MTV / VEVO 4K Graphic)
     if (this.settings.enableTvBroadcastGraphic !== false) {
       this.paintTvBroadcastOverlay(ctx, elapsed, duration, width, height);
     }
@@ -1042,6 +1047,42 @@ export class VideoGenerator {
     ctx.fillStyle = '#ec4899';
     ctx.font = `800 10px 'Outfit', sans-serif`;
     ctx.fillText('VEVO 4K', cardX + cardW - 65, cardY + 30);
+
+    ctx.restore();
+  }
+
+  paintStageSpotlights(ctx, elapsed, audioMetrics, width, height) {
+    const { masterEnergy = 0, subBass = 0 } = audioMetrics;
+    if (masterEnergy < 0.15) return;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'screen';
+
+    const numBeams = 4;
+    for (let i = 0; i < numBeams; i++) {
+      const angleOffset = (i - (numBeams - 1) / 2) * 0.35;
+      const sweep = Math.sin(elapsed * 1.5 + i * 1.2) * 0.3 + angleOffset;
+      const startX = width * (0.2 + i * 0.2);
+      const startY = 0;
+      const targetX = width * (0.5 + sweep * 0.8);
+      const targetY = height;
+
+      const beamGrad = ctx.createLinearGradient(startX, startY, targetX, targetY);
+      const color = i % 2 === 0 ? 'rgba(6, 182, 212, ' : 'rgba(236, 72, 153, ';
+      beamGrad.addColorStop(0, color + (0.35 + subBass * 0.2) + ')');
+      beamGrad.addColorStop(0.7, color + (0.1 + subBass * 0.1) + ')');
+      beamGrad.addColorStop(1, color + '0)');
+
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.moveTo(startX - 8, startY);
+      ctx.lineTo(startX + 8, startY);
+      const beamSpread = width * 0.12 * (1 + subBass * 0.4);
+      ctx.lineTo(targetX + beamSpread, targetY);
+      ctx.lineTo(targetX - beamSpread, targetY);
+      ctx.closePath();
+      ctx.fill();
+    }
 
     ctx.restore();
   }

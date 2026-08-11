@@ -677,6 +677,17 @@ export default function StepFour({ onBack, project }) {
                   <span>Strobe Flash on Drop Transitions</span>
                 </label>
               </div>
+
+              <div className="rack-toggle-row">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={settings.enableStageSpotlights !== false}
+                    onChange={(e) => setSettings({ ...settings, enableStageSpotlights: e.target.checked })}
+                  />
+                  <span>Arena Stage Spotlights & Sweeping Lasers</span>
+                </label>
+              </div>
             </div>
 
             {/* MASTER EXPORT SETTINGS */}

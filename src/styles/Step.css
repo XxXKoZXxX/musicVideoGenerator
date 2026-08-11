@@ -2147,6 +2147,92 @@ input[type="range"]::-webkit-slider-runnable-track {
   border-radius: 3px;
 }
 
+/* Screenplay Actions & Header Toolbar */
+.screenplay-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.text-input-field {
+  padding: 8px 14px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 13px;
+  font-family: var(--font-main);
+  outline: none;
+  transition: border-color 0.2s ease;
+  width: 100%;
+}
+
+.text-input-field:focus {
+  border-color: var(--primary-cyan);
+}
+
+/* Audio Stems & Equalizer Breakdown Card */
+.audio-stems-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.stem-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.stem-icon-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.kick-dot {
+  background: var(--primary-magenta);
+  box-shadow: 0 0 8px var(--primary-magenta);
+}
+
+.vocal-dot {
+  background: var(--primary-cyan);
+  box-shadow: 0 0 8px var(--primary-cyan);
+}
+
+.stem-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  display: block;
+}
+
+.stem-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.stem-active-pill {
+  margin-left: auto;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent-emerald);
+  background: rgba(16, 185, 129, 0.15);
+  padding: 2px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
 /* Responsive Layout */
 @media (max-width: 1024px) {
   .studio-layout-grid {
