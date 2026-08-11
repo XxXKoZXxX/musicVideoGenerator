@@ -1,0 +1,103 @@
+{
+  "name": "musicvid-studio",
+  "version": "0.1.0",
+  "description": "AI-powered music video generation with image lip-sync and dynamic storylines",
+  "author": "MusicVid Studio <maintainer@musicvid-studio.local>",
+  "main": "public/electron.js",
+  "homepage": "./",
+  "private": true,
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.21.0",
+    "axios": "^1.6.0",
+    "fluent-ffmpeg": "^2.1.3",
+    "lucide-react": "^0.292.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0",
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.0",
+    "electron-is-dev": "^3.0.1",
+    "wait-on": "^7.1.0"
+  },
+  "scripts": {
+    "react-start": "react-scripts start",
+    "react-build": "react-scripts build",
+    "electron-start": "wait-on http://localhost:3210 && electron . --dev",
+    "start": "concurrently \"npm run react-start\" \"npm run electron-start\"",
+    "dev": "npm start",
+    "desktop": "npm run react-build && electron .",
+    "electron-dev": "NODE_ENV=development npm run start",
+    "build": "npm run react-build && electron-builder",
+    "build-win": "npm run react-build && electron-builder --win",
+    "build-mac": "npm run react-build && electron-builder --mac",
+    "build-linux": "npm run react-build && electron-builder --linux",
+    "build-all": "npm run react-build && electron-builder -mwl"
+  },
+  "build": {
+    "appId": "com.musicvid.studio",
+    "productName": "MusicVid Studio",
+    "files": [
+      "build/**/*",
+      "public/electron.js",
+      "public/preload.js",
+      "node_modules/**/*"
+    ],
+    "directories": {
+      "buildResources": "public"
+    },
+    "win": {
+      "signAndEditExecutable": false,
+      "target": [
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "MusicVid Studio"
+    },
+    "portable": {
+      "artifactName": "MusicVid-Studio-${version}.exe"
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ]
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "AudioVideo"
+    }
+  },
+  "eslintConfig": {
+    "extends": [
+      "react-app"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  }
+}

@@ -1,9 +1,1 @@
-.venv/
-output_waveform.mp4
-soundscape.mp3
-soundscape.wav
-__pycache__/
-soundscape.mp4
-app/data/videos/output.mp4
-uploads/test.txt.txt
-.devcontainer/devcontainer.json
+node_modules

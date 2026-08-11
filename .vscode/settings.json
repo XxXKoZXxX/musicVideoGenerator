@@ -1,0 +1,11 @@
+{
+  "salesforcedx-vscode-apex.enable-apex-ls": false,
+  "salesforcedx-vscode-apex.java.home": "c:\\Users\\User\\Downloads\\oracleJdk-26",
+  "salesforcedx-vscode-core.show-cli-success-msg": false,
+  "files.readonlyInclude": {
+    "{**/.c4z/.extsrcs/*.PROTSYM.cbl,**/.c4z/.extsrcs/*.PROTSYM.listing}": true
+  },
+  "gitlens.launchpad.indicator.useColors": true,
+  "serverpulse.ai.enabled": true,
+  "serverpulse.ai.optInShown": true
+}

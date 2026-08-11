@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "musicvid-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "react-start"],
+      "port": 3000
+    }
+  ]
+}

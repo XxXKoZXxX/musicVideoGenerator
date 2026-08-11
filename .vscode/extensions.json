@@ -1,0 +1,11 @@
+{
+  "recommendations": [],
+  "unwantedRecommendations": [
+    "salesforce.salesforcedx-vscode",
+    "salesforce.salesforcedx-vscode-apex",
+    "salesforce.salesforcedx-vscode-core",
+    "salesforce.salesforcedx-vscode-lightning",
+    "salesforce.salesforcedx-vscode-lwc",
+    "salesforce.salesforcedx-vscode-visualforce"
+  ]
+}
