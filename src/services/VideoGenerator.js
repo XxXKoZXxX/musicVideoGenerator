@@ -3,6 +3,9 @@ import { LyricsEngine } from './LyricsEngine';
 import { lipSyncEngine } from './LipSyncEngine';
 import { StoryDirector, SINGER_PORTRAITS } from './StoryDirector';
 import { getRenderStyleById } from './RenderStyles';
+import { atmosphereEngine, ATMOSPHERE_MODES } from './AtmosphereEngine';
+
+export { ATMOSPHERE_MODES };
 
 export const RESOLUTION_PRESETS = {
   '480p': { height: 480, label: '480p (Fast Draft)' },
@@ -30,10 +33,12 @@ export const VISUALIZER_STYLES = [
 ];
 
 export const IMAGE_TO_VIDEO_MODES = [
-  { id: '3d-parallax', name: '3D Depth Parallax Motion', desc: 'Simulates 3D depth camera movement and focal tilt from 2D images' },
-  { id: 'fluid-warp', name: 'Audio-Reactive Fluid Motion', desc: 'Dynamic AI wave motion and organic pulse warping synced to beat drops' },
-  { id: 'hyper-zoom', name: 'Hyper Speed Zoom & Push', desc: 'Accelerated forward camera push with motion blur effects' },
-  { id: 'cinematic-pan', name: 'Widescreen Film Tracking', desc: 'Smooth horizontal and vertical tracking shot motion' },
+  { id: '3d-parallax', name: '3D Depth Parallax (Runway Gen-3)', desc: 'Simulates 3D depth camera movement and focal tilt from 2D images' },
+  { id: 'fluid-warp', name: 'Audio Fluid Wave (Kling / Luma AI)', desc: 'Dynamic AI wave motion and organic pulse warping synced to beat drops' },
+  { id: 'hyper-zoom', name: 'Hyper Speed Vertigo Push (Sora AI)', desc: 'Accelerated forward camera push with motion blur acceleration' },
+  { id: 'cinematic-pan', name: 'Widescreen Film Tracking (Pika Labs)', desc: 'Smooth horizontal and vertical tracking shot motion' },
+  { id: 'orbit-360', name: '360° Orbital Camera Spin (Kaiber AI)', desc: 'Continuous smooth orbital camera rotation around focal subject' },
+  { id: 'kinetic-beat', name: 'Sub-Surface Kinetic Pulse (DomoAI)', desc: 'Audio-reactive micro-vibrations and focal depth pulses' },
 ];
 
 export const COLOR_LUTS = {
@@ -77,6 +82,8 @@ export class VideoGenerator {
       enableHoloHud: true,
       enableTvBroadcastGraphic: project.enableTvBroadcastGraphic ?? true,
       enableStageSpotlights: true,
+      atmosphereMode: project.atmosphereMode || 'rain',
+      enableMotionBlur: true,
       brightness: 100,
       contrast: 100,
       saturation: 100,
@@ -526,15 +533,27 @@ export class VideoGenerator {
       );
     }
 
-    // 5. Stage Spotlights & Arena Lasers
+    // 5. Environmental Atmosphere Physics (Rain, Embers, Matrix Rain, Sakura, God Rays)
+    if (this.settings.atmosphereMode && this.settings.atmosphereMode !== 'none') {
+      atmosphereEngine.renderAtmosphere(
+        ctx,
+        this.settings.atmosphereMode,
+        audioMetrics,
+        elapsed,
+        width,
+        height
+      );
+    }
+
+    // 6. Stage Spotlights & Arena Lasers
     if (this.settings.enableStageSpotlights !== false) {
       this.paintStageSpotlights(ctx, elapsed, audioMetrics, width, height);
     }
 
-    // 6. Cinematic Post-FX Shaders (VHS, Film Grain, Light Flare, White Strobe Cut)
+    // 7. Cinematic Post-FX Shaders (VHS, Film Grain, Light Flare, White Strobe Cut)
     this.paintPostEffects(ctx, elapsed, isKick, blend, width, height);
 
-    // 7. Television Broadcast Lower-Third Graphic (MTV / VEVO 4K Graphic)
+    // 8. Television Broadcast Lower-Third Graphic (MTV / VEVO 4K Graphic)
     if (this.settings.enableTvBroadcastGraphic !== false) {
       this.paintTvBroadcastOverlay(ctx, elapsed, duration, width, height);
     }
@@ -701,6 +720,17 @@ export class VideoGenerator {
       offsetX = isIncoming ? (1 - blend) * -width * 0.4 : (progress - 0.5) * width * 0.18 * motionIntensity;
       offsetY = Math.sin(progress * Math.PI) * (height * 0.03) * motionIntensity;
       scale = zoomPulse * 1.1;
+    } else if (motionMode === 'orbit-360') {
+      const orbitAngle = progress * Math.PI * 0.35 * motionIntensity;
+      rotation = isIncoming ? (1 - blend) * 0.2 : orbitAngle - 0.15;
+      scale = zoomPulse * (1.1 + Math.sin(progress * Math.PI) * 0.08 * motionIntensity);
+      offsetX = Math.cos(orbitAngle) * (width * 0.03) * motionIntensity;
+      offsetY = Math.sin(orbitAngle) * (height * 0.03) * motionIntensity;
+    } else if (motionMode === 'kinetic-beat') {
+      const pulseFreq = progress * Math.PI * 8;
+      scale = zoomPulse * (1 + Math.abs(Math.sin(pulseFreq)) * 0.06 * motionIntensity);
+      offsetX = (Math.random() - 0.5) * (width * 0.008) * motionIntensity;
+      offsetY = (Math.random() - 0.5) * (height * 0.008) * motionIntensity;
     } else {
       // 3D Parallax & Tilt Tracking (Default)
       scale = zoomPulse * (1 + progress * 0.15 * motionIntensity);

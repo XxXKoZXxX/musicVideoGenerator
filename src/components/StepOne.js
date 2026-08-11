@@ -3,6 +3,7 @@ import { Upload, X, Sparkles, Check, Layers, UserCheck, Mic2, Palette } from 'lu
 import { CURATED_VISUAL_ASSETS, TRANSITION_EFFECTS } from '../data/templates';
 import { SINGER_PORTRAITS } from '../services/StoryDirector';
 import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
+import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
 import '../styles/Step.css';
 
 export default function StepOne({ onNext, project }) {
@@ -25,6 +26,7 @@ export default function StepOne({ onNext, project }) {
   const [transition, setTransition] = useState(project.transition || 'zoom');
   const [motionMode, setMotionMode] = useState(project.motionMode || '3d-parallax');
   const [motionIntensity, setMotionIntensity] = useState(project.motionIntensity || 100);
+  const [atmosphereMode, setAtmosphereMode] = useState(project.atmosphereMode || 'rain');
   const [enableTvBroadcastGraphic, setEnableTvBroadcastGraphic] = useState(
     project.enableTvBroadcastGraphic ?? true
   );
@@ -96,6 +98,7 @@ export default function StepOne({ onNext, project }) {
         artistName,
         motionMode,
         motionIntensity,
+        atmosphereMode,
         enableTvBroadcastGraphic,
         transition,
         characterPerformance,
@@ -390,6 +393,17 @@ export default function StepOne({ onNext, project }) {
               {TRANSITION_EFFECTS.map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name} ({t.description})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="motion-setting">
+            <label>Environmental Atmosphere Shaders:</label>
+            <select value={atmosphereMode} onChange={(e) => setAtmosphereMode(e.target.value)}>
+              {ATMOSPHERE_MODES.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
                 </option>
               ))}
             </select>

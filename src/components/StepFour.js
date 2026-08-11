@@ -26,6 +26,7 @@ import { LyricsEngine } from '../services/LyricsEngine';
 import { lipSyncEngine } from '../services/LipSyncEngine';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
+import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
 import '../styles/Step.css';
 
 export default function StepFour({ onBack, project }) {
@@ -38,6 +39,9 @@ export default function StepFour({ onBack, project }) {
   // Settings State
   const [settings, setSettings] = useState({
     renderStyle: project.renderStyle || 'photoreal',
+    atmosphereMode: project.atmosphereMode || 'rain',
+    enableMotionBlur: true,
+    enableStageSpotlights: true,
     resolution: '1080p',
     aspectRatio: project.aspectRatio || '16:9',
     fps: 30,
@@ -45,13 +49,12 @@ export default function StepFour({ onBack, project }) {
     speed: 1.0,
     transition: project.transition || 'zoom',
     transitionDuration: 0.8,
-    motionMode: project.motionMode || '3d-parallax',
-    motionIntensity: project.motionIntensity || 100,
     directorMode: project.directorMode || 'hybrid',
     lipSyncSensitivity: 1.2,
     enableSpeedLines: true,
     enableAnamorphicFlares: true,
     enableHoloHud: true,
+    enableTvBroadcastGraphic: project.enableTvBroadcastGraphic ?? true,
     visualizerStyle: project.recommendedVisualizer || 'radial',
     visualizerColor: '#06b6d4',
     visualizerIntensity: 100,
@@ -446,6 +449,20 @@ export default function StepFour({ onBack, project }) {
                   {RENDER_STYLES.map((r) => (
                     <option key={r.id} value={r.id}>
                       {r.name} ({r.badge})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rack-field">
+                <label>Environmental Atmosphere Physics:</label>
+                <select
+                  value={settings.atmosphereMode}
+                  onChange={(e) => setSettings({ ...settings, atmosphereMode: e.target.value })}
+                >
+                  {ATMOSPHERE_MODES.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.name}
                     </option>
                   ))}
                 </select>
