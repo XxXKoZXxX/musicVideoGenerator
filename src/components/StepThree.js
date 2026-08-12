@@ -17,6 +17,7 @@ import {
 import { generateStorylineFromAudio, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
+import { VideoFetchService } from '../services/VideoFetchService';
 import '../styles/Step.css';
 
 export default function StepThree({ onNext, onBack, project }) {
@@ -26,6 +27,7 @@ export default function StepThree({ onNext, onBack, project }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [pexelsApiKey, setPexelsApiKey] = useState(project.pexelsApiKey || '');
 
   const [screenplay, setScreenplay] = useState(
     project.screenplay || StoryDirector.generateScreenplay(project, project.images || [])
@@ -133,39 +135,67 @@ export default function StepThree({ onNext, onBack, project }) {
     alert('✨ Successfully aligned all scene cuts with musical beat drops & section transitions!');
   };
 
-  const handleGenerateAIVideos = () => {
+  const handleGenerateAIVideos = async () => {
     if (!screenplay?.scenes || isGeneratingVideos) return;
+    
+    if (!pexelsApiKey) {
+      alert('Please enter your free Pexels API Key in the settings below to download dynamic HD video loops for your lyrics!');
+      return;
+    }
+
     setIsGeneratingVideos(true);
     setGenerationProgress(0);
     
-    // Simulate generation time per scene
-    const totalScenes = screenplay.scenes.length;
-    let completed = 0;
-    
-    const interval = setInterval(() => {
-      completed += 1;
-      setGenerationProgress(Math.floor((completed / totalScenes) * 100));
-      
-      if (completed >= totalScenes) {
-        clearInterval(interval);
-        
-        // Convert static images to generated video motion
-        const updatedScenes = screenplay.scenes.map((scene, idx) => {
-          const matchingVideo = CINEMATIC_STOCK_VIDEOS[idx % CINEMATIC_STOCK_VIDEOS.length];
-          return {
+    try {
+      const totalScenes = screenplay.scenes.length;
+      let completed = 0;
+      const updatedScenes = [];
+
+      for (let i = 0; i < totalScenes; i++) {
+        const scene = screenplay.scenes[i];
+        try {
+          // Fetch video based on the scene's lyric text or title
+          const query = scene.lyricText || scene.title || 'cinematic motion';
+          const videoMedia = await VideoFetchService.fetchPexelsVideo(query, pexelsApiKey);
+          
+          if (videoMedia) {
+            updatedScenes.push({
+              ...scene,
+              imageUrl: videoMedia.url,
+              media: videoMedia
+            });
+          } else {
+            // Fallback to stock if no results found
+            const fallback = CINEMATIC_STOCK_VIDEOS[i % CINEMATIC_STOCK_VIDEOS.length];
+            updatedScenes.push({
+              ...scene,
+              imageUrl: fallback.url,
+              media: fallback
+            });
+          }
+        } catch (err) {
+          console.error('Video fetch failed for scene:', scene, err);
+          const fallback = CINEMATIC_STOCK_VIDEOS[i % CINEMATIC_STOCK_VIDEOS.length];
+          updatedScenes.push({
             ...scene,
-            imageUrl: matchingVideo.url,
-            media: matchingVideo
-          };
-        });
+            imageUrl: fallback.url,
+            media: fallback
+          });
+        }
         
-        setScreenplay({ ...screenplay, scenes: updatedScenes });
-        // Also update project state if needed so it passes down to StepFour
-        project.aiGeneratedVideos = updatedScenes.map(s => s.media);
-        
-        setTimeout(() => setIsGeneratingVideos(false), 500);
+        completed += 1;
+        setGenerationProgress(Math.floor((completed / totalScenes) * 100));
       }
-    }, 250); // 250ms simulated rendering time per scene
+      
+      setScreenplay({ ...screenplay, scenes: updatedScenes });
+      project.aiGeneratedVideos = updatedScenes.map(s => s.media);
+      project.pexelsApiKey = pexelsApiKey;
+      
+    } catch (err) {
+      alert('Generation error: ' + err.message);
+    } finally {
+      setTimeout(() => setIsGeneratingVideos(false), 500);
+    }
   };
 
   const handleApplyTemplate = (tmpl) => {
@@ -275,6 +305,14 @@ export default function StepThree({ onNext, onBack, project }) {
                 </span>
               </div>
               <div className="screenplay-actions-group">
+                <input 
+                  type="password" 
+                  className="settings-input" 
+                  placeholder="Pexels API Key (required)" 
+                  value={pexelsApiKey}
+                  onChange={(e) => setPexelsApiKey(e.target.value)}
+                  style={{ width: '200px', marginRight: '10px' }}
+                />
                 <button className="btn btn-secondary btn-sm" onClick={handleEnhancePrompts} title="Add Hollywood 8K, cinematic lighting, and lens keywords">
                   <Sparkles size={14} color="#06b6d4" /> AI Enhance
                 </button>
@@ -282,7 +320,7 @@ export default function StepThree({ onNext, onBack, project }) {
                   <Zap size={14} color="#ec4899" /> Snap to Drops
                 </button>
                 <button className="btn btn-primary btn-sm" onClick={() => handleGenerateAIVideos()} title="Generate AI motion video loops for all scenes">
-                  <Film size={14} /> {isGeneratingVideos ? 'Rendering...' : 'Generate AI Videos'}
+                  <Film size={14} /> {isGeneratingVideos ? 'Fetching...' : 'Generate AI Videos'}
                 </button>
                 <span className="acts-pill">{screenplay.scenes?.length || 6} Directorial Scenes</span>
               </div>
