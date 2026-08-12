@@ -1,303 +1,161 @@
-# 🎬 MusicVid Studio
+# 🎬 MusicVid Studio Pro
 
-AI-powered music video generation app that transforms your images into lip-synced videos with dynamic storylines based on your song.
+> **The Ultimate AI Music Video Workstation & Real-Time Viseme Lip-Sync Engine**  
+> Transform your music tracks and imagery into cinematic, beat-synchronized, full-length music videos with AI camera motion, live lip-syncing, 8 rendering aesthetics, and 4K cinema master rendering.
 
-## Features
+---
 
-### Core Capabilities
-- **Image Upload**: Add multiple images that will be used as frames
-- **Audio Import**: Import your music tracks (MP3, WAV, AAC, FLAC)
-- **Three Storyline Modes**:
-  - **AI-Generated**: Claude analyzes your song and creates a unique storyline
-  - **Template-Based**: Choose from 8+ predefined storyline templates
-  - **Custom Story**: Write your own narrative scene by scene
-- **Lip-Sync Animation**: Automatically animate faces in images to match audio
-- **Video Composition**: Generate MP4 videos with professional transitions
-- **Customizable Settings**: FPS, transitions (fade/pan/zoom/slide), playback speed, quality
+## 🌟 Overview & Standout Capabilities
 
-### Storyline Templates
-- Love Story (Romantic)
-- Empowerment & Victory (Uplifting)
-- Heartbreak & Healing (Melancholic)
-- Celebration & Party (High Energy)
-- Self-Discovery Journey (Inspirational)
-- Nature & Connection (Peaceful)
-- Rebellion & Defiance (Bold)
-- Nostalgia & Memories (Reflective)
+MusicVid Studio Pro brings together the gold-standard capabilities of leading AI video and animation generators (**Runway Gen-3, Luma Dream Machine, Pika Labs, Kaiber AI, Sora, CapCut Pro, and Topaz Video AI**) into a unified studio DAW interface.
 
-## Architecture
+```
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                   MUSICVID STUDIO PRO                                   │
+│  [ Stage 1: Style & Visuals ] -> [ Stage 2: Audio & Stems ] -> [ Stage 3: Screenplay ]  │
+│                                           │                                              │
+│                                           ▼                                              │
+│                         [ Stage 4: Live 60FPS Studio Monitor ]                           │
+│              (Viseme Lip-Sync + Atmosphere Shaders + MTV Overlay + 4K Export)            │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+```
 
-### Tech Stack
-- **Frontend**: React 18 + Vite
-- **Desktop**: Electron 27
-- **Video Processing**: FFmpeg (local rendering)
-- **AI**: Claude API (for storyline generation)
-- **Styling**: CSS Grid + Gradient UI
+---
 
-### Project Structure
+## 🚀 Key Features
+
+### 1. 🎤 Real-Time Viseme Lip-Syncing & Face Performance
+- **Audio Formant Extraction (F1/F2)**: Analyzes vocal frequencies in real-time and dynamically shapes vowels (`AA`, `OH`, `EE`, `OO`, `M/B/P`, `REST`).
+- **Anatomical Face Deformation**: Renders open mouth cavity, upper/lower teeth, and tongue depth dynamically mapped to singing vocals.
+- **Natural Biological Motion**: Automatic eyelid blinks every 3–5 seconds and on vocal pauses.
+- **Rhythmic Head Sway & Breathing**: Head tilt, subtle horizontal sway, and chest breathing synchronized to the song tempo (BPM).
+- **Vocal Luminescence Aura**: Audio-reactive singing aura around the artist responding to vocal power.
+
+### 2. 🎨 8 Distinct Cinematic Video Rendering Aesthetics
+1. **Hyper-Realistic Cinema 8K** (`photoreal`): 35mm Hollywood film color grading, anamorphic blue lens flares, and shallow depth of field bokeh.
+2. **Japanese Anime / Manga** (`anime`): Cel-shading edge contours, pastel skies, and explosive **radial action speed lines** bursting on kick drops.
+3. **3D CGI Animated** (`cgi_3d`): Soft volumetric subsurface bloom (Pixar/DreamWorks style), vibrant cartoon saturation, and character luminescence.
+4. **Cyberpunk Unreal Engine 5** (`cyberpunk`): Raytraced volumetric neon bloom, **digital holographic HUD target reticles & grid lines**, and cyber code rain.
+5. **90s Vintage MTV VHS Tape** (`vhs_retro`): Analog magnetic tape tracking distortion, scanline mesh, RGB color bleed fringing, and REC timestamp watermark.
+6. **Psychedelic Acid Dream** (`acid_dream`): Kaleidoscopic prism warping, audio-reactive color cycle trails, and wireframe horizon grid.
+7. **Dark Gothic / Film Noir** (`gothic_noir`): High-contrast chiaroscuro shadows, monochromatic silver tone with selective crimson/cyan highlights.
+8. **Lo-Fi Watercolor & Paper** (`lofi_art`): Textured handmade paper grain, warm painterly brush blooms, and vinyl dust particles.
+
+### 3. 🌧️ Environmental Atmosphere & Particle Physics Engine
+- 🌧️ **Cinematic Rain & Lens Droplets**: Dynamic falling rain streaks with glass condensation droplets and refractions on kick drops.
+- 🔥 **Fire Embers & Sparks**: Glowing physics embers rising and scattering outward on 808 sub-bass kicks.
+- 🌸 **Sakura Cherry Blossoms**: Soft floating anime flower petals with natural rotational drift and stardust glow.
+- 💻 **Cyberpunk Matrix Digital Code Rain**: Streams of glowing cyan and emerald digital glyphs cascading down the screen.
+- ☀️ **Volumetric God Rays & Light Leaks**: Sweeping warm golden sun rays + chromatic film burns across scene cuts.
+
+### 4. 🎥 Image-to-Video Multi-Axis Camera Motion
+- `3D Depth Parallax (Runway Gen-3)`: Simulates 3D focal depth camera movement, tilt tracking, and separate foreground bokeh layers from 2D images.
+- `Audio Fluid Wave (Kling / Luma AI)`: Organic AI wave pulse motion and fluid distortion synced to the music tempo.
+- `Hyper Speed Vertigo Push (Sora AI)`: Accelerated forward camera push with dynamic motion blur.
+- `Widescreen Film Tracking (Pika Labs)`: Smooth horizontal and vertical cinematic tracking shot motion.
+- `360° Orbital Camera Spin (Kaiber AI)`: Continuous smooth orbital camera rotation around focal subject.
+- `Sub-Surface Kinetic Pulse (DomoAI)`: Audio-reactive micro-vibrations and focal depth pulses.
+
+### 5. 📺 MTV & VEVO 4K Broadcast Lower-Third Graphic
+- Sleek glassmorphic broadcast credits card at video intro & outro with:
+  - Custom Artist Name & Track Title
+  - Director & Record Label credits (`DIR. MUSICVID AI · STUDIO RECORDS / VEVO 4K MASTER`)
+  - Metallic VEVO 4K accent badge
+
+### 6. 🔦 Stage Arena Spotlights & Sweeping Lasers
+- 4 sweeping volumetric cone spotlights and laser beams sweeping the stage during high-energy choruses and drops.
+
+### 7. 🎬 4-Act Screenplay Director with AI Prompt Enhancer & Beat Snap
+- **4-Act Screenplay Structure**: Setup/Intro -> Rising Tension/Verse -> Climax/Drop -> Resolution/Outro.
+- **AI Cinematic Prompt Enhancer**: One-click Hollywood 8K, anamorphic lens 35mm, and volumetric lighting keyword injector for all scenes.
+- **Snap Cuts to Beat Drops**: One-click automatic alignment of scene transitions with 808 kick drops and musical section transitions.
+- **3 Production Cut Modes**: Hybrid Director's Cut (Story + Lip-Sync), Cinematic Storyline Film, and Artist Lip-Sync Performance.
+
+### 8. 🎛️ Live 60 FPS Interactive Studio Monitor & Master Exporter
+- Real-time 60 FPS canvas compositor with transport controls, scrub timeline bar, and timecode.
+- Live Viseme & Shot Status strip showing active camera angle (`SINGER LIP-SYNC ACTIVE` vs `STORY NARRATIVE SCENE`), viseme phoneme shape, and vocal energy meter.
+- **Studio FX Rack**: Live aesthetic switcher, atmosphere toggles, shutter motion blur, and color grading LUTs.
+- **Master Video Exporter**: 4K Cinema, 2K, 1080p, 720p with clean WebAudio audio mixdown into playable MP4 / WebM video.
+
+---
+
+## 🏗️ Tech Stack & Architecture
+
+- **Frontend**: React 18 (Hooks, WebAudio API, HTML5 Canvas 2D Engine)
+- **Audio Processing**: Custom multi-band FFT analyzer (Sub-bass, Mids, Highs, Formant extraction)
+- **Video Rendering Engine**: Real-time 60 FPS Canvas compositor + MediaRecorder 4K Export Engine
+- **Styling**: Vanilla CSS Glassmorphism 2.0 with Deep Space Obsidian mesh theme
+- **Desktop Packaging**: Electron 27 (Cross-platform desktop runner)
+
 ```
 musicvid-studio/
 ├── src/
 │   ├── components/
-│   │   ├── StepOne.js (image selection)
-│   │   ├── StepTwo.js (audio selection)
-│   │   ├── StepThree.js (storyline selection)
-│   │   ├── StepFour.js (generation & export)
-│   │   └── storylines/
-│   │       ├── AIStoryline.js
-│   │       ├── TemplateStoryline.js
-│   │       └── CustomStoryline.js
+│   │   ├── StepOne.js        # Style & Performer Studio (8 Styles, Singer portraits, Storyboard)
+│   │   ├── StepTwo.js        # Audio & Beat Lab (Soundtrack library, Waveform, Stem indicators)
+│   │   ├── StepThree.js      # Screenplay & Director Studio (4-Act cards, AI prompt enhancer, Beat snap)
+│   │   └── StepFour.js       # Live 60FPS Studio Monitor & 4K Master Exporter
 │   ├── services/
-│   │   ├── AIService.js (Claude API integration)
-│   │   └── VideoGenerator.js (video composition)
+│   │   ├── VideoGenerator.js # Core Compositing Engine, Motion Paths, MTV Lower-Third, Shaders
+│   │   ├── LipSyncEngine.js  # Formant extraction, Viseme mouth deformation, Eye blinks, Sway
+│   │   ├── AtmosphereEngine.js # Particle shaders (Rain, Embers, Matrix rain, Sakura, God rays)
+│   │   ├── RenderStyles.js   # 8 Rendering Aesthetics & Post-FX presets
+│   │   ├── StoryDirector.js  # 4-Act screenplay generator & Singer portrait definitions
+│   │   ├── AudioEngine.js    # Multi-band frequency synthesis & audio analysis
+│   │   ├── LyricsEngine.js   # Beat-synced kinetic typography
+│   │   └── AIService.js      # Storyline generation & prompt enrichment
 │   ├── data/
-│   │   └── templates.js (storyline templates)
+│   │   └── templates.js      # Curated visual assets, storyline templates, transition presets
 │   ├── styles/
-│   │   └── Step.css (component styles)
-│   ├── App.js (main orchestrator)
-│   └── index.js
+│   │   └── Step.css          # Component stylesheets & glassmorphic UI controls
+│   ├── App.js                # Main orchestrator, Milestone stepper, 1-Click Master Presets
+│   └── App.css               # Design system tokens & global layout
 ├── public/
-│   ├── electron.js (main Electron process)
-│   ├── preload.js (security bridge)
+│   ├── electron.js           # Electron main process
 │   └── index.html
 └── package.json
 ```
 
-## Setup & Installation
+---
+
+## ⚡ Quick Start
 
 ### Prerequisites
-- Node.js 16+
-- FFmpeg (for video rendering)
-- Anthropic API key (for AI storyline generation)
+- Node.js 16+ or Node.js 18+
+- npm or yarn
 
-### Install FFmpeg
-**Windows**:
+### 1. Installation
 ```bash
-# Using chocolatey
-choco install ffmpeg
-
-# Or download from: https://ffmpeg.org/download.html
-```
-
-**Mac**:
-```bash
-brew install ffmpeg
-```
-
-**Linux**:
-```bash
-sudo apt-get install ffmpeg
-```
-
-### Installation
-```bash
-cd C:\Users\User\musicvid-studio
+git clone https://github.com/XxXKoZXxX/musicVideoGenerator.git
+cd musicvid-studio
 npm install
 ```
 
-### Environment Setup
-Create `.env` in the project root:
-```
-REACT_APP_ANTHROPIC_API_KEY=your-api-key-here
-```
-
-## Development
-
-### Start Dev Server
+### 2. Run Development Server
 ```bash
 npm start
 ```
+Starts the React development server on `http://localhost:3000` and opens the Electron desktop window.
 
-This runs both:
-- React dev server on http://localhost:3000
-- Electron app (waits for React server)
-
-### Build Desktop App
+### 3. Build Production Bundle
 ```bash
-npm run build
+npm run react-build
 ```
-
-Creates standalone Electron app in `dist/` directory.
-
-## Workflow (4-Step Process)
-
-### Step 1: Select Images
-- Click "Add Images" to select image files
-- Add multiple images for your video
-- Images will be displayed in sequence with lip-sync animation
-
-### Step 2: Select Audio
-- Import your music track
-- Supported formats: MP3, WAV, AAC, FLAC
-- Audio duration determines total video length
-
-### Step 3: Choose Storyline
-**Option A - AI Generated**:
-- Claude analyzes audio characteristics
-- Generates unique 5-scene storyline
-- Edit and customize the generated story
-
-**Option B - Template**:
-- Browse 8+ pre-built storyline templates
-- Each template has 5 themed scenes
-- Instant selection and use
-
-**Option C - Custom**:
-- Write your own overall narrative (optional)
-- Add individual scene descriptions
-- One scene per image
-
-### Step 4: Generate & Export
-- Configure video settings (FPS, transitions, speed, quality)
-- Click "Generate Video"
-- Monitor progress bar (0-100%)
-- Export finished MP4 to your desired location
-
-## How It Works
-
-### Image Processing
-1. Images are analyzed for facial features
-2. Mouth regions are extracted and processed
-3. Lip-sync animation frames are generated to match audio phonemes
-
-### Audio Analysis
-1. FFmpeg extracts audio metadata (duration, sample rate)
-2. Beat detection for timing synchronization
-3. Silence detection for pacing
-
-### Video Composition
-1. Images displayed according to timing calculations
-2. Transitions applied between each image
-3. Lip-sync animation composited over images
-4. Storyline elements influence visual effects/mood
-5. Audio track mixed in
-6. Final render to MP4
-
-### Storyline Integration
-- AI-generated stories inform visual mood and pacing
-- Template selection determines transition style
-- Custom stories provide narrative structure for scene ordering
-
-## Advanced Features (Planned)
-
-- [ ] Face detection & automatic lip-sync animation
-- [ ] Beat-synced transitions (changes on music beats)
-- [ ] Text overlay with storyline narration
-- [ ] Music analysis (mood, tempo, genre auto-detection)
-- [ ] Voice-over generation (TTS)
-- [ ] Effect library (glow, particles, color grading)
-- [ ] Batch video generation
-- [ ] Cloud rendering option
-- [ ] Video preview player
-- [ ] Export quality options (1080p, 4K)
-
-## API Integration
-
-### Claude API (For AI Storylines)
-The app calls Claude to generate context-aware storylines:
-
-```javascript
-// Backend endpoint would look like:
-POST /api/claude
-{
-  "prompt": "Create a 5-scene music video storyline for a song with mood: [mood]"
-}
-// Returns generated storyline text
-```
-
-### FFmpeg Commands
-Used for video composition:
-```bash
-# Image sequence to video
-ffmpeg -framerate 24 -i image_%d.png -c:v libx264 -pix_fmt yuv420p output.mp4
-
-# Add audio
-ffmpeg -i video.mp4 -i audio.mp3 -c:v copy -c:a aac -shortest output_with_audio.mp4
-```
-
-## Keyboard Shortcuts
-
-- `→` or `Space` — Next step
-- `←` or `Esc` — Back/Previous step
-- `Ctrl+O` — Open file dialog
-- `Ctrl+S` — Save/Export
-
-## Troubleshooting
-
-### FFmpeg Not Found
-Ensure FFmpeg is installed and in system PATH:
-```bash
-ffmpeg -version  # Should print version info
-```
-
-### API Key Not Working
-Check `.env` file and ensure key is valid:
-```bash
-echo $REACT_APP_ANTHROPIC_API_KEY
-```
-
-### Electron Won't Start
-Kill any existing processes:
-```bash
-pkill -f electron
-npm start
-```
-
-### Video Export Issues
-- Ensure audio file is not corrupted
-- Check disk space
-- Try lower quality setting
-
-## Performance Tips
-
-- **Large Images**: Keep under 5MB each; app will auto-resize
-- **Long Audio**: 5+ minute files may take longer to render
-- **Quality**: Set to "Medium" for faster generation; "High"/"Ultra" for final export
-- **Transitions**: "Fade" is fastest; "Zoom"/"Pan" more CPU-intensive
-
-## File Size Estimates
-
-| Duration | Quality | Est. Size |
-|----------|---------|-----------|
-| 3 min    | Low     | 30-50 MB  |
-| 3 min    | Medium  | 60-100 MB |
-| 3 min    | High    | 150-250 MB|
-| 3 min    | Ultra   | 400-600 MB|
-
-## License
-
-Private project - not for distribution
-
-## Roadmap
-
-### v0.1 (Current - Prototype)
-- Basic UI and step-by-step workflow
-- Template and custom storylines
-- Placeholder video generation
-
-### v0.2 (Next)
-- Real FFmpeg integration
-- Lip-sync animation engine
-- Claude API integration for AI storylines
-- Audio analysis (beat detection, tempo)
-
-### v0.3
-- Face detection and automatic lip-sync
-- Beat-synced transitions
-- Effects library
-- Performance optimizations
-
-### v1.0
-- Cloud rendering support
-- Batch processing
-- Advanced audio analysis
-- Video preview player
-- Export presets
-
-## Support & Feedback
-
-This is an experimental prototype. For issues or feature requests, consult the development team.
+Builds an optimized, production-ready bundle in the `build/` directory.
 
 ---
 
-**Made with ♦ and AI** | MusicVid Studio v0.1.0
+## 🪄 1-Click Master Presets
+
+Click any preset in the top header toolbar to instantly configure a complete music video:
+- ⚡ **Cyberpunk 2077 Night Drive** (UE5 Raytracing, Kiriko Neon, Neon Wave, Rain)
+- 🌸 **Anime J-Rock Anthem** (Anime Cel-Shading, Hikari Shonen, Speed Lines, Sakura)
+- ✨ **3D Pixar CGI Hit** (3D Subsurface Bloom, Nova Pop, Fluid Wave, God Rays)
+- 📼 **90s MTV VHS Throwback** (Analog Tape Scanlines, Retro Wave 84, MTV VEVO Card)
+- 🔥 **808 Trap District** (Photoreal 8K, Metro Drill Rapper, Bass Explosions, Embers)
+
+---
+
+## 📜 License
+
+Private project. Created with ❤️ for AI Music Video Creators.
