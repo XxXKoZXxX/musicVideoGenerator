@@ -134,22 +134,27 @@ export class VideoGenerator {
 
   async loadImages() {
     const renderStyleObj = getRenderStyleById(this.settings.renderStyle);
-    const sources = this.project.images && this.project.images.length > 0
-      ? this.project.images
-      : renderStyleObj.defaultScenes || [
-          'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80',
-          'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
-        ];
+    let sources = [];
+    if (this.project.screenplay && this.project.screenplay.scenes) {
+      sources = this.project.screenplay.scenes.map(s => s.imageUrl);
+    } else if (this.project.images && this.project.images.length > 0) {
+      sources = this.project.images;
+    } else {
+      sources = renderStyleObj.defaultScenes || [
+        'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80',
+        'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+      ];
+    }
 
     const loaded = [];
     for (let i = 0; i < sources.length; i++) {
       if (this.cancelled) throw new Error('Cancelled');
       try {
-        const img = await this.loadImage(sources[i]);
-        loaded.push(img);
+        const media = await this.loadMedia(sources[i]);
+        loaded.push(media);
       } catch (err) {
-        console.warn('Failed to load image:', sources[i], err);
+        console.warn('Failed to load media asset:', sources[i], err);
       }
       this.progressCallback(Math.round(((i + 1) / sources.length) * 15));
     }
@@ -157,12 +162,45 @@ export class VideoGenerator {
     // Load Singer Portrait Image
     const singerUrl = this.project.singerImageUrl || renderStyleObj.defaultSinger || SINGER_PORTRAITS[0].url;
     try {
-      this.singerImage = await this.loadImage(singerUrl);
+      this.singerImage = await this.loadMedia(singerUrl);
     } catch {
       this.singerImage = loaded[0];
     }
 
     return loaded.length > 0 ? loaded : [this.singerImage];
+  }
+
+  async loadMedia(source) {
+    const src = typeof source === 'string' ? source : (source?.url || '');
+    const isVideo = src.includes('.mp4') || src.includes('.webm') || src.includes('.mov') || src.startsWith('data:video') || (source && source.type && source.type.startsWith('video/'));
+
+    if (isVideo) {
+      return new Promise((resolve) => {
+        const video = document.createElement('video');
+        video.crossOrigin = 'anonymous';
+        video.muted = true;
+        video.playsInline = true;
+        video.loop = true;
+        video.preload = 'auto';
+        video.src = src;
+
+        const onReady = () => {
+          video.onloadeddata = null;
+          video.oncanplay = null;
+          resolve(video);
+        };
+
+        video.onloadeddata = onReady;
+        video.oncanplay = onReady;
+        video.onerror = () => {
+          this.loadImage(src).then(resolve).catch(() => resolve(video));
+        };
+
+        setTimeout(onReady, 4000);
+      });
+    }
+
+    return this.loadImage(src);
   }
 
   loadImage(source) {
@@ -435,15 +473,34 @@ export class VideoGenerator {
       audioMetrics
     );
 
-    const position = elapsed / secondsPerImage;
-    const index = Math.floor(position) % images.length;
-    const nextIndex = (index + 1) % images.length;
-    const withinImage = position - Math.floor(position);
+    // Use Director Cut timing if screenplay exists, otherwise fallback to simple uniform timing
+    let index = 0;
+    let nextIndex = 0;
+    let withinImage = 0;
+
+    if (this.screenplay?.scenes?.length) {
+      index = directorCut.sceneIndex;
+      nextIndex = Math.min(index + 1, images.length - 1);
+      withinImage = directorCut.sceneProgress || 0;
+    } else {
+      const position = elapsed / secondsPerImage;
+      index = Math.floor(position) % images.length;
+      nextIndex = (index + 1) % images.length;
+      withinImage = position - Math.floor(position);
+    }
+
+    // Force index bounds
+    index = Math.min(index, images.length - 1);
+    nextIndex = Math.min(nextIndex, images.length - 1);
 
     const transitionSec = Math.min(this.settings.transitionDuration || 0.8, secondsPerImage * 0.45);
-    const transitionStart = 1 - transitionSec / secondsPerImage;
-    const blend =
-      withinImage > transitionStart ? (withinImage - transitionStart) / (1 - transitionStart) : 0;
+    let transitionStart = 1 - transitionSec / secondsPerImage;
+    if (this.screenplay?.scenes?.length && directorCut.scene) {
+      const sceneDur = directorCut.scene.endTime - directorCut.scene.startTime;
+      transitionStart = 1 - Math.min(transitionSec, sceneDur * 0.4) / sceneDur;
+    }
+
+    const blend = withinImage > transitionStart ? (withinImage - transitionStart) / (1 - transitionStart) : 0;
 
     // Camera Shake on Sub-Bass Kicks
     ctx.save();
@@ -465,8 +522,10 @@ export class VideoGenerator {
 
     // 1. Render Active Shot: Lip-Sync Singer OR Narrative Story Scene
     const zoomPulse = 1 + (this.settings.cameraShake ? subBass * 0.08 : 0);
+    const activeMedia = images[index];
+    const isVideo = activeMedia instanceof HTMLVideoElement;
 
-    if (directorCut.isSingerShot && this.singerImage) {
+    if (directorCut.isSingerShot && this.singerImage && !isVideo) {
       // SINGER PERFORMANCE SHOT WITH AUDIO-REACTIVE LIP-SYNCING
       lipSyncEngine.renderLipSyncFace(
         ctx,
@@ -750,9 +809,11 @@ export class VideoGenerator {
       offsetY += progress * height * 0.06;
     }
 
-    // Cover Fit Image calculation
+    // Cover Fit Image/Video calculation
+    const mediaWidth = image.videoWidth || image.naturalWidth || image.width || width;
+    const mediaHeight = image.videoHeight || image.naturalHeight || image.height || height;
     const frameRatio = width / height;
-    const imageRatio = image.width / image.height;
+    const imageRatio = (mediaWidth && mediaHeight) ? (mediaWidth / mediaHeight) : frameRatio;
     let drawWidth = width;
     let drawHeight = height;
 
@@ -772,7 +833,14 @@ export class VideoGenerator {
     if (rotation !== 0) ctx.rotate(rotation);
     ctx.translate(-centerX, -centerY);
 
-    // 1. Draw Main Dynamic Motion Scene
+    // If media is a video element, trigger play to update frames
+    if (image instanceof HTMLVideoElement && image.duration) {
+      if (image.paused) {
+        image.play().catch(() => {});
+      }
+    }
+
+    // 1. Draw Main Dynamic Motion Scene (Video or Image)
     ctx.drawImage(
       image,
       centerX - drawWidth / 2,

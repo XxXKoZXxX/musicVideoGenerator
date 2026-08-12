@@ -34,14 +34,13 @@ function createWindow() {
     dialog.showErrorBox('MusicVid Studio', `Could not load ${url}\n\n${description} (${code})`);
   });
 
-  const startUrl = isDev
-    ? `http://localhost:${process.env.PORT || 3210}`
-    : path.join(__dirname, '../build/index.html');
+  const buildPath = path.join(__dirname, '../build/index.html');
+  const useBuild = fs.existsSync(buildPath) && !process.argv.includes('--dev');
 
-  if (isDev) {
-    mainWindow.loadURL(startUrl);
+  if (useBuild) {
+    mainWindow.loadFile(buildPath);
   } else {
-    mainWindow.loadFile(startUrl);
+    mainWindow.loadURL(`http://localhost:${process.env.PORT || 3210}`);
   }
 
   mainWindow.once('ready-to-show', () => {

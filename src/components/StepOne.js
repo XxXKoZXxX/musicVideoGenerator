@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Upload, X, Sparkles, Check, Layers, UserCheck, Mic2, Palette } from 'lucide-react';
-import { CURATED_VISUAL_ASSETS, TRANSITION_EFFECTS } from '../data/templates';
+import { Upload, X, Sparkles, Check, Layers, UserCheck, Mic2, Palette, Video } from 'lucide-react';
+import { CURATED_VISUAL_ASSETS, CINEMATIC_STOCK_VIDEOS, TRANSITION_EFFECTS } from '../data/templates';
 import { SINGER_PORTRAITS } from '../services/StoryDirector';
 import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
 import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
@@ -157,13 +157,19 @@ export default function StepOne({ onNext, project }) {
             className={`tab-btn ${tab === 'gallery' ? 'active' : ''}`}
             onClick={() => setTab('gallery')}
           >
-            <Sparkles size={18} /> Cinematic Story World Visuals
+            <Sparkles size={18} /> Story World Visuals
+          </button>
+          <button
+            className={`tab-btn ${tab === 'videos' ? 'active' : ''}`}
+            onClick={() => setTab('videos')}
+          >
+            <Video size={18} /> Cinematic Video Clips & Loops ({CINEMATIC_STOCK_VIDEOS.length})
           </button>
           <button
             className={`tab-btn ${tab === 'upload' ? 'active' : ''}`}
             onClick={() => setTab('upload')}
           >
-            <Upload size={18} /> Upload Custom Frames
+            <Upload size={18} /> Upload Custom Media (Images & Videos)
           </button>
         </div>
 
@@ -286,18 +292,55 @@ export default function StepOne({ onNext, project }) {
           </div>
         )}
 
-        {/* TAB 4: UPLOAD CUSTOM FRAMES */}
+        {/* TAB 3: CINEMATIC STOCK VIDEO CLIPS */}
+        {tab === 'videos' && (
+          <div className="curated-gallery-panel">
+            <p className="tab-hint">
+              Select motion video clips and looping B-roll to composite directly into your music video.
+            </p>
+            <div className="curated-grid">
+              {CINEMATIC_STOCK_VIDEOS.map((clip) => {
+                const isSelected = images.includes(clip.url);
+                return (
+                  <div
+                    key={clip.id}
+                    className={`curated-card video-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => addCuratedAsset(clip.url)}
+                  >
+                    <img src={clip.thumbnail} alt={clip.title} />
+                    <div className="video-card-badge">
+                      <Video size={12} /> VIDEO LOOP
+                    </div>
+                    <div className="curated-overlay">
+                      <span className="asset-tag">{clip.category}</span>
+                      <h4>{clip.title}</h4>
+                      {isSelected ? (
+                        <span className="check-badge">
+                          <Check size={14} /> Added to Timeline
+                        </span>
+                      ) : (
+                        <span className="add-badge">+ Add Video Clip</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: UPLOAD CUSTOM MEDIA (IMAGES & VIDEOS) */}
         {tab === 'upload' && (
           <div className="upload-section">
-            <label className="upload-box" htmlFor="image-file-input">
+            <label className="upload-box" htmlFor="media-file-input">
               <Upload size={36} />
-              <h3>Drop or Upload Custom Scene Images</h3>
-              <p>Supports PNG, JPG, WEBP (HD & 4K recommended)</p>
+              <h3>Drop or Upload Custom Videos & Images</h3>
+              <p>Supports MP4, WEBM, MOV, PNG, JPG (HD & 4K recommended)</p>
               <input
-                id="image-file-input"
+                id="media-file-input"
                 type="file"
                 multiple
-                accept="image/*"
+                accept="image/*,video/*"
                 onChange={handleFileUpload}
                 style={{ display: 'none' }}
               />
@@ -306,7 +349,7 @@ export default function StepOne({ onNext, project }) {
                 className="btn btn-secondary"
                 onClick={() => {
                   if (window.electron) handleSelectElectronImages();
-                  else document.getElementById('image-file-input').click();
+                  else document.getElementById('media-file-input').click();
                 }}
               >
                 Browse Files
@@ -326,41 +369,53 @@ export default function StepOne({ onNext, project }) {
           </div>
 
           <div className="scenes-horizontal-strip">
-            {images.map((img, idx) => (
-              <div key={idx} className="scene-thumbnail-card">
-                <img src={img} alt={`scene-${idx}`} />
-                <div className="scene-badge">Scene {idx + 1}</div>
-                <div className="scene-hover-controls">
-                  <div className="reorder-group">
-                    {idx > 0 && (
-                      <button
-                        className="move-btn"
-                        onClick={() => reorderImage(idx, idx - 1)}
-                        title="Move Left"
-                      >
-                        ←
-                      </button>
-                    )}
-                    {idx < images.length - 1 && (
-                      <button
-                        className="move-btn"
-                        onClick={() => reorderImage(idx, idx + 1)}
-                        title="Move Right"
-                      >
-                        →
-                      </button>
-                    )}
+            {images.map((item, idx) => {
+              const isVideo = typeof item === 'string' && (
+                item.includes('.mp4') || item.includes('.webm') || item.includes('.mov') || item.startsWith('data:video')
+              );
+
+              return (
+                <div key={idx} className="scene-thumbnail-card">
+                  {isVideo ? (
+                    <video src={item} muted autoPlay loop playsInline className="timeline-video-thumb" />
+                  ) : (
+                    <img src={item} alt={`scene-${idx}`} />
+                  )}
+                  <div className="scene-badge">
+                    {isVideo ? '🎬 Video ' : 'Scene '}{idx + 1}
                   </div>
-                  <button
-                    className="scene-remove-btn"
-                    onClick={() => removeImage(idx)}
-                    title="Remove Scene"
-                  >
-                    <X size={14} />
-                  </button>
+                  <div className="scene-hover-controls">
+                    <div className="reorder-group">
+                      {idx > 0 && (
+                        <button
+                          className="move-btn"
+                          onClick={() => reorderImage(idx, idx - 1)}
+                          title="Move Left"
+                        >
+                          ←
+                        </button>
+                      )}
+                      {idx < images.length - 1 && (
+                        <button
+                          className="move-btn"
+                          onClick={() => reorderImage(idx, idx + 1)}
+                          title="Move Right"
+                        >
+                          →
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      className="scene-remove-btn"
+                      onClick={() => removeImage(idx)}
+                      title="Remove Scene"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 

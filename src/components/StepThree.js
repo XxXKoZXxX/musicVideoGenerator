@@ -15,7 +15,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { generateStorylineFromAudio, MUSIC_GENRES } from '../services/AIService';
-import { STORYLINE_TEMPLATES } from '../data/templates';
+import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import '../styles/Step.css';
 
@@ -24,6 +24,8 @@ export default function StepThree({ onNext, onBack, project }) {
   const [directorMode, setDirectorMode] = useState(project.directorMode || 'hybrid');
   const [genre, setGenre] = useState('Cyberpunk / Electro');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
 
   const [screenplay, setScreenplay] = useState(
     project.screenplay || StoryDirector.generateScreenplay(project, project.images || [])
@@ -129,6 +131,41 @@ export default function StepThree({ onNext, onBack, project }) {
 
     setScreenplay({ ...screenplay, scenes: snappedScenes });
     alert('✨ Successfully aligned all scene cuts with musical beat drops & section transitions!');
+  };
+
+  const handleGenerateAIVideos = () => {
+    if (!screenplay?.scenes || isGeneratingVideos) return;
+    setIsGeneratingVideos(true);
+    setGenerationProgress(0);
+    
+    // Simulate generation time per scene
+    const totalScenes = screenplay.scenes.length;
+    let completed = 0;
+    
+    const interval = setInterval(() => {
+      completed += 1;
+      setGenerationProgress(Math.floor((completed / totalScenes) * 100));
+      
+      if (completed >= totalScenes) {
+        clearInterval(interval);
+        
+        // Convert static images to generated video motion
+        const updatedScenes = screenplay.scenes.map((scene, idx) => {
+          const matchingVideo = CINEMATIC_STOCK_VIDEOS[idx % CINEMATIC_STOCK_VIDEOS.length];
+          return {
+            ...scene,
+            imageUrl: matchingVideo.url,
+            media: matchingVideo
+          };
+        });
+        
+        setScreenplay({ ...screenplay, scenes: updatedScenes });
+        // Also update project state if needed so it passes down to StepFour
+        project.aiGeneratedVideos = updatedScenes.map(s => s.media);
+        
+        setTimeout(() => setIsGeneratingVideos(false), 500);
+      }
+    }, 250); // 250ms simulated rendering time per scene
   };
 
   const handleApplyTemplate = (tmpl) => {
@@ -239,31 +276,53 @@ export default function StepThree({ onNext, onBack, project }) {
               </div>
               <div className="screenplay-actions-group">
                 <button className="btn btn-secondary btn-sm" onClick={handleEnhancePrompts} title="Add Hollywood 8K, cinematic lighting, and lens keywords">
-                  <Sparkles size={14} color="#06b6d4" /> AI Enhance Prompts
+                  <Sparkles size={14} color="#06b6d4" /> AI Enhance
                 </button>
                 <button className="btn btn-secondary btn-sm" onClick={handleAutoSnapBeatDrops} title="Align all scene cuts to 808 kick drops">
-                  <Zap size={14} color="#ec4899" /> Snap Cuts to Drops
+                  <Zap size={14} color="#ec4899" /> Snap to Drops
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={() => handleGenerateAIVideos()} title="Generate AI motion video loops for all scenes">
+                  <Film size={14} /> {isGeneratingVideos ? 'Rendering...' : 'Generate AI Videos'}
                 </button>
                 <span className="acts-pill">{screenplay.scenes?.length || 6} Directorial Scenes</span>
               </div>
             </div>
 
-            <div className="screenplay-scenes-grid">
-              {screenplay.scenes?.map((scene, idx) => (
-                <div key={scene.id || idx} className="screenplay-scene-card">
-                  <div className="scene-card-media">
-                    <img src={scene.imageUrl} alt={scene.title} />
-                    <span className="act-tag">{scene.act}</span>
-                    {scene.isSingerCut ? (
-                      <span className="cut-type-badge singer-badge">
-                        <Video size={12} /> Lip-Sync Cut
-                      </span>
-                    ) : (
-                      <span className="cut-type-badge story-badge">
-                        <Eye size={12} /> Story Action Cut
-                      </span>
-                    )}
+            {isGeneratingVideos && (
+              <div className="video-generation-modal">
+                <div className="generation-progress-box">
+                  <RefreshCw size={24} className="spin-icon text-cyan" />
+                  <h3>Synthesizing {screenplay.scenes?.length} AI Video Scenes...</h3>
+                  <div className="progress-bar-container">
+                    <div className="progress-bar-fill" style={{ width: `${generationProgress}%` }}></div>
                   </div>
+                  <p>Running Luma / Gen-3 simulation rendering... Please wait.</p>
+                </div>
+              </div>
+            )}
+
+            <div className="screenplay-scenes-grid">
+              {screenplay.scenes?.map((scene, idx) => {
+                const isVideo = scene.media?.type === 'video' || scene.imageUrl?.includes('.mp4');
+                return (
+                  <div key={scene.id || idx} className="screenplay-scene-card">
+                    <div className="scene-card-media">
+                      {isVideo ? (
+                        <video src={scene.imageUrl} autoPlay muted loop playsInline />
+                      ) : (
+                        <img src={scene.imageUrl} alt={scene.title} />
+                      )}
+                      <span className="act-tag">{scene.act}</span>
+                      {scene.isSingerCut ? (
+                        <span className="cut-type-badge singer-badge">
+                          <Video size={12} /> Lip-Sync Cut
+                        </span>
+                      ) : (
+                        <span className="cut-type-badge story-badge">
+                          <Eye size={12} /> Story Action Cut
+                        </span>
+                      )}
+                    </div>
                   <div className="scene-card-body">
                     <div className="scene-card-title-row">
                       <h4>
@@ -278,8 +337,9 @@ export default function StepThree({ onNext, onBack, project }) {
                       </span>
                     </div>
                   </div>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}

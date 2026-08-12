@@ -49,96 +49,126 @@ export const SINGER_PORTRAITS = [
 ];
 
 export class StoryDirector {
-  // Generate a complete 4-Act screenplay for the song
+  // Generate a complete screenplay dynamically mapping all visual assets and parsing lyrics line-by-line
   static generateScreenplay(songInfo = {}, visualAssets = []) {
     const title = songInfo.title || songInfo.audioTitle || 'Cyber Odyssey';
     const bpm = songInfo.bpm || 128;
     const duration = Math.round(songInfo.duration || 32);
-
+    
+    // Fallback assets if none provided
     const assetList = visualAssets.length > 0 ? visualAssets : [
       'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80',
       'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200&auto=format&fit=crop&q=80',
     ];
 
-    const sceneDuration = duration / 6;
+    const cameraMoves = ['slow-dolly', 'tracking-shot', 'whip-pan', 'hyper-zoom', 'vortex', 'crane-pullout', '3d-tilt', 'orbit-360'];
+    const scenes = [];
+    
+    // Parse lyrics to generate scenes
+    const rawLyrics = songInfo.lyrics || songInfo.aiStoryboard?.lyrics;
+    let lyricLines = [];
+    
+    if (rawLyrics) {
+      const lines = rawLyrics.split('\\n').filter(l => l.trim().length > 0);
+      lyricLines = lines.map(line => {
+        // Parse [mm:ss.xx] timestamp if exists
+        const match = line.match(/^\\[(\\d{2}):(\\d{2}(?:\\.\\d+)?)\\]\\s*(.*)/);
+        if (match) {
+          const mins = parseInt(match[1]);
+          const secs = parseFloat(match[2]);
+          return { time: mins * 60 + secs, text: match[3] };
+        }
+        return { time: -1, text: line };
+      });
+    }
 
-    const scenes = [
-      {
-        id: 'scene-1',
-        act: 'Act I: The Setup',
-        title: 'Establish The World',
-        directive: 'Raindrops glisten on glowing neon towers as shadows move across the alleyways.',
-        cameraMove: 'slow-dolly',
-        imageUrl: assetList[0 % assetList.length],
-        startTime: 0,
-        endTime: sceneDuration,
-        isSingerCut: false,
-      },
-      {
-        id: 'scene-2',
-        act: 'Act II: Rising Tension (Verse 1)',
-        title: 'Vocalist Infiltration',
-        directive: 'The artist initiates neural link, streaming cyan digital code across the visor.',
-        cameraMove: 'tracking-shot',
-        imageUrl: assetList[1 % assetList.length],
-        startTime: sceneDuration,
-        endTime: sceneDuration * 2,
-        isSingerCut: true, // Singer performs verse 1
-      },
-      {
-        id: 'scene-3',
-        act: 'Act II: The Pursuit (Pre-Chorus)',
-        title: 'Drone Laser Sweep',
-        directive: 'Crimson security sirens flash as drones sweep laser searchlights across the wet asphalt.',
-        cameraMove: 'whip-pan',
-        imageUrl: assetList[2 % assetList.length],
-        startTime: sceneDuration * 2,
-        endTime: sceneDuration * 3,
-        isSingerCut: false, // Story action shot
-      },
-      {
-        id: 'scene-4',
-        act: 'Act III: THE DROP (Chorus)',
-        title: 'Supernova Energy Climax',
-        directive: 'Massive explosive energy pulse shatters reality with vibrant cyan & magenta light waves.',
-        cameraMove: 'hyper-zoom',
-        imageUrl: assetList[3 % assetList.length],
-        startTime: sceneDuration * 3,
-        endTime: sceneDuration * 4.5,
-        isSingerCut: true, // Singer performs chorus with maximum power
-      },
-      {
-        id: 'scene-5',
-        act: 'Act III: Quantum Distortion (Bridge)',
-        title: 'Zero Gravity Light Rift',
-        directive: 'Holographic fragments dissolve into floating geometric stardust in zero gravity.',
-        cameraMove: 'vortex',
-        imageUrl: assetList[4 % assetList.length],
-        startTime: sceneDuration * 4.5,
-        endTime: sceneDuration * 5.2,
-        isSingerCut: false, // Story psychedelic distortion
-      },
-      {
-        id: 'scene-6',
-        act: 'Act IV: Resolution (Outro)',
-        title: 'Radiant Cyber Dawn',
-        directive: 'Standing victorious atop the mega-city looking into the infinite horizon.',
-        cameraMove: 'crane-pullout',
-        imageUrl: assetList[0 % assetList.length],
-        startTime: sceneDuration * 5.2,
-        endTime: duration,
-        isSingerCut: true, // Final vocalist close-up & fade
-      },
-    ];
+    if (lyricLines.length > 3) {
+      // Create a scene for each lyric line
+      for (let i = 0; i < lyricLines.length; i++) {
+        const line = lyricLines[i];
+        const nextLine = lyricLines[i + 1];
+        
+        let startTime = line.time;
+        let endTime = nextLine ? nextLine.time : -1;
+        
+        // Auto-distribute timestamps if missing
+        if (startTime === -1) startTime = (i / lyricLines.length) * duration;
+        if (endTime === -1) endTime = ((i + 1) / lyricLines.length) * duration;
+        if (endTime <= startTime) endTime = Math.min(duration, startTime + 3);
+        
+        const isSinger = i % 3 === 0 || i === lyricLines.length - 1; // Singer appears every 3 scenes and at the end
+        
+        // Determine Act based on time
+        let act = 'Act I: Intro';
+        if (startTime > duration * 0.25) act = 'Act II: Verse';
+        if (startTime > duration * 0.5) act = 'Act III: Chorus';
+        if (startTime > duration * 0.75) act = 'Act IV: Outro';
+        
+        // Try to find a matching video from visualAssets based on lyrics, or use round-robin
+        let selectedAsset = assetList[i % assetList.length];
+        
+        // If it's a generated video (contains object with type 'video'), prefer it
+        if (songInfo.aiGeneratedVideos && songInfo.aiGeneratedVideos[i]) {
+          selectedAsset = songInfo.aiGeneratedVideos[i];
+        }
+
+        scenes.push({
+          id: `scene-${i + 1}`,
+          act: act,
+          title: isSinger ? `Vocal Cut: "${line.text}"` : `Narrative: "${line.text}"`,
+          directive: isSinger
+            ? `Singer performs "${line.text}" with dynamic facial expressions and real-time lip-sync.`
+            : `Cinematic sequence mapping to: "${line.text}".`,
+          cameraMove: cameraMoves[i % cameraMoves.length],
+          imageUrl: selectedAsset?.url || selectedAsset,
+          media: selectedAsset, // Full object in case it's a video
+          startTime: Math.round(startTime * 10) / 10,
+          endTime: Math.round(endTime * 10) / 10,
+          isSingerCut: isSinger,
+          lyricText: line.text
+        });
+      }
+    } else {
+      // Fallback: 20 procedural scenes if no lyrics
+      const numScenes = 20;
+      const sceneDuration = duration / numScenes;
+      for (let i = 0; i < numScenes; i++) {
+        const actIdx = Math.min(3, Math.floor((i / numScenes) * 4));
+        const acts = ['Act I: Establishment & World Setup', 'Act II: Rising Vocal Tension', 'Act III: THE BASS DROP (Chorus)', 'Act IV: Climax & Resolution'];
+        const isSinger = i % 2 === 1 || i === numScenes - 1;
+        
+        let selectedAsset = assetList[i % assetList.length];
+        if (songInfo.aiGeneratedVideos && songInfo.aiGeneratedVideos[i]) {
+          selectedAsset = songInfo.aiGeneratedVideos[i];
+        }
+
+        scenes.push({
+          id: `scene-${i + 1}`,
+          act: acts[actIdx],
+          title: isSinger ? `Vocal Performance Shot #${Math.ceil((i + 1) / 2)}` : `Narrative World Scene #${Math.ceil((i + 1) / 2)}`,
+          directive: isSinger
+            ? `Singer performs high-energy vocals with real-time lip-sync visemes and dynamic stage lighting.`
+            : `Cinematic 3D camera pan across scene visual environment with audio-reactive parallax depth.`,
+          cameraMove: cameraMoves[i % cameraMoves.length],
+          imageUrl: selectedAsset?.url || selectedAsset,
+          media: selectedAsset,
+          startTime: Math.round(i * sceneDuration * 10) / 10,
+          endTime: Math.round((i + 1) * sceneDuration * 10) / 10,
+          isSingerCut: isSinger,
+        });
+      }
+    }
 
     return {
-      title: `${title} - Screenplay`,
+      title: `${title} - ${scenes.length}-Cut Production Screenplay`,
       duration,
       bpm,
       actsCount: 4,
+      scenesCount: scenes.length,
       scenes,
     };
   }
