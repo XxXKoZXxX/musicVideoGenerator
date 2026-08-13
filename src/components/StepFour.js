@@ -512,6 +512,19 @@ export default function StepFour({ onBack, project }) {
                 <label className="checkbox-label">
                   <input
                     type="checkbox"
+                    checked={settings.enableCartoonInk || settings.renderStyle === 'cartoon_2d' || settings.renderStyle === 'chibi_anime'}
+                    onChange={(e) =>
+                      setSettings({ ...settings, enableCartoonInk: e.target.checked })
+                    }
+                  />
+                  <span>2D Cartoon Ink Outlines & Animated Pop Stars</span>
+                </label>
+              </div>
+
+              <div className="rack-toggle-row">
+                <label className="checkbox-label">
+                  <input
+                    type="checkbox"
                     checked={settings.enableTvBroadcastGraphic !== false}
                     onChange={(e) =>
                       setSettings({ ...settings, enableTvBroadcastGraphic: e.target.checked })
@@ -752,6 +765,20 @@ export default function StepFour({ onBack, project }) {
                   <option value="high">High (10 Mbps Web Master)</option>
                   <option value="medium">Medium (5 Mbps Fast)</option>
                 </select>
+              </div>
+
+              <div className="rack-field" style={{ marginTop: 10 }}>
+                <label>Pexels HD Stock Video API Key:</label>
+                <input
+                  type="password"
+                  className="settings-input"
+                  placeholder="Enter Pexels API Key (Saved Automatically)"
+                  defaultValue={localStorage.getItem('pexels_api_key') || ''}
+                  onChange={(e) => {
+                    localStorage.setItem('pexels_api_key', e.target.value);
+                    project.pexelsApiKey = e.target.value;
+                  }}
+                />
               </div>
             </div>
           </div>

@@ -662,6 +662,42 @@ export class VideoGenerator {
       ctx.restore();
     }
 
+    // SHADER F: 2D Cartoon Ink Contours & Animated Pop Stars
+    if (
+      styleId === 'cartoon_2d' ||
+      styleId === 'chibi_anime' ||
+      renderStyleObj.hasCartoonInk ||
+      this.settings.enableCartoonInk
+    ) {
+      ctx.save();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = Math.max(3, width * 0.005);
+      ctx.globalAlpha = 0.85;
+
+      // Draw hand-drawn comic ink outline border
+      ctx.strokeRect(10, 10, width - 20, height - 20);
+
+      // Bouncing Animated Cartoon Sparkles & Pop Stars
+      const starCount = 14;
+      const bpm = this.project.bpm || 128;
+      const secPerBeat = 60 / bpm;
+      const bounce = Math.abs(Math.sin((elapsed / secPerBeat) * Math.PI)) * 14;
+
+      ctx.fillStyle = styleId === 'chibi_anime' ? '#ec4899' : '#f59e0b';
+      for (let i = 0; i < starCount; i++) {
+        const starX = width * 0.08 + ((i * 147) % (width * 0.84));
+        const starY = height * 0.12 + Math.sin(elapsed * 3.5 + i) * 28 - bounce;
+        const size = 5 + (i % 4) * 4;
+
+        ctx.beginPath();
+        ctx.arc(starX, starY, size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
     // SHADER B: Anamorphic Cinema Blue/Cyan Lens Flare (for Photoreal 8K & Cyberpunk)
     if (
       (styleId === 'photoreal' || renderStyleObj.hasAnamorphicFlares) &&

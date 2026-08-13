@@ -130,7 +130,6 @@ function buildSongBespokeStoryline(title, genre, bpm, duration) {
     };
   }
 
-  // Default Cinematic / EDM / Pop
   return {
     concept: `A cinematic visual odyssey created for "${cleanTitle}": dazzling celestial horizons, soaring light trails, and a journey into the infinite.`,
     scenes: [
@@ -141,5 +140,96 @@ function buildSongBespokeStoryline(title, genre, bpm, duration) {
       `Scene 5 [Outro - Slow Orbit]: The traveler gazes into a new dawn as the final chords echo into eternity.`,
     ],
     lyrics: `${formatTimestamp(0)} Across the ocean of the sky\n${formatTimestamp(quarter)} Watching the shooting stars go by\n${formatTimestamp(half)} Energy building from within\n${formatTimestamp(threeQuarter)} Let the new universe begin\n${formatTimestamp(duration - 4)} Forever shining bright`,
+  };
+}
+
+// Parse lyrics into line array with timestamps
+export function parseLyricsLines(lyricsText = '') {
+  if (!lyricsText || !lyricsText.trim()) {
+    return [
+      { timestamp: 0, text: 'Rain falling down on the neon street' },
+      { timestamp: 6, text: 'Chasing the ghost in the machine\'s heartbeat' },
+      { timestamp: 12, text: 'We break through the firewall tonight' },
+      { timestamp: 18, text: 'Caught in the pulse of the laser light' },
+      { timestamp: 24, text: 'Fade into the digital sunrise' },
+    ];
+  }
+
+  const lines = lyricsText.split('\n').filter((l) => l.trim().length > 0);
+  return lines.map((line, idx) => {
+    const timeMatch = line.match(/\[(\d+):(\d+)(?:\.(\d+))?\]/);
+    let timestamp = idx * 5;
+    let cleanText = line;
+
+    if (timeMatch) {
+      const minutes = parseInt(timeMatch[1], 10);
+      const seconds = parseInt(timeMatch[2], 10);
+      timestamp = minutes * 60 + seconds;
+      cleanText = line.replace(/\[\d+:\d+(?:\.\d+)?\]/, '').trim();
+    }
+
+    return { timestamp, text: cleanText || line };
+  });
+}
+
+// Generate bespoke lyric-by-lyric visual video scenes matching the song's lyrics
+export function generateLyricVisualScenes(lyricsText = '', songInfo = {}) {
+  const parsedLyrics = parseLyricsLines(lyricsText);
+  const duration = Math.round(songInfo.duration || 30);
+  const title = songInfo.title || songInfo.audioTitle || 'Music Video';
+  
+  const cameraMoves = ['3d-parallax', 'fluid-warp', 'hyper-zoom', 'cinematic-pan', 'orbit-360', 'whip-pan', 'vortex', 'slow-dolly'];
+
+  const stockVisualMap = [
+    { keywords: ['rain', 'street', 'city', 'night', 'neon'], url: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['laser', 'light', 'stage', 'concert', 'dance'], url: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['retro', 'grid', 'synth', 'drive', 'car'], url: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['star', 'space', 'sky', 'cosmic', 'fly'], url: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['dark', 'shadow', 'gothic', 'smoke', 'fire'], url: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['tokyo', 'japan', 'walk', 'alley', 'urban'], url: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['portal', 'quantum', 'future', 'glitch', 'code'], url: 'https://images.unsplash.com/photo-1563089145-599997674d42?w=1200&auto=format&fit=crop&q=80' },
+    { keywords: ['sun', 'morning', 'window', 'coffee', 'home'], url: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?w=1200&auto=format&fit=crop&q=80' },
+  ];
+
+  const totalLines = Math.max(1, parsedLyrics.length);
+  const timeStep = duration / totalLines;
+
+  const scenes = [];
+  const generatedImages = [];
+
+  parsedLyrics.forEach((lyric, idx) => {
+    const startTime = Math.round(idx * timeStep * 10) / 10;
+    const endTime = Math.round((idx + 1) * timeStep * 10) / 10;
+    const lowerLine = lyric.text.toLowerCase();
+
+    let matchedAsset = stockVisualMap.find(asset => 
+      asset.keywords.some(kw => lowerLine.includes(kw))
+    );
+
+    if (!matchedAsset) {
+      matchedAsset = stockVisualMap[idx % stockVisualMap.length];
+    }
+
+    generatedImages.push(matchedAsset.url);
+
+    scenes.push({
+      id: `lyric-scene-${idx + 1}`,
+      lyricText: lyric.text,
+      act: `Lyric Scene ${idx + 1} [${startTime}s - ${endTime}s]`,
+      title: `"${lyric.text.substring(0, 32)}${lyric.text.length > 32 ? '...' : ''}"`,
+      directive: `Visual frame generated for lyrics: "${lyric.text}". Rendered with ${cameraMoves[idx % cameraMoves.length]} motion and audio frequency sync.`,
+      cameraMove: cameraMoves[idx % cameraMoves.length],
+      imageUrl: matchedAsset.url,
+      startTime,
+      endTime,
+      isSingerCut: idx % 2 === 1,
+    });
+  });
+
+  return {
+    title: `${title} - Lyric-Driven Video Storyboard`,
+    scenes,
+    images: generatedImages,
+    lyrics: lyricsText,
   };
 }

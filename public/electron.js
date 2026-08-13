@@ -27,7 +27,7 @@ function createWindow() {
     },
     title: 'MusicVid Studio',
     backgroundColor: '#0f0f0f',
-    show: false,
+    show: true,
   });
 
   mainWindow.webContents.on('did-fail-load', (_event, code, description, url) => {
@@ -43,9 +43,7 @@ function createWindow() {
     mainWindow.loadURL(`http://localhost:${process.env.PORT || 3210}`);
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
-  });
+  mainWindow.show();
 
   mainWindow.on('closed', () => {
     mainWindow = null;

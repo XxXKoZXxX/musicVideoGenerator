@@ -14,7 +14,7 @@ import {
   Eye,
   Zap,
 } from 'lucide-react';
-import { generateStorylineFromAudio, MUSIC_GENRES } from '../services/AIService';
+import { generateStorylineFromAudio, generateLyricVisualScenes, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { VideoFetchService } from '../services/VideoFetchService';
@@ -27,7 +27,15 @@ export default function StepThree({ onNext, onBack, project }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
   const [generationProgress, setGenerationProgress] = useState(0);
-  const [pexelsApiKey, setPexelsApiKey] = useState(project.pexelsApiKey || '');
+  const [pexelsApiKey, setPexelsApiKey] = useState(
+    project.pexelsApiKey || localStorage.getItem('pexels_api_key') || ''
+  );
+
+  const handlePexelsKeyChange = (key) => {
+    setPexelsApiKey(key);
+    localStorage.setItem('pexels_api_key', key);
+    project.pexelsApiKey = key;
+  };
 
   const [screenplay, setScreenplay] = useState(
     project.screenplay || StoryDirector.generateScreenplay(project, project.images || [])
@@ -96,6 +104,35 @@ export default function StepThree({ onNext, onBack, project }) {
       setScreenplay(updatedScreenplay);
     } catch (err) {
       alert('Generation error: ' + err.message);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateLyricVideo = () => {
+    setIsGenerating(true);
+    try {
+      const lyricResult = generateLyricVisualScenes(lyricsText, project);
+      setAiStoryboard({
+        concept: lyricResult.title,
+        scenes: lyricResult.scenes.map((s) => s.directive),
+        lyrics: lyricResult.lyrics,
+      });
+
+      const lyricScreenplay = {
+        title: lyricResult.title,
+        duration: project.duration || 30,
+        bpm: project.bpm || 128,
+        scenesCount: lyricResult.scenes.length,
+        scenes: lyricResult.scenes,
+      };
+
+      setScreenplay(lyricScreenplay);
+      if (lyricResult.images?.length) {
+        project.images = lyricResult.images;
+      }
+    } catch (err) {
+      alert('Error generating lyric video: ' + err.message);
     } finally {
       setIsGenerating(false);
     }
@@ -308,10 +345,10 @@ export default function StepThree({ onNext, onBack, project }) {
                 <input 
                   type="password" 
                   className="settings-input" 
-                  placeholder="Pexels API Key (required)" 
+                  placeholder="Pexels API Key (saved automatically)" 
                   value={pexelsApiKey}
-                  onChange={(e) => setPexelsApiKey(e.target.value)}
-                  style={{ width: '200px', marginRight: '10px' }}
+                  onChange={(e) => handlePexelsKeyChange(e.target.value)}
+                  style={{ width: '220px', marginRight: '10px' }}
                 />
                 <button className="btn btn-secondary btn-sm" onClick={handleEnhancePrompts} title="Add Hollywood 8K, cinematic lighting, and lens keywords">
                   <Sparkles size={14} color="#06b6d4" /> AI Enhance
@@ -319,7 +356,10 @@ export default function StepThree({ onNext, onBack, project }) {
                 <button className="btn btn-secondary btn-sm" onClick={handleAutoSnapBeatDrops} title="Align all scene cuts to 808 kick drops">
                   <Zap size={14} color="#ec4899" /> Snap to Drops
                 </button>
-                <button className="btn btn-primary btn-sm" onClick={() => handleGenerateAIVideos()} title="Generate AI motion video loops for all scenes">
+                <button className="btn btn-primary btn-sm" onClick={handleGenerateLyricVideo} title="Automatically extract song lyrics and generate visual video scenes for every line">
+                  <Wand2 size={14} /> Generate Scenes from Lyrics
+                </button>
+                <button className="btn btn-secondary btn-sm" onClick={() => handleGenerateAIVideos()} title="Generate AI motion video loops for all scenes">
                   <Film size={14} /> {isGeneratingVideos ? 'Fetching...' : 'Generate AI Videos'}
                 </button>
                 <span className="acts-pill">{screenplay.scenes?.length || 6} Directorial Scenes</span>
