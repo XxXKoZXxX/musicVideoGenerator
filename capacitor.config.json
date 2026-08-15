@@ -1,0 +1,20 @@
+{
+  "appId": "com.astraea.cosmicstudio",
+  "appName": "Astraea",
+  "webDir": "build",
+  "bundledWebRuntime": false,
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#060814",
+      "showSpinner": false
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#060814"
+    }
+  }
+}

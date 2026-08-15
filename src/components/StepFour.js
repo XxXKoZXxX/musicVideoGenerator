@@ -280,11 +280,11 @@ export default function StepFour({ onBack, project }) {
   return (
     <div className="step-container step-four-container">
       <div className="step-header">
-        <span className="step-badge">Live Studio & Multi-Style Master Export</span>
-        <h2>Step 4: Live Studio Monitor & Master Render</h2>
+        <span className="step-badge">🔥 Master Studio Monitor & 4K Render</span>
+        <h2>Live Studio Monitor & Master Video Export</h2>
         <p>
-          Preview your AI music video at 60 FPS in real time with audio-reactive viseme lip-syncing,
-          multi-style rendering aesthetics, and 4K master rendering.
+          Preview your AI music video live at 60 FPS with audio-reactive viseme lip-syncing,
+          Hollywood FX rack, and master 4K rendering!
         </p>
       </div>
 
@@ -412,7 +412,7 @@ export default function StepFour({ onBack, project }) {
                 className="btn btn-primary btn-large btn-master-render"
                 onClick={handleStartExport}
               >
-                <Video size={24} /> Render Master Music Video ({settings.resolution})
+                <Video size={24} /> Render Master Music Video 🔥 ({settings.resolution})
               </button>
             )}
 

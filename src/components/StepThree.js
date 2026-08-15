@@ -13,16 +13,21 @@ import {
   Video,
   Eye,
   Zap,
+  Cpu,
+  Layers,
 } from 'lucide-react';
 import { generateStorylineFromAudio, generateLyricVisualScenes, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { VideoFetchService } from '../services/VideoFetchService';
+import { AI_VIDEO_MODELS, AI_STORYLINE_GENERATORS } from '../data/aiModels';
 import '../styles/Step.css';
 
 export default function StepThree({ onNext, onBack, project }) {
-  const [activeTab, setActiveTab] = useState('screenplay');
+  const [activeTab, setActiveTab] = useState('models');
   const [directorMode, setDirectorMode] = useState(project.directorMode || 'hybrid');
+  const [selectedVideoModel, setSelectedVideoModel] = useState(project.selectedVideoModel || AI_VIDEO_MODELS[0].id);
+  const [selectedStoryGenerator, setSelectedStoryGenerator] = useState(project.selectedStoryGenerator || AI_STORYLINE_GENERATORS[0].id);
   const [genre, setGenre] = useState('Cyberpunk / Electro');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
@@ -263,11 +268,11 @@ export default function StepThree({ onNext, onBack, project }) {
   return (
     <div className="step-container">
       <div className="step-header">
-        <span className="step-badge">Cinematic Story & Director Studio</span>
-        <h2>Step 3: Direct Storyline & Lip-Sync Performance</h2>
+        <span className="step-badge">🎬 AI Storyboard & Director Studio</span>
+        <h2>Direct Your Storyline & Lip-Sync Performance</h2>
         <p>
-          Configure the 4-Act screenplay, select the production cut mode (Hybrid Story + Lip-Sync),
-          and customize beat-synchronized kinetic typography.
+          Break down 10 to 14 multi-act scene directives, generate bespoke video frames directly from song lyrics,
+          and tune your director cut mode!
         </p>
       </div>
 
@@ -306,10 +311,16 @@ export default function StepThree({ onNext, onBack, project }) {
         {/* Navigation Tabs */}
         <div className="mode-tabs">
           <button
+            className={`tab-btn ${activeTab === 'models' ? 'active' : ''}`}
+            onClick={() => setActiveTab('models')}
+          >
+            <Cpu size={18} /> AI Video & Story Engine Suite
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'screenplay' ? 'active' : ''}`}
             onClick={() => setActiveTab('screenplay')}
           >
-            <Film size={18} /> 4-Act Screenplay Breakdown
+            <Film size={18} /> Directorial Screenplay
           </button>
           <button
             className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
@@ -330,6 +341,84 @@ export default function StepThree({ onNext, onBack, project }) {
             <Type size={18} /> Synced Kinetic Lyrics
           </button>
         </div>
+
+        {/* TAB 0: AI VIDEO MODELS & STORYLINE SUITE */}
+        {activeTab === 'models' && (
+          <div className="tab-pane">
+            <div className="section-title">
+              <Cpu size={20} color="#06b6d4" />
+              <h3>Select AI Video Motion Engine</h3>
+              <p>Choose the neural AI generator engine that powers your camera dynamics and render quality</p>
+            </div>
+
+            <div className="ai-models-grid">
+              {AI_VIDEO_MODELS.map((model) => {
+                const isSelected = selectedVideoModel === model.id;
+                return (
+                  <div
+                    key={model.id}
+                    className={`ai-model-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSelectedVideoModel(model.id);
+                      project.selectedVideoModel = model.id;
+                      project.motionMode = model.motionMode;
+                    }}
+                    style={{ borderColor: isSelected ? model.color : 'rgba(255, 255, 255, 0.08)' }}
+                  >
+                    <div className="model-card-top">
+                      <span className="model-icon">{model.icon}</span>
+                      <span className="model-badge-pill" style={{ background: `${model.color}22`, color: model.color }}>
+                        {model.badge}
+                      </span>
+                    </div>
+                    <h4>{model.name}</h4>
+                    <p className="model-tagline">{model.tagline}</p>
+                    <div className="model-specs">
+                      <span>Max: <strong>{model.maxResolution}</strong></span>
+                      <span>Motion: <strong>{model.motionQuality}</strong></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="section-title" style={{ marginTop: 28 }}>
+              <Layers size={20} color="#ec4899" />
+              <h3>Select AI Storyline & Script Generator</h3>
+              <p>Choose the AI intelligence model used to synthesize scene screenplays and lyric visual directives</p>
+            </div>
+
+            <div className="ai-story-grid">
+              {AI_STORYLINE_GENERATORS.map((gen) => {
+                const isSelected = selectedStoryGenerator === gen.id;
+                return (
+                  <div
+                    key={gen.id}
+                    className={`story-gen-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      setSelectedStoryGenerator(gen.id);
+                      project.selectedStoryGenerator = gen.id;
+                    }}
+                  >
+                    <div className="gen-card-top">
+                      <span className="gen-icon">{gen.icon}</span>
+                      <span className="gen-badge">{gen.badge}</span>
+                    </div>
+                    <h4>{gen.name}</h4>
+                    <p>{gen.tagline}</p>
+                    <div className="gen-features">
+                      {gen.features.map((f, i) => (
+                        <span key={i} className="gen-feature-tag">
+                          <Check size={12} /> {f}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* TAB 1: 4-ACT SCREENPLAY BREAKDOWN */}
         {activeTab === 'screenplay' && (
@@ -602,10 +691,10 @@ export default function StepThree({ onNext, onBack, project }) {
 
       <div className="step-footer">
         <button className="btn btn-secondary" onClick={onBack}>
-          ← Back
+          ← Back to Audio Beats
         </button>
         <button className="btn btn-primary btn-large" onClick={handleNext}>
-          Next: Live Studio & Master Export →
+          Launch Studio Monitor & Render 4K →
         </button>
       </div>
     </div>

@@ -25,13 +25,13 @@ function createWindow() {
       enableRemoteModule: false,
       nodeIntegration: false,
     },
-    title: 'MusicVid Studio',
-    backgroundColor: '#0f0f0f',
+    title: 'Astraea - Secret Language & Cosmic Oracle Studio',
+    backgroundColor: '#060814',
     show: true,
   });
 
   mainWindow.webContents.on('did-fail-load', (_event, code, description, url) => {
-    dialog.showErrorBox('MusicVid Studio', `Could not load ${url}\n\n${description} (${code})`);
+    dialog.showErrorBox('Astraea Studio', `Could not load ${url}\n\n${description} (${code})`);
   });
 
   const buildPath = path.join(__dirname, '../build/index.html');

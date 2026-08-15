@@ -217,11 +217,11 @@ export default function StepTwo({ onNext, onBack, project }) {
   return (
     <div className="step-container">
       <div className="step-header">
-        <span className="step-badge">Audio & Beat Lab</span>
-        <h2>Step 2: Select & Analyze Soundtrack</h2>
+        <span className="step-badge">🎵 Drop The Track & Audio Engine</span>
+        <h2>Drop Your Song & Detect Audio Beats</h2>
         <p>
-          Choose a royalty-free genre track or upload your own song. MusicVid Studio detects BPM,
-          transients, and multi-band frequency drops for visual synchronization.
+          Pick a curated genre anthem or upload your custom song! We automatically detect BPM,
+          sub-bass 808 kick drops, and vocal frequencies for lip-syncing.
         </p>
       </div>
 
@@ -407,10 +407,10 @@ export default function StepTwo({ onNext, onBack, project }) {
 
       <div className="step-footer">
         <button className="btn btn-secondary" onClick={onBack}>
-          ← Back
+          ← Back to Vibes
         </button>
         <button className="btn btn-primary btn-large" onClick={handleNext}>
-          Next: Storyboard & Lyrics Studio →
+          Unleash AI Storyboard →
         </button>
       </div>
     </div>

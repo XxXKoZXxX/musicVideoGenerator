@@ -113,11 +113,11 @@ export default function StepOne({ onNext, project }) {
   return (
     <div className="step-container">
       <div className="step-header">
-        <span className="step-badge">Rendering Styles & Performer Studio</span>
-        <h2>Step 1: Choose Video Rendering Style & Assets</h2>
+        <span className="step-badge">🎨 Vibe Check & Style Drop</span>
+        <h2>Pick Your Visual Aesthetic & Story World</h2>
         <p>
-          Select your visual aesthetic (Realistic, Japanese Anime, 3D CGI, Cyberpunk, 90s VHS),
-          choose your lead singer for lip-syncing, and curate storyline scenes.
+          Select your art direction (Hollywood 8K Cinema, Japanese Anime, 2D Cartoon, Cyberpunk, 90s VHS),
+          load your lead singer for lip-sync, and pick visual scene assets!
         </p>
       </div>
 
@@ -517,7 +517,7 @@ export default function StepOne({ onNext, project }) {
 
       <div className="step-footer">
         <button className="btn btn-primary btn-large" onClick={handleNext}>
-          Next: Choose Audio Track →
+          Lock In Vibe & Drop The Beat →
         </button>
       </div>
     </div>

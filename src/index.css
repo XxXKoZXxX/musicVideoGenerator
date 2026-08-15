@@ -1,3 +1,7 @@
+html {
+  scroll-behavior: smooth;
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -10,7 +14,7 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: #0f0f0f;
+  background: #060814;
   color: #e0e0e0;
 }
 
@@ -22,4 +26,15 @@ code {
 #root {
   width: 100%;
   min-height: 100vh;
+}
+
+/* Selection styling */
+::selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fff;
+}
+
+::-moz-selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: #fff;
 }

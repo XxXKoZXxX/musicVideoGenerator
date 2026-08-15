@@ -1,8 +1,8 @@
 {
-  "name": "musicvid-studio",
-  "version": "0.1.0",
-  "description": "AI-powered music video generation with image lip-sync and dynamic storylines",
-  "author": "MusicVid Studio <maintainer@musicvid-studio.local>",
+  "name": "astraea-cosmic-studio",
+  "version": "1.0.0",
+  "description": "Astraea — Sovereign Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire, Tarot & Numerology Studio",
+  "author": "Astraea Cosmic Studios <support@astraea.app>",
   "main": "public/electron.js",
   "homepage": "./",
   "private": true,
@@ -34,11 +34,15 @@
     "build-win": "npm run react-build && electron-builder --win",
     "build-mac": "npm run react-build && electron-builder --mac",
     "build-linux": "npm run react-build && electron-builder --linux",
-    "build-all": "npm run react-build && electron-builder -mwl"
+    "build-all": "npm run react-build && electron-builder -mwl",
+    "build:mobile": "react-scripts build",
+    "mobile:sync": "npx @capacitor/cli sync",
+    "mobile:android": "npx @capacitor/cli open android",
+    "mobile:ios": "npx @capacitor/cli open ios"
   },
   "build": {
-    "appId": "com.musicvid.studio",
-    "productName": "MusicVid Studio",
+    "appId": "com.astraea.studio",
+    "productName": "Astraea Cosmic Studio",
     "files": [
       "build/**/*",
       "public/electron.js",
@@ -64,10 +68,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "MusicVid Studio"
+      "shortcutName": "Astraea Cosmic Studio"
     },
     "portable": {
-      "artifactName": "MusicVid-Studio-${version}.exe"
+      "artifactName": "Astraea-Studio-${version}.exe"
     },
     "mac": {
       "target": [
