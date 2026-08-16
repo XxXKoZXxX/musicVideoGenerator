@@ -109,44 +109,44 @@ export const THEME_PRESETS = [
 
 export const FONT_STYLE_PRESETS = [
   {
+    id: 'playful',
+    name: 'Playful & Friendly (Default)',
+    icon: '✨',
+    desc: 'Quicksand rounded bubbly headers + warm friendly Nunito body',
+    headingFont: "'Quicksand', 'Nunito', sans-serif",
+    bodyFont: "'Quicksand', 'Nunito', sans-serif"
+  },
+  {
+    id: 'bubbly',
+    name: 'Bubbly & Cheerful',
+    icon: '🎈',
+    desc: 'Fredoka soft playful headers + Comfortaa bouncy curves',
+    headingFont: "'Fredoka', 'Comfortaa', cursive",
+    bodyFont: "'Nunito', sans-serif"
+  },
+  {
+    id: 'clean_modern',
+    name: 'Modern & Vibrant',
+    icon: '🌈',
+    desc: 'Outfit modern geometric headers + Plus Jakarta Sans crisp body',
+    headingFont: "'Outfit', sans-serif",
+    bodyFont: "'Plus Jakarta Sans', sans-serif"
+  },
+  {
     id: 'royal',
-    name: 'Royal Esoteric (Default)',
+    name: 'Royal Esoteric',
     icon: '👑',
-    desc: 'Cinzel classical royal serif headers + crisp Jakarta sans',
+    desc: 'Cinzel classical royal serif headers + Jakarta sans',
     headingFont: "'Cinzel', serif",
     bodyFont: "'Plus Jakarta Sans', sans-serif"
   },
   {
-    id: 'grimoire',
-    name: 'Ancient Grimoire Manuscript',
-    icon: '📜',
-    desc: 'Decorative Cinzel + Cormorant Garamond alchemical script',
-    headingFont: "'Cinzel Decorative', 'Cinzel', serif",
-    bodyFont: "'Cormorant Garamond', Georgia, serif"
-  },
-  {
     id: 'literary',
-    name: 'Classic Editorial & Book',
+    name: 'Classic Storybook',
     icon: '📚',
-    desc: 'Playfair Display headers + Lora literary reading body',
-    headingFont: "'Playfair Display', Georgia, serif",
-    bodyFont: "'Lora', serif"
-  },
-  {
-    id: 'celestial',
-    name: 'Modern Celestial Starlight',
-    icon: '🪐',
-    desc: 'Space Grotesk modern headers + Inter clean tech body',
-    headingFont: "'Space Grotesk', sans-serif",
-    bodyFont: "'Inter', sans-serif"
-  },
-  {
-    id: 'cyber',
-    name: 'Cyberpunk Astrolabe',
-    icon: '⚡',
-    desc: 'Orbitron geometric headers + Rajdhani high-tech numerals',
-    headingFont: "'Orbitron', sans-serif",
-    bodyFont: "'Rajdhani', sans-serif"
+    desc: 'Lora literary book serif + friendly reading body',
+    headingFont: "'Lora', serif",
+    bodyFont: "'Nunito', sans-serif"
   }
 ];
 
@@ -225,7 +225,7 @@ export function loadSavedTheme() {
   
   const defaultTheme = {
     ...THEME_PRESETS[0],
-    fontStyleId: 'royal',
+    fontStyleId: 'playful',
     fontSizeId: 'standard',
     lineHeightId: 'relaxed'
   };

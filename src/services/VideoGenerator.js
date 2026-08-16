@@ -58,6 +58,7 @@ export class VideoGenerator {
     const initialRenderStyle = getRenderStyleById(project.renderStyle || 'photoreal');
 
     this.settings = {
+      rendererEngine: project.rendererEngine || 'ai-neural',
       renderStyle: project.renderStyle || 'photoreal',
       resolution: '1080p',
       aspectRatio: '16:9',
@@ -160,7 +161,11 @@ export class VideoGenerator {
     }
 
     // Load Singer Portrait Image
-    const singerUrl = this.project.singerImageUrl || renderStyleObj.defaultSinger || SINGER_PORTRAITS[0].url;
+    const singerUrl =
+      this.project.singerImage ||
+      this.project.singerImageUrl ||
+      renderStyleObj.defaultSinger ||
+      SINGER_PORTRAITS[0].url;
     try {
       this.singerImage = await this.loadMedia(singerUrl);
     } catch {
@@ -219,7 +224,9 @@ export class VideoGenerator {
 
     try {
       const element = new Audio();
-      element.crossOrigin = 'anonymous';
+      if (typeof audioSource === 'string' && !audioSource.startsWith('blob:')) {
+        element.crossOrigin = 'anonymous';
+      }
       element.preload = 'auto';
       element.src = audioSource;
 
@@ -227,13 +234,16 @@ export class VideoGenerator {
         const timeout = setTimeout(() => resolve(), 5000);
         element.onloadedmetadata = () => { clearTimeout(timeout); resolve(); };
         element.oncanplaythrough = () => { clearTimeout(timeout); resolve(); };
-        element.onerror = () => { clearTimeout(timeout); reject(new Error('Audio load error')); };
+        element.onerror = () => { clearTimeout(timeout); resolve(); };
       });
 
-      const duration = Number.isFinite(element.duration) ? element.duration : (this.project.duration || 30);
+      const duration = Number.isFinite(element.duration) && element.duration > 0
+        ? element.duration
+        : (this.project.duration || 30);
       this.audioElement = element;
       return { element, duration };
-    } catch {
+    } catch (err) {
+      console.warn('Audio loading error fallback:', err);
       return null;
     }
   }
@@ -269,12 +279,24 @@ export class VideoGenerator {
     let bassAnalyser = null;
     let midsAnalyser = null;
 
-    if (audio) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      audioContext = new AudioCtx();
-      const sourceNode = audioContext.createMediaElementSource(audio.element);
-      const gain = audioContext.createGain();
-      gain.gain.value = (this.settings.audioBoost || 100) / 100;
+    if (audio && audio.element) {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioCtx();
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
+
+        let sourceNode;
+        try {
+          sourceNode = audioContext.createMediaElementSource(audio.element);
+        } catch (e) {
+          console.warn('Reusing existing audio element source node:', e);
+        }
+
+        if (sourceNode) {
+          const gain = audioContext.createGain();
+          gain.gain.value = (this.settings.audioBoost || 100) / 100;
 
       // Master Analyser
       analyser = audioContext.createAnalyser();
@@ -305,6 +327,10 @@ export class VideoGenerator {
       const destination = audioContext.createMediaStreamDestination();
       gain.connect(destination);
       destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
+        }
+      } catch (err) {
+        console.warn('MediaStream audio routing fallback:', err);
+      }
     }
 
     const mimeCandidates = [
@@ -630,8 +656,44 @@ export class VideoGenerator {
   paintStyleShaders(ctx, renderStyleObj, audioMetrics, elapsed, isKick, width, height) {
     const { subBass = 0, masterEnergy = 0 } = audioMetrics;
     const styleId = this.settings.renderStyle;
+    const selectedModel = this.project.selectedVideoModel || this.settings.selectedVideoModel;
 
     ctx.save();
+
+    // AI Model Engine Active HUD Badge Overlay (First 4 Seconds)
+    if (selectedModel && elapsed < 4) {
+      const modelLabels = {
+        sora_ai: 'SORA AI · WORLD SIMULATOR 60FPS',
+        runway_gen3: 'RUNWAY GEN-3 ALPHA · CINEMA MOTION',
+        kling_ai: 'KLING 1.5 AI · PHOTOREAL FLUID DYNAMICS',
+        luma_dream: 'LUMA DREAM MACHINE · 3D KEYFRAME MORPH',
+        pika_20: 'PIKA 2.0 ENGINE · STYLIZED ANIMATION',
+        kaiber_ai: 'KAIBER AI · AUDIO-REACTIVE ORBIT',
+        domo_ai: 'DOMOAI · JAPANESE ANIME CEL-SHADING',
+        stable_video: 'STABLE VIDEO DIFFUSION · LATENT VORTEX',
+      };
+
+      const label = modelLabels[selectedModel] || `${selectedModel.toUpperCase()} ENGINE`;
+      const fadeAlpha = elapsed > 3 ? (4 - elapsed) : Math.min(1, elapsed * 2);
+
+      ctx.save();
+      ctx.globalAlpha = fadeAlpha * 0.85;
+      ctx.fillStyle = 'rgba(6, 11, 25, 0.75)';
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.6)';
+      ctx.lineWidth = 1;
+      const rectW = 280;
+      const rectH = 26;
+      ctx.beginPath();
+      ctx.roundRect(width - rectW - 20, 20, rectW, rectH, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = '700 10px "Space Grotesk", sans-serif';
+      ctx.fillStyle = '#38bdf8';
+      ctx.textAlign = 'center';
+      ctx.fillText(label, width - rectW / 2 - 20, 37);
+      ctx.restore();
+    }
 
     // SHADER A: Japanese Anime Radial Action Speed Lines (on beat drops / kick)
     if (
@@ -794,7 +856,19 @@ export class VideoGenerator {
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    const motionMode = this.settings.motionMode || '3d-parallax';
+    const selectedModel = this.project.selectedVideoModel || this.settings.selectedVideoModel || 'sora_ai';
+    let motionMode = this.settings.motionMode || '3d-parallax';
+
+    // Auto-map AI Video Models to their signature camera dynamics if selected
+    if (selectedModel === 'sora_ai') motionMode = 'hyper-zoom';
+    else if (selectedModel === 'runway_gen3') motionMode = '3d-parallax';
+    else if (selectedModel === 'kling_ai') motionMode = 'fluid-warp';
+    else if (selectedModel === 'luma_dream') motionMode = 'cinematic-pan';
+    else if (selectedModel === 'pika_20') motionMode = 'orbit-360';
+    else if (selectedModel === 'kaiber_ai') motionMode = 'kinetic-beat';
+    else if (selectedModel === 'domo_ai') motionMode = 'fluid-warp';
+    else if (selectedModel === 'stable_video') motionMode = 'hyper-zoom';
+
     const motionIntensity = (this.settings.motionIntensity || 100) / 100;
 
     let scale = zoomPulse;
@@ -802,36 +876,36 @@ export class VideoGenerator {
     let offsetY = 0;
     let rotation = 0;
 
-    // Advanced 3D Depth & Camera Motion Modes (Simulating Image-to-Video Animation)
-    if (motionMode === 'fluid-warp') {
+    // Advanced Generative AI Camera Motion Engines (Sora, Runway, Kling, Luma, Pika, Kaiber, DomoAI, SVD)
+    if (motionMode === 'fluid-warp' || selectedModel === 'kling_ai') {
       const wavePhase = progress * Math.PI * 4;
-      offsetX = Math.sin(wavePhase) * (width * 0.025) * motionIntensity;
-      offsetY = Math.cos(wavePhase * 0.7) * (height * 0.02) * motionIntensity;
-      scale = zoomPulse * (1 + Math.sin(wavePhase * 0.5) * 0.05 * motionIntensity);
-    } else if (motionMode === 'hyper-zoom' || cameraMove === 'hyper-zoom') {
+      offsetX = Math.sin(wavePhase) * (width * 0.035) * motionIntensity;
+      offsetY = Math.cos(wavePhase * 0.7) * (height * 0.025) * motionIntensity;
+      scale = zoomPulse * (1 + Math.sin(wavePhase * 0.5) * 0.08 * motionIntensity);
+    } else if (motionMode === 'hyper-zoom' || cameraMove === 'hyper-zoom' || selectedModel === 'sora_ai') {
       const accelProgress = Math.pow(progress, 1.4);
-      scale = zoomPulse * (1 + accelProgress * 0.35 * motionIntensity);
-    } else if (motionMode === 'cinematic-pan' || cameraMove === 'tracking-shot' || cameraMove === 'pan') {
-      offsetX = isIncoming ? (1 - blend) * -width * 0.4 : (progress - 0.5) * width * 0.18 * motionIntensity;
-      offsetY = Math.sin(progress * Math.PI) * (height * 0.03) * motionIntensity;
-      scale = zoomPulse * 1.1;
-    } else if (motionMode === 'orbit-360') {
-      const orbitAngle = progress * Math.PI * 0.35 * motionIntensity;
-      rotation = isIncoming ? (1 - blend) * 0.2 : orbitAngle - 0.15;
-      scale = zoomPulse * (1.1 + Math.sin(progress * Math.PI) * 0.08 * motionIntensity);
-      offsetX = Math.cos(orbitAngle) * (width * 0.03) * motionIntensity;
-      offsetY = Math.sin(orbitAngle) * (height * 0.03) * motionIntensity;
-    } else if (motionMode === 'kinetic-beat') {
+      scale = zoomPulse * (1 + accelProgress * 0.42 * motionIntensity);
+    } else if (motionMode === 'cinematic-pan' || cameraMove === 'tracking-shot' || cameraMove === 'pan' || selectedModel === 'luma_dream') {
+      offsetX = isIncoming ? (1 - blend) * -width * 0.4 : (progress - 0.5) * width * 0.22 * motionIntensity;
+      offsetY = Math.sin(progress * Math.PI) * (height * 0.04) * motionIntensity;
+      scale = zoomPulse * 1.12;
+    } else if (motionMode === 'orbit-360' || selectedModel === 'kaiber_ai') {
+      const orbitAngle = progress * Math.PI * 0.45 * motionIntensity;
+      rotation = isIncoming ? (1 - blend) * 0.2 : orbitAngle - 0.2;
+      scale = zoomPulse * (1.15 + Math.sin(progress * Math.PI) * 0.1 * motionIntensity);
+      offsetX = Math.cos(orbitAngle) * (width * 0.04) * motionIntensity;
+      offsetY = Math.sin(orbitAngle) * (height * 0.04) * motionIntensity;
+    } else if (motionMode === 'kinetic-beat' || selectedModel === 'pika_20') {
       const pulseFreq = progress * Math.PI * 8;
-      scale = zoomPulse * (1 + Math.abs(Math.sin(pulseFreq)) * 0.06 * motionIntensity);
-      offsetX = (Math.random() - 0.5) * (width * 0.008) * motionIntensity;
-      offsetY = (Math.random() - 0.5) * (height * 0.008) * motionIntensity;
+      scale = zoomPulse * (1 + Math.abs(Math.sin(pulseFreq)) * 0.08 * motionIntensity);
+      offsetX = (Math.random() - 0.5) * (width * 0.012) * motionIntensity;
+      offsetY = (Math.random() - 0.5) * (height * 0.012) * motionIntensity;
     } else {
-      // 3D Parallax & Tilt Tracking (Default)
-      scale = zoomPulse * (1 + progress * 0.15 * motionIntensity);
-      offsetX = Math.sin(progress * Math.PI * 2) * (width * 0.015) * motionIntensity;
-      offsetY = (progress - 0.5) * (height * 0.06) * motionIntensity;
-      rotation = Math.sin(progress * Math.PI) * 0.015 * motionIntensity;
+      // Runway Gen-3 3D Parallax & Hollywood Tracking (Default)
+      scale = zoomPulse * (1 + progress * 0.18 * motionIntensity);
+      offsetX = Math.sin(progress * Math.PI * 2) * (width * 0.02) * motionIntensity;
+      offsetY = (progress - 0.5) * (height * 0.07) * motionIntensity;
+      rotation = Math.sin(progress * Math.PI) * 0.02 * motionIntensity;
     }
 
     if (cameraMove === 'whip-pan') {

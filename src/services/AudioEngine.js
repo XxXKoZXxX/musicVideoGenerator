@@ -517,7 +517,10 @@ class AudioEngine {
     }
 
     this.currentMediaElement = mediaElement;
-    this.currentSource = ctx.createMediaElementSource(mediaElement);
+    if (!mediaElement.__sourceNode) {
+      mediaElement.__sourceNode = ctx.createMediaElementSource(mediaElement);
+    }
+    this.currentSource = mediaElement.__sourceNode;
 
     this.gainNode = ctx.createGain();
     this.gainNode.gain.value = (audioBoost || 100) / 100;

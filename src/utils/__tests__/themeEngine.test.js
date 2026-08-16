@@ -21,11 +21,11 @@ describe('Astraea Theme & Typography Customization Engine Tests', () => {
   test('2. FONT_STYLE_PRESETS has 5 diverse font pairings', () => {
     expect(FONT_STYLE_PRESETS.length).toBe(5);
     const ids = FONT_STYLE_PRESETS.map(f => f.id);
+    expect(ids).toContain('playful');
+    expect(ids).toContain('bubbly');
+    expect(ids).toContain('clean_modern');
     expect(ids).toContain('royal');
-    expect(ids).toContain('grimoire');
     expect(ids).toContain('literary');
-    expect(ids).toContain('celestial');
-    expect(ids).toContain('cyber');
   });
 
   test('3. FONT_SIZE_PRESETS contains standard, comfortable, and xlarge', () => {
@@ -47,7 +47,7 @@ describe('Astraea Theme & Typography Customization Engine Tests', () => {
       primary: '#10B981',
       secondary: '#06B6D4',
       background: '#02120B',
-      fontStyleId: 'grimoire',
+      fontStyleId: 'playful',
       fontSizeId: 'comfortable',
       lineHeightId: 'relaxed'
     };
@@ -55,6 +55,6 @@ describe('Astraea Theme & Typography Customization Engine Tests', () => {
     applyTheme(custom);
     const loaded = loadSavedTheme();
     expect(loaded.primary).toBe('#10B981');
-    expect(loaded.fontStyleId).toBe('grimoire');
+    expect(loaded.fontStyleId).toBe('playful');
   });
 });

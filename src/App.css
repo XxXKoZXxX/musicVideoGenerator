@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Comfortaa:wght@600;700&family=Fredoka:wght@400;500;600;700&family=Nunito:ital,wght@0,400;0,600;0,700;0,800;0,900;1,400&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Quicksand:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&family=Cinzel:wght@600;700&family=Lora:ital,wght@0,400;0,600;1,400&display=swap');
 
 :root {
   --bg-dark: #060814;
@@ -15,8 +15,8 @@
   --silver: #E2E8F0;
   --rose: #FB7185;
   --emerald: #34D399;
-  --font-serif: 'Cinzel', serif;
-  --font-sans: 'Plus Jakarta Sans', sans-serif;
+  --font-serif: 'Quicksand', 'Nunito', sans-serif;
+  --font-sans: 'Quicksand', 'Nunito', sans-serif;
   --ease-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
   --ease-smooth: cubic-bezier(0.16, 1, 0.3, 1);
 }

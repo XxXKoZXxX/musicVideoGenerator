@@ -6,7 +6,6 @@ import {
   RefreshCw,
   Check,
   Film,
-  Music2,
   Wand2,
   Disc,
   Clapperboard,
@@ -15,23 +14,29 @@ import {
   Zap,
   Cpu,
   Layers,
+  Monitor,
+  RotateCcw,
 } from 'lucide-react';
 import { generateStorylineFromAudio, generateLyricVisualScenes, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { VideoFetchService } from '../services/VideoFetchService';
 import { AI_VIDEO_MODELS, AI_STORYLINE_GENERATORS } from '../data/aiModels';
+import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
 import '../styles/Step.css';
 
 export default function StepThree({ onNext, onBack, project }) {
   const [activeTab, setActiveTab] = useState('models');
   const [directorMode, setDirectorMode] = useState(project.directorMode || 'hybrid');
+  const [rendererEngine, setRendererEngine] = useState(project.rendererEngine || 'ai-neural');
   const [selectedVideoModel, setSelectedVideoModel] = useState(project.selectedVideoModel || AI_VIDEO_MODELS[0].id);
   const [selectedStoryGenerator, setSelectedStoryGenerator] = useState(project.selectedStoryGenerator || AI_STORYLINE_GENERATORS[0].id);
   const [genre, setGenre] = useState('Cyberpunk / Electro');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+  const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const [generationProgress, setGenerationProgress] = useState(0);
+  const [generationStatus, setGenerationStatus] = useState('');
   const [pexelsApiKey, setPexelsApiKey] = useState(
     project.pexelsApiKey || localStorage.getItem('pexels_api_key') || ''
   );
@@ -179,15 +184,11 @@ export default function StepThree({ onNext, onBack, project }) {
 
   const handleGenerateAIVideos = async () => {
     if (!screenplay?.scenes || isGeneratingVideos) return;
-    
-    if (!pexelsApiKey) {
-      alert('Please enter your free Pexels API Key in the settings below to download dynamic HD video loops for your lyrics!');
-      return;
-    }
 
     setIsGeneratingVideos(true);
     setGenerationProgress(0);
-    
+    setGenerationStatus('Initializing AI video synthesis...');
+
     try {
       const totalScenes = screenplay.scenes.length;
       let completed = 0;
@@ -195,48 +196,82 @@ export default function StepThree({ onNext, onBack, project }) {
 
       for (let i = 0; i < totalScenes; i++) {
         const scene = screenplay.scenes[i];
+        setGenerationStatus(`Synthesizing Scene ${i + 1}/${totalScenes}: "${scene.title || scene.lyricText || 'Motion Cut'}"`);
+        
         try {
-          // Fetch video based on the scene's lyric text or title
-          const query = scene.lyricText || scene.title || 'cinematic motion';
+          const query = scene.lyricText || scene.title || scene.directive || 'cinematic cyberpunk neon';
           const videoMedia = await VideoFetchService.fetchPexelsVideo(query, pexelsApiKey);
-          
-          if (videoMedia) {
+
+          if (videoMedia && videoMedia.url) {
             updatedScenes.push({
               ...scene,
               imageUrl: videoMedia.url,
-              media: videoMedia
+              media: videoMedia,
             });
           } else {
-            // Fallback to stock if no results found
             const fallback = CINEMATIC_STOCK_VIDEOS[i % CINEMATIC_STOCK_VIDEOS.length];
             updatedScenes.push({
               ...scene,
               imageUrl: fallback.url,
-              media: fallback
+              media: fallback,
             });
           }
         } catch (err) {
-          console.error('Video fetch failed for scene:', scene, err);
+          console.warn('Video fetch fallback for scene:', scene, err);
           const fallback = CINEMATIC_STOCK_VIDEOS[i % CINEMATIC_STOCK_VIDEOS.length];
           updatedScenes.push({
             ...scene,
             imageUrl: fallback.url,
-            media: fallback
+            media: fallback,
           });
         }
-        
+
         completed += 1;
         setGenerationProgress(Math.floor((completed / totalScenes) * 100));
+        // Yield briefly for smooth animation
+        await new Promise((r) => setTimeout(r, 120));
       }
-      
+
       setScreenplay({ ...screenplay, scenes: updatedScenes });
-      project.aiGeneratedVideos = updatedScenes.map(s => s.media);
+      project.aiGeneratedVideos = updatedScenes.map((s) => s.media);
+      project.images = updatedScenes.map((s) => s.imageUrl);
+      project.screenplay = { ...screenplay, scenes: updatedScenes };
       project.pexelsApiKey = pexelsApiKey;
-      
+
+      setGenerationStatus('✨ All scene video cuts generated & synchronized!');
     } catch (err) {
       alert('Generation error: ' + err.message);
     } finally {
-      setTimeout(() => setIsGeneratingVideos(false), 500);
+      setTimeout(() => {
+        setIsGeneratingVideos(false);
+        setGenerationStatus('');
+      }, 600);
+    }
+  };
+
+  const handleRegenerateSingleSceneVideo = async (sceneIndex) => {
+    if (!screenplay?.scenes?.[sceneIndex] || regeneratingIndex !== null) return;
+    setRegeneratingIndex(sceneIndex);
+
+    try {
+      const scene = screenplay.scenes[sceneIndex];
+      const query = scene.lyricText || scene.title || scene.directive || 'cinematic lighting motion';
+      const videoMedia = await VideoFetchService.fetchPexelsVideo(query, pexelsApiKey);
+
+      const nextScenes = [...screenplay.scenes];
+      nextScenes[sceneIndex] = {
+        ...scene,
+        imageUrl: videoMedia.url,
+        media: videoMedia,
+      };
+
+      setScreenplay({ ...screenplay, scenes: nextScenes });
+      project.images = nextScenes.map((s) => s.imageUrl);
+      project.screenplay = { ...screenplay, scenes: nextScenes };
+    } catch (err) {
+      console.warn('Failed to regenerate scene video:', err);
+    } finally {
+      setRegeneratingIndex(null);
     }
   };
 
@@ -252,31 +287,69 @@ export default function StepThree({ onNext, onBack, project }) {
   };
 
   const handleNext = () => {
-    onNext({
+    const updated = {
       storyline: aiStoryboard,
       aiStoryboard,
       screenplay,
       directorMode,
+      rendererEngine,
       selectedTemplate,
+      selectedVideoModel,
+      selectedStoryGenerator,
       lyrics: lyricsText,
       lyricsStyle,
       recommendedLut: selectedTemplate?.recommendedLut || 'cyberpunk',
       recommendedVisualizer: selectedTemplate?.recommendedVisualizer || 'radial',
-    });
+    };
+    Object.assign(project, updated);
+    onNext(updated);
   };
+
+  const currentRendererObj = getRendererEngineById(rendererEngine);
 
   return (
     <div className="step-container">
       <div className="step-header">
-        <span className="step-badge">🎬 AI Storyboard & Director Studio</span>
-        <h2>Direct Your Storyline & Lip-Sync Performance</h2>
+        <span className="step-badge">🎬 AI Storyboard & Video Engine Studio</span>
+        <h2>Select Renderer Engine & Generate AI Videos</h2>
         <p>
-          Break down 10 to 14 multi-act scene directives, generate bespoke video frames directly from song lyrics,
-          and tune your director cut mode!
+          Configure high-performance rendering engines, generate full video scene loops for your lyrics,
+          and orchestrate director production cuts!
         </p>
       </div>
 
       <div className="step-content">
+        {/* Quick Renderer Engine Banner */}
+        <div className="renderer-summary-banner" style={{ borderColor: currentRendererObj.color }}>
+          <div className="banner-left">
+            <span className="engine-icon-badge" style={{ background: `${currentRendererObj.color}25`, color: currentRendererObj.color }}>
+              {currentRendererObj.icon}
+            </span>
+            <div>
+              <span className="engine-sublabel">ACTIVE RENDERING ENGINE</span>
+              <h4 style={{ color: currentRendererObj.color }}>{currentRendererObj.name}</h4>
+              <p className="engine-desc-text">{currentRendererObj.tagline}</p>
+            </div>
+          </div>
+          <div className="banner-right">
+            <button
+              className="btn btn-primary btn-generate-hero"
+              onClick={handleGenerateAIVideos}
+              disabled={isGeneratingVideos}
+            >
+              {isGeneratingVideos ? (
+                <>
+                  <RefreshCw size={16} className="spin-icon" /> Generating Videos ({generationProgress}%)...
+                </>
+              ) : (
+                <>
+                  <Film size={16} /> Generate AI Video Scenes 🔥
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Production Director Cut Mode Switcher */}
         <div className="director-mode-card">
           <div className="director-mode-header">
@@ -314,13 +387,13 @@ export default function StepThree({ onNext, onBack, project }) {
             className={`tab-btn ${activeTab === 'models' ? 'active' : ''}`}
             onClick={() => setActiveTab('models')}
           >
-            <Cpu size={18} /> AI Video & Story Engine Suite
+            <Cpu size={18} /> Renderer & AI Engine Suite
           </button>
           <button
             className={`tab-btn ${activeTab === 'screenplay' ? 'active' : ''}`}
             onClick={() => setActiveTab('screenplay')}
           >
-            <Film size={18} /> Directorial Screenplay
+            <Film size={18} /> Directorial Screenplay & Video Clips
           </button>
           <button
             className={`tab-btn ${activeTab === 'ai' ? 'active' : ''}`}
@@ -342,13 +415,58 @@ export default function StepThree({ onNext, onBack, project }) {
           </button>
         </div>
 
-        {/* TAB 0: AI VIDEO MODELS & STORYLINE SUITE */}
+        {/* TAB 0: RENDERER ENGINES & AI MODELS */}
         {activeTab === 'models' && (
           <div className="tab-pane">
+            {/* SECTION 1: MASTER RENDERER SELECTION */}
             <div className="section-title">
+              <Monitor size={20} color="#38bdf8" />
+              <h3>Select Video Renderer Engine</h3>
+              <p>Choose the core graphical compositing & master rendering pipeline</p>
+            </div>
+
+            <div className="renderer-engines-grid">
+              {RENDERER_ENGINES.map((engine) => {
+                const isSelected = rendererEngine === engine.id;
+                return (
+                  <div
+                    key={engine.id}
+                    className={`renderer-engine-card ${isSelected ? 'selected' : ''}`}
+                    onClick={() => {
+                      setRendererEngine(engine.id);
+                      project.rendererEngine = engine.id;
+                    }}
+                    style={{ borderColor: isSelected ? engine.color : 'rgba(255, 255, 255, 0.08)' }}
+                  >
+                    <div className="engine-card-top">
+                      <span className="engine-icon">{engine.icon}</span>
+                      <span className="engine-badge" style={{ background: `${engine.color}22`, color: engine.color }}>
+                        {engine.badge}
+                      </span>
+                    </div>
+                    <h4>{engine.name}</h4>
+                    <p className="engine-tagline">{engine.tagline}</p>
+                    <div className="engine-features-list">
+                      {engine.features.map((f, i) => (
+                        <div key={i} className="engine-feat-item">
+                          <Check size={12} color={engine.color} />
+                          <span>{f}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="engine-rec">
+                      <span>💡 <em>{engine.recommendedFor}</em></span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* SECTION 2: AI VIDEO MOTION MODELS */}
+            <div className="section-title" style={{ marginTop: 32 }}>
               <Cpu size={20} color="#06b6d4" />
               <h3>Select AI Video Motion Engine</h3>
-              <p>Choose the neural AI generator engine that powers your camera dynamics and render quality</p>
+              <p>Choose the neural AI generator engine that powers camera dynamics and image-to-video motion</p>
             </div>
 
             <div className="ai-models-grid">
@@ -382,7 +500,8 @@ export default function StepThree({ onNext, onBack, project }) {
               })}
             </div>
 
-            <div className="section-title" style={{ marginTop: 28 }}>
+            {/* SECTION 3: STORYLINE SCRIPT GENERATORS */}
+            <div className="section-title" style={{ marginTop: 32 }}>
               <Layers size={20} color="#ec4899" />
               <h3>Select AI Storyline & Script Generator</h3>
               <p>Choose the AI intelligence model used to synthesize scene screenplays and lyric visual directives</p>
@@ -420,7 +539,7 @@ export default function StepThree({ onNext, onBack, project }) {
           </div>
         )}
 
-        {/* TAB 1: 4-ACT SCREENPLAY BREAKDOWN */}
+        {/* TAB 1: 4-ACT SCREENPLAY BREAKDOWN & VIDEO CLIPS */}
         {activeTab === 'screenplay' && (
           <div className="screenplay-panel">
             <div className="screenplay-header-strip">
@@ -431,13 +550,13 @@ export default function StepThree({ onNext, onBack, project }) {
                 </span>
               </div>
               <div className="screenplay-actions-group">
-                <input 
-                  type="password" 
-                  className="settings-input" 
-                  placeholder="Pexels API Key (saved automatically)" 
+                <input
+                  type="password"
+                  className="settings-input pexels-key-input"
+                  placeholder="Optional Pexels API Key"
                   value={pexelsApiKey}
                   onChange={(e) => handlePexelsKeyChange(e.target.value)}
-                  style={{ width: '220px', marginRight: '10px' }}
+                  title="Optional: Leave blank to use built-in HD video loops & AI procedural animations"
                 />
                 <button className="btn btn-secondary btn-sm" onClick={handleEnhancePrompts} title="Add Hollywood 8K, cinematic lighting, and lens keywords">
                   <Sparkles size={14} color="#06b6d4" /> AI Enhance
@@ -445,32 +564,41 @@ export default function StepThree({ onNext, onBack, project }) {
                 <button className="btn btn-secondary btn-sm" onClick={handleAutoSnapBeatDrops} title="Align all scene cuts to 808 kick drops">
                   <Zap size={14} color="#ec4899" /> Snap to Drops
                 </button>
-                <button className="btn btn-primary btn-sm" onClick={handleGenerateLyricVideo} title="Automatically extract song lyrics and generate visual video scenes for every line">
-                  <Wand2 size={14} /> Generate Scenes from Lyrics
+                <button className="btn btn-secondary btn-sm" onClick={handleGenerateLyricVideo} title="Automatically extract song lyrics and generate visual video scenes for every line">
+                  <Wand2 size={14} /> Lyric Scenes
                 </button>
-                <button className="btn btn-secondary btn-sm" onClick={() => handleGenerateAIVideos()} title="Generate AI motion video loops for all scenes">
-                  <Film size={14} /> {isGeneratingVideos ? 'Fetching...' : 'Generate AI Videos'}
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={handleGenerateAIVideos}
+                  disabled={isGeneratingVideos}
+                  title="Generate dynamic AI motion video loops for all scenes"
+                >
+                  <Film size={14} /> {isGeneratingVideos ? 'Synthesizing...' : 'Generate AI Video Clips'}
                 </button>
                 <span className="acts-pill">{screenplay.scenes?.length || 6} Directorial Scenes</span>
               </div>
             </div>
 
+            {/* Video Generation Progress Modal */}
             {isGeneratingVideos && (
               <div className="video-generation-modal">
                 <div className="generation-progress-box">
-                  <RefreshCw size={24} className="spin-icon text-cyan" />
-                  <h3>Synthesizing {screenplay.scenes?.length} AI Video Scenes...</h3>
+                  <RefreshCw size={28} className="spin-icon text-cyan" />
+                  <h3>Generating AI Video Scenes...</h3>
                   <div className="progress-bar-container">
                     <div className="progress-bar-fill" style={{ width: `${generationProgress}%` }}></div>
                   </div>
-                  <p>Running Luma / Gen-3 simulation rendering... Please wait.</p>
+                  <span className="progress-percent font-mono">{generationProgress}% Completed</span>
+                  <p className="generation-status-text">{generationStatus}</p>
                 </div>
               </div>
             )}
 
             <div className="screenplay-scenes-grid">
               {screenplay.scenes?.map((scene, idx) => {
-                const isVideo = scene.media?.type === 'video' || scene.imageUrl?.includes('.mp4');
+                const isVideo = scene.media?.type === 'video' || (typeof scene.imageUrl === 'string' && (scene.imageUrl.includes('.mp4') || scene.imageUrl.includes('blob:')));
+                const isRegenerating = regeneratingIndex === idx;
+
                 return (
                   <div key={scene.id || idx} className="screenplay-scene-card">
                     <div className="scene-card-media">
@@ -480,6 +608,11 @@ export default function StepThree({ onNext, onBack, project }) {
                         <img src={scene.imageUrl} alt={scene.title} />
                       )}
                       <span className="act-tag">{scene.act}</span>
+                      {isVideo && (
+                        <span className="video-cut-pill">
+                          <Film size={11} /> VIDEO CLIP
+                        </span>
+                      )}
                       {scene.isSingerCut ? (
                         <span className="cut-type-badge singer-badge">
                           <Video size={12} /> Lip-Sync Cut
@@ -490,20 +623,29 @@ export default function StepThree({ onNext, onBack, project }) {
                         </span>
                       )}
                     </div>
-                  <div className="scene-card-body">
-                    <div className="scene-card-title-row">
-                      <h4>
-                        Scene {idx + 1}: {scene.title}
-                      </h4>
-                      <span className="camera-pill">{scene.cameraMove}</span>
+                    <div className="scene-card-body">
+                      <div className="scene-card-title-row">
+                        <h4>
+                          Scene {idx + 1}: {scene.title}
+                        </h4>
+                        <span className="camera-pill">{scene.cameraMove}</span>
+                      </div>
+                      <p className="scene-directive">{scene.directive}</p>
+                      <div className="scene-card-bottom-row">
+                        <span className="scene-timing-badge font-mono">
+                          {Math.round(scene.startTime || 0)}s - {Math.round(scene.endTime || 5)}s
+                        </span>
+                        <button
+                          className="btn-regen-scene"
+                          onClick={() => handleRegenerateSingleSceneVideo(idx)}
+                          disabled={isRegenerating}
+                          title="Generate a new video clip for this scene"
+                        >
+                          <RotateCcw size={12} className={isRegenerating ? 'spin-icon' : ''} />
+                          {isRegenerating ? 'Regenerating...' : 'New Video Clip'}
+                        </button>
+                      </div>
                     </div>
-                    <p className="scene-directive">{scene.directive}</p>
-                    <div className="scene-timing-bar">
-                      <span className="font-mono">
-                        {Math.round(scene.startTime)}s - {Math.round(scene.endTime)}s
-                      </span>
-                    </div>
-                  </div>
                   </div>
                 );
               })}
@@ -594,20 +736,15 @@ export default function StepThree({ onNext, onBack, project }) {
                     className={`template-box-card ${isSelected ? 'selected' : ''}`}
                     onClick={() => handleApplyTemplate(tmpl)}
                   >
-                    <div className="template-box-top">
-                      <h4>{tmpl.name}</h4>
-                      <span className="mood-tag">{tmpl.mood}</span>
+                    <div className="tmpl-top">
+                      <span className="tmpl-genre">{tmpl.genre}</span>
+                      {isSelected && <Check size={16} color="#06b6d4" />}
                     </div>
-                    <p className="template-desc">{tmpl.description}</p>
-                    <div className="template-meta-strip">
-                      <span className="meta-genre">{tmpl.genre}</span>
-                      {isSelected ? (
-                        <span className="applied-pill">
-                          <Check size={12} /> Active
-                        </span>
-                      ) : (
-                        <span className="apply-btn-pill">Apply Template</span>
-                      )}
+                    <h4>{tmpl.name}</h4>
+                    <p className="tmpl-mood">Mood: {tmpl.mood}</p>
+                    <p className="tmpl-desc">{tmpl.description}</p>
+                    <div className="tmpl-scenes-preview">
+                      <span>{tmpl.scenes?.length || 10} Narrative Acts Included</span>
                     </div>
                   </div>
                 );
@@ -616,86 +753,45 @@ export default function StepThree({ onNext, onBack, project }) {
           </div>
         )}
 
-        {/* TAB 4: KINETIC LYRICS STUDIO */}
+        {/* TAB 4: SYNCHRONIZED LYRICS */}
         {activeTab === 'lyrics' && (
-          <div className="lyrics-panel">
-            <div className="lyrics-editor-grid">
-              <div className="lyrics-input-column">
-                <div className="column-header">
-                  <Music2 size={18} />
-                  <h4>Song Lyrics (Timed LRC or Plain Text)</h4>
-                </div>
-                <textarea
-                  className="lyrics-textarea"
-                  value={lyricsText}
-                  onChange={(e) => setLyricsText(e.target.value)}
-                  rows={8}
-                  placeholder={`[00:00.00] Line 1...\n[00:06.00] Line 2...`}
-                />
-                <p className="lyrics-hint">
-                  Tip: Include [mm:ss.xx] timestamps for millisecond precision, or enter plain lines
-                  for auto-timed pacing.
-                </p>
+          <div className="lyrics-editor-panel">
+            <div className="lyrics-header-row">
+              <div>
+                <h3>Synced LRC Lyrics & Kinetic Typography</h3>
+                <p>Edit time-coded lyrics in [MM:SS.xx] format or paste raw lyrics to auto-time</p>
               </div>
-
-              <div className="lyrics-style-column">
-                <h4>Kinetic Typography Visual Style</h4>
-                <div className="style-options-grid">
-                  {[
-                    {
-                      id: 'neon',
-                      name: 'Neon Glow Pulse',
-                      desc: 'Cyberpunk glowing cyan/magenta aura',
-                    },
-                    {
-                      id: 'karaoke',
-                      name: 'Karaoke Word Highlight',
-                      desc: 'Live word-by-word progressive color fill',
-                    },
-                    {
-                      id: 'kinetic',
-                      name: 'Kinetic Pop & Spring',
-                      desc: 'Explosive scale-pop synchronized to beats',
-                    },
-                    {
-                      id: 'glitch',
-                      name: 'Chromatic RGB Glitch',
-                      desc: 'Digital color split on sub-bass kicks',
-                    },
-                    {
-                      id: 'perspective',
-                      name: '3D Perspective Warp',
-                      desc: 'Angled cinematic typography fly-in',
-                    },
-                    {
-                      id: 'cinema',
-                      name: 'Classic Cinema Subtitle',
-                      desc: 'Golden film subtitles with soft letterbox pill',
-                    },
-                  ].map((st) => (
-                    <div
-                      key={st.id}
-                      className={`style-card ${lyricsStyle === st.id ? 'active' : ''}`}
-                      onClick={() => setLyricsStyle(st.id)}
-                    >
-                      <h5>{st.name}</h5>
-                      <p>{st.desc}</p>
-                    </div>
-                  ))}
-                </div>
+              <div className="lyrics-style-picker">
+                <label>Typography Style:</label>
+                <select value={lyricsStyle} onChange={(e) => setLyricsStyle(e.target.value)}>
+                  <option value="neon">Neon Cyan Glow (Cyberpunk)</option>
+                  <option value="karaoke">Karaoke Bounce Word-by-Word</option>
+                  <option value="cinema">Cinema 35mm Minimalist</option>
+                  <option value="glitch">Glitch Cyber Matrix</option>
+                  <option value="bold">Bold Impact Pop</option>
+                </select>
               </div>
             </div>
+
+            <textarea
+              className="lyrics-textarea font-mono"
+              rows={12}
+              value={lyricsText}
+              onChange={(e) => setLyricsText(e.target.value)}
+              placeholder="[00:00.00] Line 1&#10;[00:06.00] Line 2..."
+            />
           </div>
         )}
-      </div>
 
-      <div className="step-footer">
-        <button className="btn btn-secondary" onClick={onBack}>
-          ← Back to Audio Beats
-        </button>
-        <button className="btn btn-primary btn-large" onClick={handleNext}>
-          Launch Studio Monitor & Render 4K →
-        </button>
+        {/* Navigation Action Buttons */}
+        <div className="step-actions-footer">
+          <button className="btn btn-secondary" onClick={onBack}>
+            ← Back to Audio
+          </button>
+          <button className="btn btn-primary btn-large" onClick={handleNext}>
+            Proceed to Live Studio Monitor & Render Master →
+          </button>
+        </div>
       </div>
     </div>
   );

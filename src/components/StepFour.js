@@ -3,7 +3,6 @@ import {
   Play,
   Pause,
   Download,
-  Settings2,
   Zap,
   RefreshCw,
   Video,
@@ -12,6 +11,8 @@ import {
   Mic2,
   Activity,
   Palette,
+  Monitor,
+  RotateCcw,
 } from 'lucide-react';
 import {
   VideoGenerator,
@@ -24,9 +25,11 @@ import {
 import { audioEngine } from '../services/AudioEngine';
 import { LyricsEngine } from '../services/LyricsEngine';
 import { lipSyncEngine } from '../services/LipSyncEngine';
-import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
+import { StoryDirector } from '../services/StoryDirector';
 import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
 import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
+import { AI_VIDEO_MODELS } from '../data/aiModels';
+import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
 import '../styles/Step.css';
 
 export default function StepFour({ onBack, project }) {
@@ -38,11 +41,13 @@ export default function StepFour({ onBack, project }) {
 
   // Settings State
   const [settings, setSettings] = useState({
+    rendererEngine: project.rendererEngine || 'ai-neural',
     renderStyle: project.renderStyle || 'photoreal',
+    selectedVideoModel: project.selectedVideoModel || 'sora_ai',
     atmosphereMode: project.atmosphereMode || 'rain',
     enableMotionBlur: true,
     enableStageSpotlights: true,
-    resolution: '1080p',
+    resolution: project.resolution || '1080p',
     aspectRatio: project.aspectRatio || '16:9',
     fps: 30,
     quality: 'high',
@@ -87,7 +92,9 @@ export default function StepFour({ onBack, project }) {
 
   useEffect(() => {
     settingsRef.current = settings;
-  }, [settings]);
+    project.rendererEngine = settings.rendererEngine;
+    project.renderStyle = settings.renderStyle;
+  }, [settings, project]);
 
   // Preload Images, Size Canvas, and Parse Lyrics on Mount
   useEffect(() => {
@@ -182,20 +189,23 @@ export default function StepFour({ onBack, project }) {
 
     audioEngine.setupAnalysers(liveAudioRef.current, settings.audioBoost);
 
-    liveAudioRef.current.play().then(() => {
-      setIsPlaying(true);
-      const loop = () => {
-        if (liveAudioRef.current && !liveAudioRef.current.paused) {
-          const t = liveAudioRef.current.currentTime;
-          setCurrentTime(t);
-          drawPreviewFrame(t);
-          liveAnimFrameRef.current = requestAnimationFrame(loop);
-        } else {
-          setIsPlaying(false);
-        }
-      };
-      liveAnimFrameRef.current = requestAnimationFrame(loop);
-    }).catch((e) => console.warn(e));
+    liveAudioRef.current
+      .play()
+      .then(() => {
+        setIsPlaying(true);
+        const loop = () => {
+          if (liveAudioRef.current && !liveAudioRef.current.paused) {
+            const t = liveAudioRef.current.currentTime;
+            setCurrentTime(t);
+            drawPreviewFrame(t);
+            liveAnimFrameRef.current = requestAnimationFrame(loop);
+          } else {
+            setIsPlaying(false);
+          }
+        };
+        liveAnimFrameRef.current = requestAnimationFrame(loop);
+      })
+      .catch((e) => console.warn(e));
   };
 
   const stopLivePlayback = () => {
@@ -233,6 +243,7 @@ export default function StepFour({ onBack, project }) {
     setIsExporting(true);
     setError(null);
     setExportProgress(0);
+    setVideoResult(null);
 
     const videoGen = new VideoGenerator(project, settings, (p) => setExportProgress(p));
     generatorRef.current = videoGen;
@@ -254,7 +265,7 @@ export default function StepFour({ onBack, project }) {
 
   const handleDownloadVideo = async () => {
     if (!videoResult) return;
-    const filename = `MusicVid_${settings.renderStyle}_${settings.resolution}_${settings.aspectRatio.replace(':', 'x')}.${videoResult.extension}`;
+    const filename = `MusicVid_${settings.rendererEngine}_${settings.renderStyle}_${settings.resolution}_${settings.aspectRatio.replace(':', 'x')}.${videoResult.extension}`;
 
     if (window.electron?.saveVideo) {
       const bytes = new Uint8Array(await videoResult.blob.arrayBuffer());
@@ -276,16 +287,47 @@ export default function StepFour({ onBack, project }) {
   };
 
   const activeStyleObj = getRenderStyleById(settings.renderStyle);
+  const activeEngineObj = getRendererEngineById(settings.rendererEngine);
 
   return (
     <div className="step-container step-four-container">
       <div className="step-header">
         <span className="step-badge">🔥 Master Studio Monitor & 4K Render</span>
-        <h2>Live Studio Monitor & Master Video Export</h2>
+        <h2>Live Studio Monitor & Video Master Export</h2>
         <p>
           Preview your AI music video live at 60 FPS with audio-reactive viseme lip-syncing,
-          Hollywood FX rack, and master 4K rendering!
+          switch renderer engines on the fly, and render your master video!
         </p>
+      </div>
+
+      {/* RENDERER SELECTION STRIP */}
+      <div className="renderer-selector-strip">
+        <div className="strip-label-col">
+          <Monitor size={18} color="#06b6d4" />
+          <span>Active Renderer:</span>
+        </div>
+        <div className="renderer-pills-row">
+          {RENDERER_ENGINES.map((engine) => {
+            const isSelected = settings.rendererEngine === engine.id;
+            return (
+              <button
+                key={engine.id}
+                className={`renderer-pill-btn ${isSelected ? 'active' : ''}`}
+                onClick={() => setSettings({ ...settings, rendererEngine: engine.id })}
+                style={{
+                  borderColor: isSelected ? engine.color : 'transparent',
+                  background: isSelected ? `${engine.color}20` : 'rgba(255,255,255,0.04)',
+                }}
+              >
+                <span className="pill-icon">{engine.icon}</span>
+                <span className="pill-name">{engine.name}</span>
+                <span className="pill-badge-tag" style={{ color: engine.color }}>
+                  {engine.badge}
+                </span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div className="studio-layout-grid">
@@ -306,6 +348,12 @@ export default function StepFour({ onBack, project }) {
                 <span className="status-text">{isPlaying ? 'LIVE 60 FPS' : 'PAUSED'}</span>
                 <span className="style-pill-badge" style={{ marginLeft: 8 }}>
                   {activeStyleObj.badge}
+                </span>
+                <span
+                  className="style-pill-badge engine-pill-badge"
+                  style={{ marginLeft: 6, borderColor: activeEngineObj.color, color: activeEngineObj.color }}
+                >
+                  {activeEngineObj.icon} {activeEngineObj.badge}
                 </span>
               </div>
               <div className="aspect-pill-group">
@@ -341,7 +389,9 @@ export default function StepFour({ onBack, project }) {
               </div>
 
               <div className="viseme-meter">
-                <span className="viseme-tag">Viseme: <strong>{currentShotInfo.viseme || 'REST'}</strong></span>
+                <span className="viseme-tag">
+                  Viseme: <strong>{currentShotInfo.viseme || 'REST'}</strong>
+                </span>
                 <span className="vocal-energy-tag">
                   <Activity size={12} /> Vocal: {currentShotInfo.energy || 0}%
                 </span>
@@ -380,58 +430,175 @@ export default function StepFour({ onBack, project }) {
             {isExporting ? (
               <div className="export-rendering-state">
                 <div className="render-spinner">
-                  <RefreshCw size={28} className="spin-icon" />
+                  <RefreshCw size={28} className="spin-icon text-cyan" />
                 </div>
                 <div className="render-info">
-                  <h4>Rendering Master Music Video...</h4>
+                  <h4>Rendering Master Music Video ({settings.resolution})...</h4>
                   <div className="render-progress-bar">
                     <div className="render-progress-fill" style={{ width: `${exportProgress}%` }} />
                   </div>
-                  <span className="render-percent font-mono">{exportProgress}% Complete</span>
+                  <span className="render-percent font-mono">
+                    {exportProgress}% Complete — {activeEngineObj.name}
+                  </span>
                 </div>
                 <button className="btn btn-secondary btn-sm" onClick={handleCancelExport}>
                   Cancel
                 </button>
               </div>
             ) : videoResult ? (
-              <div className="export-completed-state">
-                <CheckCircle size={32} color="#10b981" />
-                <div className="completed-info">
-                  <h4>Master Video Ready for Download!</h4>
-                  <p>
-                    {videoResult.width}×{videoResult.height} · {Math.round(videoResult.duration)}s ·{' '}
-                    {videoResult.extension.toUpperCase()} High Bitrate
-                  </p>
+              <div className="export-completed-container">
+                <div className="export-completed-header">
+                  <div className="completed-title-row">
+                    <CheckCircle size={26} color="#10b981" />
+                    <div>
+                      <h4>Master Video Rendered Successfully!</h4>
+                      <p>
+                        {videoResult.width}×{videoResult.height} ({settings.resolution}) · {settings.fps} FPS ·{' '}
+                        {Math.round(videoResult.duration)}s · {videoResult.extension.toUpperCase()}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="completed-actions">
+                    <button className="btn btn-primary btn-large" onClick={handleDownloadVideo}>
+                      <Download size={20} /> Download Master Video
+                    </button>
+                    <button
+                      className="btn btn-secondary btn-sm"
+                      onClick={() => setVideoResult(null)}
+                      title="Render with different settings or renderer"
+                    >
+                      <RotateCcw size={15} /> Render Again
+                    </button>
+                  </div>
                 </div>
-                <button className="btn btn-primary btn-large" onClick={handleDownloadVideo}>
-                  <Download size={20} /> Download Master Video
-                </button>
+
+                {/* Master Video Player Viewport */}
+                <div className="master-player-box">
+                  <video
+                    src={videoResult.url}
+                    controls
+                    autoPlay
+                    playsInline
+                    className="master-video-element"
+                  />
+                </div>
               </div>
             ) : (
-              <button
-                className="btn btn-primary btn-large btn-master-render"
-                onClick={handleStartExport}
-              >
-                <Video size={24} /> Render Master Music Video 🔥 ({settings.resolution})
-              </button>
+              <div className="render-cta-box">
+                <button
+                  className="btn btn-primary btn-large btn-master-render"
+                  onClick={handleStartExport}
+                >
+                  <Video size={24} /> Render Master Music Video 🔥 ({settings.resolution} · {settings.fps} FPS)
+                </button>
+                <span className="render-cta-sub">
+                  Powered by {activeEngineObj.name} · {settings.quality.toUpperCase()} Bitrate
+                </span>
+              </div>
             )}
 
             {error && <div className="export-error-msg">❌ {error}</div>}
           </div>
         </div>
 
-        {/* RIGHT COLUMN: LIVE VISUALIZER, LIP-SYNC & FX RACK */}
+        {/* RIGHT COLUMN: RENDERER SETTINGS & FX RACK */}
         <div className="studio-rack-column">
           <div className="rack-panel">
-            {/* VIDEO RENDERING STYLE & AESTHETICS */}
+            {/* RENDERER ENGINE & OUTPUT RESOLUTION */}
             <div className="rack-section-header">
-              <Palette size={18} />
-              <h4>Video Rendering Aesthetic Engine</h4>
+              <Monitor size={18} color="#06b6d4" />
+              <h4>Renderer Engine & Output Master</h4>
             </div>
 
             <div className="rack-content">
               <div className="rack-field">
-                <label>Rendering Aesthetic:</label>
+                <label>Renderer Engine:</label>
+                <select
+                  value={settings.rendererEngine}
+                  onChange={(e) => setSettings({ ...settings, rendererEngine: e.target.value })}
+                >
+                  {RENDERER_ENGINES.map((eng) => (
+                    <option key={eng.id} value={eng.id}>
+                      {eng.icon} {eng.name} ({eng.badge})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rack-field">
+                <label>Master Resolution Presets:</label>
+                <select
+                  value={settings.resolution}
+                  onChange={(e) => setSettings({ ...settings, resolution: e.target.value })}
+                >
+                  {Object.entries(RESOLUTION_PRESETS).map(([key, val]) => (
+                    <option key={key} value={key}>
+                      {val.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rack-field">
+                <label>Framerate (FPS):</label>
+                <select
+                  value={settings.fps}
+                  onChange={(e) => setSettings({ ...settings, fps: Number(e.target.value) })}
+                >
+                  <option value={24}>24 FPS (Cinematic Film Standard)</option>
+                  <option value={30}>30 FPS (Broadcast Standard)</option>
+                  <option value={60}>60 FPS (Ultra-Fluid 4K Gaming / Web)</option>
+                </select>
+              </div>
+
+              <div className="rack-field">
+                <label>Encoding Bitrate Quality:</label>
+                <select
+                  value={settings.quality}
+                  onChange={(e) => setSettings({ ...settings, quality: e.target.value })}
+                >
+                  <option value="standard">Standard (5 Mbps - Fast Share)</option>
+                  <option value="high">High (10 Mbps - YouTube HD)</option>
+                  <option value="ultra">Ultra Master (18 Mbps - 4K Cinema Master)</option>
+                </select>
+              </div>
+            </div>
+
+            {/* VIDEO RENDERING STYLE & AESTHETICS */}
+            <div className="rack-section-header" style={{ marginTop: 24 }}>
+              <Palette size={18} color="#ec4899" />
+              <h4>Aesthetic Style & Color Grading</h4>
+            </div>
+
+            <div className="rack-content">
+              <div className="rack-field">
+                <label>AI Video Generator Engine:</label>
+                <select
+                  value={settings.selectedVideoModel || project.selectedVideoModel || 'sora_ai'}
+                  onChange={(e) => {
+                    const modelId = e.target.value;
+                    const modelObj = AI_VIDEO_MODELS.find((m) => m.id === modelId);
+                    setSettings({
+                      ...settings,
+                      selectedVideoModel: modelId,
+                      motionMode: modelObj?.motionMode || settings.motionMode,
+                    });
+                    project.selectedVideoModel = modelId;
+                    if (modelObj?.motionMode) {
+                      project.motionMode = modelObj.motionMode;
+                    }
+                  }}
+                >
+                  {AI_VIDEO_MODELS.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.icon} {m.name} ({m.badge})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rack-field">
+                <label>Rendering Aesthetic Style:</label>
                 <select
                   value={settings.renderStyle}
                   onChange={(e) => {
@@ -455,6 +622,37 @@ export default function StepFour({ onBack, project }) {
               </div>
 
               <div className="rack-field">
+                <label>Cinematic 3D Camera Motion:</label>
+                <select
+                  value={settings.motionMode || project.motionMode || '3d-parallax'}
+                  onChange={(e) => {
+                    setSettings({ ...settings, motionMode: e.target.value });
+                    project.motionMode = e.target.value;
+                  }}
+                >
+                  {IMAGE_TO_VIDEO_MODES.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rack-field">
+                <label>Color LUT Cinema Grading:</label>
+                <select
+                  value={settings.colorLut}
+                  onChange={(e) => setSettings({ ...settings, colorLut: e.target.value })}
+                >
+                  {Object.entries(COLOR_LUTS).map(([key, val]) => (
+                    <option key={key} value={key}>
+                      {val.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="rack-field">
                 <label>Environmental Atmosphere Physics:</label>
                 <select
                   value={settings.atmosphereMode}
@@ -468,22 +666,9 @@ export default function StepFour({ onBack, project }) {
                 </select>
               </div>
 
-              {/* Aesthetic-Specific Shader Toggles */}
+              {/* Shaders & Overlays Toggles */}
               <div className="rack-toggle-row">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.enableSpeedLines}
-                    onChange={(e) =>
-                      setSettings({ ...settings, enableSpeedLines: e.target.checked })
-                    }
-                  />
-                  <span>Anime Action Speed Lines</span>
-                </label>
-              </div>
-
-              <div className="rack-toggle-row">
-                <label className="checkbox-label">
+                <label className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={settings.enableAnamorphicFlares}
@@ -491,12 +676,13 @@ export default function StepFour({ onBack, project }) {
                       setSettings({ ...settings, enableAnamorphicFlares: e.target.checked })
                     }
                   />
-                  <span>Anamorphic Cinema Blue Lens Flares</span>
+                  <span className="slider round"></span>
                 </label>
+                <span>Hollywood Anamorphic Lens Flares</span>
               </div>
 
               <div className="rack-toggle-row">
-                <label className="checkbox-label">
+                <label className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={settings.enableHoloHud}
@@ -504,280 +690,87 @@ export default function StepFour({ onBack, project }) {
                       setSettings({ ...settings, enableHoloHud: e.target.checked })
                     }
                   />
-                  <span>Cyberpunk Holographic HUD Grid</span>
+                  <span className="slider round"></span>
                 </label>
+                <span>Holographic HUD & Cyber Grid</span>
               </div>
 
               <div className="rack-toggle-row">
-                <label className="checkbox-label">
+                <label className="toggle-switch">
                   <input
                     type="checkbox"
-                    checked={settings.enableCartoonInk || settings.renderStyle === 'cartoon_2d' || settings.renderStyle === 'chibi_anime'}
-                    onChange={(e) =>
-                      setSettings({ ...settings, enableCartoonInk: e.target.checked })
-                    }
-                  />
-                  <span>2D Cartoon Ink Outlines & Animated Pop Stars</span>
-                </label>
-              </div>
-
-              <div className="rack-toggle-row">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.enableTvBroadcastGraphic !== false}
+                    checked={settings.enableTvBroadcastGraphic}
                     onChange={(e) =>
                       setSettings({ ...settings, enableTvBroadcastGraphic: e.target.checked })
                     }
                   />
-                  <span>TV Broadcast Lower-Third Graphic (MTV / VEVO 4K)</span>
+                  <span className="slider round"></span>
                 </label>
-              </div>
-            </div>
-
-            {/* IMAGE-TO-VIDEO MOTION ENGINE */}
-            <div className="rack-section-header" style={{ marginTop: 20 }}>
-              <Video size={18} />
-              <h4>Image-to-Video Motion Engine</h4>
-            </div>
-
-            <div className="rack-content">
-              <div className="rack-field">
-                <label>Motion Simulation Mode:</label>
-                <select
-                  value={settings.motionMode}
-                  onChange={(e) => setSettings({ ...settings, motionMode: e.target.value })}
-                >
-                  {IMAGE_TO_VIDEO_MODES.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="rack-field">
-                <label>Motion Speed & Depth Intensity ({settings.motionIntensity || 100}%):</label>
-                <input
-                  type="range"
-                  min="30"
-                  max="200"
-                  value={settings.motionIntensity || 100}
-                  onChange={(e) =>
-                    setSettings({ ...settings, motionIntensity: parseInt(e.target.value) })
-                  }
-                />
-              </div>
-            </div>
-
-            {/* DIRECTOR CUT MODE & LIP-SYNC */}
-            <div className="rack-section-header" style={{ marginTop: 20 }}>
-              <Clapperboard size={18} />
-              <h4>Director Cut & Lip-Sync Controls</h4>
-            </div>
-
-            <div className="rack-content">
-              <div className="rack-field">
-                <label>Director Cut Mode:</label>
-                <select
-                  value={settings.directorMode}
-                  onChange={(e) => setSettings({ ...settings, directorMode: e.target.value })}
-                >
-                  {DIRECTOR_MODES.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="rack-field">
-                <label>Lip-Sync Mouth Motion Sensitivity:</label>
-                <div className="slider-with-val">
-                  <input
-                    type="range"
-                    min="50"
-                    max="200"
-                    value={Math.round((settings.lipSyncSensitivity || 1.2) * 100)}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        lipSyncSensitivity: parseInt(e.target.value) / 100,
-                      })
-                    }
-                  />
-                  <span className="font-mono">
-                    {Math.round((settings.lipSyncSensitivity || 1.2) * 100)}%
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            {/* AUDIO VISUALIZER & SHADERS */}
-            <div className="rack-section-header" style={{ marginTop: 20 }}>
-              <Zap size={18} />
-              <h4>Audio Visualizer & Shaders</h4>
-            </div>
-
-            <div className="rack-content">
-              <div className="rack-field">
-                <label>Visualizer Style:</label>
-                <select
-                  value={settings.visualizerStyle}
-                  onChange={(e) => setSettings({ ...settings, visualizerStyle: e.target.value })}
-                >
-                  {VISUALIZER_STYLES.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="rack-row">
-                <div className="rack-field flex-1">
-                  <label>Glow Color:</label>
-                  <input
-                    type="color"
-                    className="color-picker-input"
-                    value={settings.visualizerColor}
-                    onChange={(e) =>
-                      setSettings({ ...settings, visualizerColor: e.target.value })
-                    }
-                  />
-                </div>
-                <div className="rack-field flex-2">
-                  <label>Intensity ({settings.visualizerIntensity}%):</label>
-                  <input
-                    type="range"
-                    min="20"
-                    max="150"
-                    value={settings.visualizerIntensity}
-                    onChange={(e) =>
-                      setSettings({ ...settings, visualizerIntensity: parseInt(e.target.value) })
-                    }
-                  />
-                </div>
-              </div>
-
-              <div className="rack-field">
-                <label>Cinematic Color LUT & Mood:</label>
-                <select
-                  value={settings.colorLut}
-                  onChange={(e) => setSettings({ ...settings, colorLut: e.target.value })}
-                >
-                  {Object.entries(COLOR_LUTS).map(([key, val]) => (
-                    <option key={key} value={key}>
-                      {val.name}
-                    </option>
-                  ))}
-                </select>
+                <span>VEVO / MTV Lower-Third Song Broadcast Tag</span>
               </div>
 
               <div className="rack-toggle-row">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.cameraShake}
-                    onChange={(e) => setSettings({ ...settings, cameraShake: e.target.checked })}
-                  />
-                  <span>Camera Shake on 808 / Kick</span>
-                </label>
-                {settings.cameraShake && (
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={settings.shakeIntensity}
-                    onChange={(e) =>
-                      setSettings({ ...settings, shakeIntensity: parseInt(e.target.value) })
-                    }
-                    style={{ width: 90 }}
-                  />
-                )}
-              </div>
-
-              <div className="rack-toggle-row">
-                <label className="checkbox-label">
+                <label className="toggle-switch">
                   <input
                     type="checkbox"
                     checked={settings.flashOnBeat}
-                    onChange={(e) => setSettings({ ...settings, flashOnBeat: e.target.checked })}
+                    onChange={(e) =>
+                      setSettings({ ...settings, flashOnBeat: e.target.checked })
+                    }
                   />
-                  <span>Strobe Flash on Drop Transitions</span>
+                  <span className="slider round"></span>
                 </label>
-              </div>
-
-              <div className="rack-toggle-row">
-                <label className="checkbox-label">
-                  <input
-                    type="checkbox"
-                    checked={settings.enableStageSpotlights !== false}
-                    onChange={(e) => setSettings({ ...settings, enableStageSpotlights: e.target.checked })}
-                  />
-                  <span>Arena Stage Spotlights & Sweeping Lasers</span>
-                </label>
+                <span>808 Bass Kick Strobe Flash</span>
               </div>
             </div>
 
-            {/* MASTER EXPORT SETTINGS */}
-            <div className="rack-section-header" style={{ marginTop: 20 }}>
-              <Settings2 size={18} />
-              <h4>Master Output Settings</h4>
+            {/* AUDIO-REACTIVE SPECTRUM & LYRICS */}
+            <div className="rack-section-header" style={{ marginTop: 24 }}>
+              <Zap size={18} color="#06b6d4" />
+              <h4>Audio Reactive Spectrum & Viseme Lip-Sync</h4>
             </div>
 
             <div className="rack-content">
-              <div className="rack-row">
-                <div className="rack-field flex-1">
-                  <label>Resolution:</label>
-                  <select
-                    value={settings.resolution}
-                    onChange={(e) => setSettings({ ...settings, resolution: e.target.value })}
-                  >
-                    {Object.entries(RESOLUTION_PRESETS).map(([key, val]) => (
-                      <option key={key} value={key}>
-                        {val.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="rack-field flex-1">
-                  <label>Frame Rate:</label>
-                  <select
-                    value={settings.fps}
-                    onChange={(e) => setSettings({ ...settings, fps: parseInt(e.target.value) })}
-                  >
-                    <option value="24">24 FPS (Cinema)</option>
-                    <option value="30">30 FPS (Smooth)</option>
-                    <option value="60">60 FPS (Ultra Smooth)</option>
-                  </select>
-                </div>
-              </div>
-
               <div className="rack-field">
-                <label>Encoding Bitrate & Quality:</label>
+                <label>Audio Spectrum Visualizer:</label>
                 <select
-                  value={settings.quality}
-                  onChange={(e) => setSettings({ ...settings, quality: e.target.value })}
+                  value={settings.visualizerStyle}
+                  onChange={(e) =>
+                    setSettings({ ...settings, visualizerStyle: e.target.value })
+                  }
                 >
-                  <option value="ultra">Ultra (18 Mbps Master)</option>
-                  <option value="high">High (10 Mbps Web Master)</option>
-                  <option value="medium">Medium (5 Mbps Fast)</option>
+                  {VISUALIZER_STYLES.map((v) => (
+                    <option key={v.id} value={v.id}>
+                      {v.name} ({v.desc})
+                    </option>
+                  ))}
                 </select>
               </div>
 
-              <div className="rack-field" style={{ marginTop: 10 }}>
-                <label>Pexels HD Stock Video API Key:</label>
+              <div className="rack-field">
+                <label>Lip-Sync Viseme Sensitivity: {settings.lipSyncSensitivity}x</label>
                 <input
-                  type="password"
-                  className="settings-input"
-                  placeholder="Enter Pexels API Key (Saved Automatically)"
-                  defaultValue={localStorage.getItem('pexels_api_key') || ''}
-                  onChange={(e) => {
-                    localStorage.setItem('pexels_api_key', e.target.value);
-                    project.pexelsApiKey = e.target.value;
-                  }}
+                  type="range"
+                  min="0.5"
+                  max="2.5"
+                  step="0.1"
+                  value={settings.lipSyncSensitivity}
+                  onChange={(e) =>
+                    setSettings({ ...settings, lipSyncSensitivity: parseFloat(e.target.value) })
+                  }
+                />
+              </div>
+
+              <div className="rack-field">
+                <label>Audio Reactivity Boost: {settings.audioBoost}%</label>
+                <input
+                  type="range"
+                  min="50"
+                  max="200"
+                  value={settings.audioBoost}
+                  onChange={(e) =>
+                    setSettings({ ...settings, audioBoost: parseInt(e.target.value) })
+                  }
                 />
               </div>
             </div>
@@ -785,9 +778,10 @@ export default function StepFour({ onBack, project }) {
         </div>
       </div>
 
-      <div className="step-footer">
-        <button className="btn btn-secondary" onClick={onBack} disabled={isExporting}>
-          ← Back to Storyboard
+      {/* Navigation Footer */}
+      <div className="step-actions-footer">
+        <button className="btn btn-secondary" onClick={onBack}>
+          ← Back to Storyboard & Cuts
         </button>
       </div>
     </div>

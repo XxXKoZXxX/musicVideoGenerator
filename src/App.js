@@ -12,7 +12,7 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState(1);
 
   // Shared project state
-  const [project] = useState({
+  const [project, setProject] = useState({
     renderStyle: 'photoreal',
     images: RENDER_STYLES[0].defaultScenes || [],
     singerImage: RENDER_STYLES[0].defaultSinger || '',
@@ -29,7 +29,13 @@ export default function App() {
     pexelsApiKey: localStorage.getItem('pexels_api_key') || '',
   });
 
-  const handleNext = () => {
+  const handleNext = (stepData) => {
+    if (stepData && typeof stepData === 'object') {
+      setProject((prev) => ({
+        ...prev,
+        ...stepData,
+      }));
+    }
     setCurrentStep((prev) => Math.min(prev + 1, 4));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };

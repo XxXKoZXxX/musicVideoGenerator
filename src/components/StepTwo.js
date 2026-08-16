@@ -92,6 +92,13 @@ export default function StepTwo({ onNext, onBack, project }) {
       setIsPlaying(false);
       setCurrentTime(0);
 
+      project.audio = blobUrl;
+      project.audioBlobUrl = blobUrl;
+      project.audioTitle = file.name;
+      project.bpm = audioData.bpm;
+      project.duration = audioData.duration;
+      project.waveformPeaks = audioData.peaks;
+
       if (audioRef.current) {
         audioRef.current.src = blobUrl;
         audioRef.current.currentTime = 0;
@@ -104,6 +111,10 @@ export default function StepTwo({ onNext, onBack, project }) {
         duration: audioData.duration,
       }).then((customStory) => {
         setTrackStoryline(customStory);
+        project.aiStoryboard = customStory;
+        if (customStory?.lyrics) {
+          project.lyrics = customStory.lyrics;
+        }
       });
     } catch (err) {
       alert('Error decoding audio file: ' + err.message);
