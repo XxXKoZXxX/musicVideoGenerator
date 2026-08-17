@@ -334,7 +334,6 @@ select:-webkit-autofill:focus {
   display: flex;
   gap: 0.5rem;
   overflow-x: auto;
-  scrollbar-width: none;
 }
 .sub-view-pills::-webkit-scrollbar {
   display: none;
