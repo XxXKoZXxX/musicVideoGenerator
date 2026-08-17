@@ -9,17 +9,15 @@ export default function VideoStudioView({ profile, onNavigate }) {
   const engineRef = useRef(null);
 
   const [renderer, setRenderer] = useState('ai-neural');
+  const [isPlaying, setIsPlaying] = useState(true);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
 
   // UI: select video generator engine
   const handleRendererSelect = (val) => {
     setRenderer(val);
     console.log('Selected video renderer:', val);
   };
-
-  // (Later integration: pass renderer to generation logic)
-
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -107,6 +105,10 @@ export default function VideoStudioView({ profile, onNavigate }) {
         </div>
       </div>
 
+      <div className="mt-4">
+        <VideoGeneratorSelector selectedRenderer={renderer} onRendererSelect={handleRendererSelect} />
+      </div>
+
       {/* Video Canvas Container */}
       <div className="video-canvas-container glass-panel mt-6 text-center">
         <div className="canvas-wrapper">
@@ -138,7 +140,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
 
           <a 
             href={recordedVideoUrl} 
-            download={`${profile.name.replace(/\s+/g, '_')}_Cosmic_Forecast.webm`} 
+            download={`${profile.name.replace(/\s+/g, '_')}_Cosmic_Forecast_${renderer}.webm`} 
             className="btn btn-primary-glow mt-4 inline-flex"
           >
             <Download className="w-5 h-5 mr-2" /> Download Video File (.webm)

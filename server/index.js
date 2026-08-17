@@ -24,7 +24,7 @@ app.get('/api/generators', (req, res) => {
 // Mock generation endpoint – replace with real API calls as needed
 app.post('/api/generate', async (req, res) => {
   const { renderer, payload } = req.body;
-  console.log('Generation request for:', renderer);
+  console.log('Generation request for:', renderer, payload);
   // Simulate async processing delay
   setTimeout(() => {
     res.json({

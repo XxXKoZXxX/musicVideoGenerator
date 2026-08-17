@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { fetchVideoGenerators } from '../services/VideoServerClient';
 
-export default function VideoGeneratorSelector({ onRendererSelect }) {
+export default function VideoGeneratorSelector({ selectedRenderer, onRendererSelect }) {
   const [options, setOptions] = useState([]);
-  const [selected, setSelected] = useState('ai-neural');
+  const [selected, setSelected] = useState(selectedRenderer || 'ai-neural');
+
+  useEffect(() => {
+    if (selectedRenderer) setSelected(selectedRenderer);
+  }, [selectedRenderer]);
 
   useEffect(() => {
     // Fetch available renderer options from the local server
