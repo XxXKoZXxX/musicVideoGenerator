@@ -13,7 +13,9 @@ import {
   REFLEXOLOGY_ZONES,
   PRANAYAMA_BREATHWORK_SUITE,
   SOUL_TYPES_AND_STARSEEDS,
-  calculateVitalityMatrix
+  calculateVitalityMatrix,
+  SPIRITUAL_BANISHING_SUITE,
+  SUPERSTITIONS_ENCYCLOPEDIA
 } from '../grimoireEngine';
 
 describe('Astraea Grand Occult Grimoire Engine Tests', () => {
@@ -90,5 +92,25 @@ describe('Astraea Grand Occult Grimoire Engine Tests', () => {
     expect(names.some(n => n.includes('Nadi Shodhana'))).toBe(true);
     expect(names.some(n => n.includes('Kapalabhati'))).toBe(true);
     expect(names.some(n => n.includes('Box Breathing'))).toBe(true);
+  });
+
+  test('8. SPIRITUAL_BANISHING_SUITE contains 6 banishing protocols and 5 protective chants', () => {
+    expect(SPIRITUAL_BANISHING_SUITE.methods.length).toBe(6);
+    expect(SPIRITUAL_BANISHING_SUITE.chants.length).toBe(5);
+    const methodIds = SPIRITUAL_BANISHING_SUITE.methods.map(m => m.id);
+    expect(methodIds).toContain('smoke');
+    expect(methodIds).toContain('salt');
+    expect(methodIds).toContain('sound');
+    expect(methodIds).toContain('candle');
+  });
+
+  test('9. SUPERSTITIONS_ENCYCLOPEDIA contains 12 superstitions with origins and reality verdicts', () => {
+    expect(SUPERSTITIONS_ENCYCLOPEDIA.length).toBe(12);
+    SUPERSTITIONS_ENCYCLOPEDIA.forEach(s => {
+      expect(s.name).toBeDefined();
+      expect(s.origin).toBeDefined();
+      expect(s.verdict).toBeDefined();
+      expect(s.truthLikelihood).toBeDefined();
+    });
   });
 });

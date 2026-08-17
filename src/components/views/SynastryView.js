@@ -13,6 +13,7 @@ import {
 
 const COMPARISON_SUBJECTS = [
   { id: 'all', label: 'All Subjects (Complete Matrix)', icon: <Layers className="w-3.5 h-3.5" /> },
+  { id: 'partnerAlignment', label: '💎 Potential Partner Alignment', icon: <Heart className="w-3.5 h-3.5 text-pink-400" /> },
   { id: 'twinFlame', label: '🔥 Twin Flame & Soul Contract', icon: <Flame className="w-3.5 h-3.5 text-rose-400" /> },
   { id: 'quiz', label: '🧪 Twin Flame Diagnostic Quiz', icon: <HelpCircle className="w-3.5 h-3.5 text-amber-400" /> },
   { id: 'houseOverlays', label: '🏠 House Overlays & Field', icon: <Home className="w-3.5 h-3.5 text-emerald-400" /> },
@@ -278,6 +279,128 @@ export default function SynastryView({ profiles, activeProfile, onNavigate, onAd
       </div>
 
       {/* ============================================================ */}
+      {/* SUBJECT 0: POTENTIAL PARTNER ALIGNMENT & DEEP COMPATIBILITY  */}
+      {/* ============================================================ */}
+      {(activeSubject === 'all' || activeSubject === 'partnerAlignment') && comparison.partnerAlignment && (
+        <div className="partner-alignment-studio-section mt-6 glass-panel p-6 rounded-3xl border border-pink-500/40 bg-gradient-to-br from-slate-950/98 via-slate-900/90 to-pink-950/20 shadow-2xl space-y-6">
+          {/* Header Banner */}
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 pb-4 border-b border-white/10">
+            <div>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-pink-500/20 text-pink-300 text-xs font-bold mb-2 border border-pink-500/30">
+                <Heart className="w-3.5 h-3.5 fill-current text-pink-400" />
+                <span>Deep Potential Partner Alignment</span>
+              </div>
+              <h3 className="text-2xl font-bold text-white leading-tight">
+                {profileA.name} & {profileB.name} Soul Synergy
+              </h3>
+              <p className="text-xs text-slate-300 mt-1 max-w-2xl leading-relaxed">
+                {comparison.partnerAlignment.alignmentVerdict}
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3 bg-black/60 p-3.5 rounded-2xl border border-pink-500/30">
+              <div className="text-right">
+                <span className="text-[11px] text-slate-400 font-bold uppercase block">Overall Alignment</span>
+                <span className="text-xs text-pink-300 font-semibold">{comparison.partnerAlignment.connectionTier}</span>
+              </div>
+              <div className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-amber-300 pl-2 border-l border-white/10">
+                {comparison.partnerAlignment.alignmentScore}%
+              </div>
+            </div>
+          </div>
+
+          {/* 5 Core Longevity Pillars */}
+          <div>
+            <h4 className="text-xs font-bold text-pink-300 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5" /> 5 Pillars of Long-Term Partner Harmony
+            </h4>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {comparison.partnerAlignment.pillars.map((pillar, idx) => (
+                <div key={idx} className="p-4 rounded-2xl bg-slate-900/80 border border-white/10 flex flex-col justify-between space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{pillar.icon}</span>
+                      <strong className="text-xs font-bold text-white">{pillar.name}</strong>
+                    </div>
+                    <span className="text-xs font-black text-pink-400">{pillar.score}%</span>
+                  </div>
+
+                  {/* Progress Bar */}
+                  <div className="w-full h-2 rounded-full bg-black/60 overflow-hidden border border-white/5">
+                    <div 
+                      className="h-full rounded-full bg-gradient-to-r from-pink-500 to-amber-400 transition-all duration-500" 
+                      style={{ width: `${pillar.score}%` }}
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-slate-300 leading-snug">
+                    {pillar.desc}
+                  </p>
+                </div>
+              ))}
+
+              {/* Personality Test Call-to-Action Card */}
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-purple-900/40 to-pink-900/30 border border-purple-400/40 flex flex-col justify-between text-left">
+                <div>
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300 block mb-1">
+                    🧠 Personality & Archetype Alignment
+                  </span>
+                  <strong className="text-xs text-white block font-bold">
+                    Discover Your Core Soul Archetype
+                  </strong>
+                  <p className="text-[11px] text-slate-300 mt-1 leading-snug">
+                    Take the 8-question archetypal test to discover your ideal partner match and shadow triggers.
+                  </p>
+                </div>
+                <button
+                  onClick={() => onNavigate && onNavigate('personalityTest')}
+                  className="btn-gold text-xs py-2 px-3 rounded-xl font-bold bg-amber-400 text-slate-950 mt-3 flex items-center justify-center gap-1.5 shadow-md"
+                >
+                  <Sparkles className="w-3.5 h-3.5" /> Launch Personality Test
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Green Flags 🟢 vs Red Flags / Growth Edges 🚩 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+            {/* Green Flags */}
+            <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/30 space-y-2.5">
+              <div className="flex items-center gap-2 text-emerald-400">
+                <CheckCircle2 className="w-4 h-4" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Top 3 Soul Alignment Green Flags 🟢</h4>
+              </div>
+              <div className="space-y-2">
+                {comparison.partnerAlignment.greenFlags.map((flag, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl bg-slate-900/70 border border-emerald-500/20">
+                    <strong className="text-xs text-emerald-200 block font-bold">{flag.title}</strong>
+                    <span className="text-[11px] text-slate-300 block mt-0.5 leading-snug">{flag.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Red Flags / Growth Edges */}
+            <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-500/30 space-y-2.5">
+              <div className="flex items-center gap-2 text-rose-400">
+                <ShieldAlert className="w-4 h-4" />
+                <h4 className="text-xs font-bold uppercase tracking-wider">Growth Edges & Shadow Warnings 🚩</h4>
+              </div>
+              <div className="space-y-2">
+                {comparison.partnerAlignment.redFlagsToWatch.map((flag, idx) => (
+                  <div key={idx} className="p-2.5 rounded-xl bg-slate-900/70 border border-rose-500/20">
+                    <strong className="text-xs text-rose-200 block font-bold">{flag.title}</strong>
+                    <span className="text-[11px] text-slate-300 block mt-0.5 leading-snug">{flag.desc}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
       {/* SUBJECT 1: TWIN FLAME & SOUL CONTRACT HERO MATRIX            */}
       {/* ============================================================ */}
       {(activeSubject === 'all' || activeSubject === 'twinFlame') && (
@@ -375,7 +498,7 @@ export default function SynastryView({ profiles, activeProfile, onNavigate, onAd
                         <button
                           key={oIdx}
                           onClick={() => handleAnswerQuiz(q.id, opt.points)}
-                          className={`w-full text-left p-2.5 rounded-lg text-xs transition-all flex items-center justify-between border ${isSelected ? 'bg-gold/20 border-gold text-white font-semibold' : 'bg-white/5 border-white/5 text-slate-300 hover:bg-white/10'}`}
+                          className={`w-full text-left p-2.5 rounded-lg text-xs transition-all flex items-center justify-between border ${isSelected ? 'bg-amber-400/20 border-amber-400 text-amber-300 font-semibold' : 'bg-slate-900/80 border-slate-700/60 text-slate-300 hover:bg-amber-400/10 hover:border-amber-400/30'}`}
                         >
                           <span>{opt.label}</span>
                           {isSelected && <CheckCircle2 className="w-4 h-4 text-gold flex-shrink-0 ml-2" />}
@@ -630,7 +753,7 @@ export default function SynastryView({ profiles, activeProfile, onNavigate, onAd
               </thead>
               <tbody className="divide-y divide-white/5">
                 {comparison.astrology.aspects.map((asp, idx) => (
-                  <tr key={idx} className="hover:bg-white/5">
+                  <tr key={idx} className="hover:bg-amber-400/10 transition-colors">
                     <td className="py-2.5 font-medium text-white">{asp.pair}</td>
                     <td className="py-2.5">
                       <span className="font-bold text-gold mr-1">{asp.symbol}</span>

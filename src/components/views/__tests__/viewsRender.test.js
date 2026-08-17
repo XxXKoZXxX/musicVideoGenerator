@@ -17,6 +17,7 @@ import SynastryView from '../SynastryView';
 import CosmicReportView from '../CosmicReportView';
 import DreamInterpreterView from '../DreamInterpreterView';
 import GrimoireView from '../GrimoireView';
+import PersonalityTestView from '../PersonalityTestView';
 import ProfileForm from '../../profile/ProfileForm';
 import { calculatePlanetaryPositions } from '../../../utils/astrologyEngine';
 
@@ -96,8 +97,8 @@ describe('Astraea All 15 Studio Views Smoke Test Suite', () => {
   });
 
   const mockProfile = {
-    id: 'test_patrice',
-    name: 'Patrice',
+    id: 'test_astraea',
+    name: 'Astraea',
     birthYear: 1990,
     birthMonth: 7,
     birthDay: 15,
@@ -244,6 +245,13 @@ describe('Astraea All 15 Studio Views Smoke Test Suite', () => {
   test('17. GrimoireView renders smoothly with 10 portals', () => {
     act(() => {
       root.render(<GrimoireView profile={mockProfile} onNavigate={() => {}} />);
+    });
+    expect(container).toBeDefined();
+  });
+
+  test('18. PersonalityTestView renders smoothly with 8 questions', () => {
+    act(() => {
+      root.render(<PersonalityTestView profile={mockProfile} onNavigate={() => {}} />);
     });
     expect(container).toBeDefined();
   });

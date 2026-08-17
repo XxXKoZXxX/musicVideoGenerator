@@ -635,6 +635,87 @@ export function calculateFullDualComparison(profileA, profileB) {
       binauralBeat: "Schumann Resonance (7.83 Hz Earth Frequency)"
     },
 
+    // 10. POTENTIAL PARTNER ALIGNMENT & DEEP COMPATIBILITY PILLARS
+    partnerAlignment: {
+      alignmentScore: totalScore,
+      connectionTier: twinFlameArchetype,
+      pillars: [
+        {
+          name: 'Emotional Sanctuary & Empathy',
+          icon: '🌊',
+          score: Math.min(99, Math.max(65, elemMoon.score + (sunMoonCross1.bonus > 15 ? 10 : 0))),
+          desc: sunMoonCross1.bonus > 15 
+            ? 'Effortless emotional transparency — you intuitively sense when the other needs tenderness or silence.'
+            : 'Deep emotional empathy developed through active listening and emotional validation.'
+        },
+        {
+          name: 'Romantic Spark & Erotic Chemistry',
+          icon: '🔥',
+          score: Math.min(99, Math.max(60, (venusMarsCross1.bonus + venusMarsCross2.bonus) * 1.8)),
+          desc: venusMarsCross1.bonus > 15 || venusMarsCross2.bonus > 15
+            ? 'High electric polarity — magnetic physical attraction and vibrant romantic playfulness.'
+            : 'Warm, affectionate chemistry that grows steadily through shared sensual appreciation.'
+        },
+        {
+          name: 'Intellectual Rhythm & Banter',
+          icon: '💨',
+          score: Math.min(99, Math.max(60, mercuryMercuryAspect.bonus * 3.5 + 20)),
+          desc: mercuryMercuryAspect.bonus > 15
+            ? 'Telepathic flow — effortless conversation, hilarious inside jokes, and shared curiosity.'
+            : 'Stimulating dialogue where diverse perspectives sharpen each other’s worldview.'
+        },
+        {
+          name: 'Long-Term Values & Empire Building',
+          icon: '🌿',
+          score: Math.min(99, Math.max(65, (saturnAspect.bonus + jupiterAspect.bonus) * 2 + 30)),
+          desc: saturnAspect.bonus > 10
+            ? 'Bedrock reliability — mutual dedication to financial stability, family safety, and integrity.'
+            : 'Creative flexibility — navigating life changes through mutual respect and adaptability.'
+        },
+        {
+          name: 'Karmic Evolution & Soul Growth',
+          icon: '✨',
+          score: Math.min(99, Math.max(70, hasKarmicNodeConnection ? 95 : 82)),
+          desc: hasKarmicNodeConnection
+            ? 'Profound soul agreement — this connection serves as an evolutionary mirror to heal old ancestral patterns.'
+            : 'Conscious co-creation — empowering one another to step boldly into your highest potential.'
+        }
+      ],
+      greenFlags: [
+        {
+          title: 'Immediate Soul Recognition',
+          desc: `Natural ease between ${profileA.name} and ${profileB.name}; conversation flows with minimal awkwardness.`
+        },
+        {
+          title: 'Constructive Mirroring',
+          desc: 'Differences inspire mutual curiosity and growth rather than defensive ego battles.'
+        },
+        {
+          title: 'Shared Vision & Protection',
+          desc: 'Instinctive urge to celebrate each other’s victories and provide a safe shelter during hardship.'
+        }
+      ],
+      redFlagsToWatch: [
+        {
+          title: 'Unspoken Expectations',
+          desc: 'Assuming the other person can read your mind; practice expressing emotional needs directly.'
+        },
+        {
+          title: 'Pacing & Independence Balance',
+          desc: 'Allowing space for individual passions so the bond stays magnetic rather than suffocating.'
+        },
+        {
+          title: 'Stress Response Friction',
+          desc: 'When tired, one may retreat into silence while the other seeks immediate resolution.'
+        }
+      ],
+      alignmentVerdict: totalScore >= 90
+        ? '🌟 Extraordinary Cosmic Match: Rare vibrational synergy across emotional, mental, and spiritual planes.'
+        : totalScore >= 80
+        ? '💖 Highly Harmonious & Magnetic: Deep compatibility with rich opportunities for conscious co-creation.'
+        : '⚡ Dynamic Growth Catalyst: High-chemistry connection with valuable life lessons and mutual evolution.'
+    },
+
     communicationTip: communicationTip
   };
 }

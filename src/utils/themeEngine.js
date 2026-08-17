@@ -1,4 +1,4 @@
-// Dynamic Theme, Color & Typography Customization Engine for Astraea
+// Dynamic Luxury Color Aura Engine for Astraea
 
 export const THEME_PRESETS = [
   {
@@ -60,7 +60,7 @@ export const THEME_PRESETS = [
     desc: 'Sacred healing green & Gaia vitality',
     primary: '#10B981',
     secondary: '#06B6D4',
-    glow: 'rgba(16, 185, 129, 0.45)',
+    glow: 'rgba(168, 185, 129, 0.45)',
     background: '#02120B',
     panelBg: 'rgba(6, 26, 18, 0.88)',
     panelBorder: 'rgba(16, 185, 129, 0.3)',
@@ -107,61 +107,6 @@ export const THEME_PRESETS = [
   }
 ];
 
-export const FONT_STYLE_PRESETS = [
-  {
-    id: 'playful',
-    name: 'Playful & Friendly (Default)',
-    icon: '✨',
-    desc: 'Quicksand rounded bubbly headers + warm friendly Nunito body',
-    headingFont: "'Quicksand', 'Nunito', sans-serif",
-    bodyFont: "'Quicksand', 'Nunito', sans-serif"
-  },
-  {
-    id: 'bubbly',
-    name: 'Bubbly & Cheerful',
-    icon: '🎈',
-    desc: 'Fredoka soft playful headers + Comfortaa bouncy curves',
-    headingFont: "'Fredoka', 'Comfortaa', cursive",
-    bodyFont: "'Nunito', sans-serif"
-  },
-  {
-    id: 'clean_modern',
-    name: 'Modern & Vibrant',
-    icon: '🌈',
-    desc: 'Outfit modern geometric headers + Plus Jakarta Sans crisp body',
-    headingFont: "'Outfit', sans-serif",
-    bodyFont: "'Plus Jakarta Sans', sans-serif"
-  },
-  {
-    id: 'royal',
-    name: 'Royal Esoteric',
-    icon: '👑',
-    desc: 'Cinzel classical royal serif headers + Jakarta sans',
-    headingFont: "'Cinzel', serif",
-    bodyFont: "'Plus Jakarta Sans', sans-serif"
-  },
-  {
-    id: 'literary',
-    name: 'Classic Storybook',
-    icon: '📚',
-    desc: 'Lora literary book serif + friendly reading body',
-    headingFont: "'Lora', serif",
-    bodyFont: "'Nunito', sans-serif"
-  }
-];
-
-export const FONT_SIZE_PRESETS = [
-  { id: 'standard', name: 'Standard', sizePx: '15px', scale: '1' },
-  { id: 'comfortable', name: 'Comfortable (17px)', sizePx: '17px', scale: '1.12' },
-  { id: 'xlarge', name: 'Extra Large (19px)', sizePx: '19px', scale: '1.25' }
-];
-
-export const LINE_HEIGHT_PRESETS = [
-  { id: 'compact', name: 'Compact (1.55)', value: '1.55' },
-  { id: 'relaxed', name: 'Relaxed (1.75)', value: '1.75' },
-  { id: 'spacious', name: 'Spacious (1.95)', value: '1.95' }
-];
-
 export function hexToRgba(hex, alpha = 1) {
   let c = hex.replace('#', '');
   if (c.length === 3) {
@@ -193,21 +138,6 @@ export function applyTheme(theme) {
   root.style.setProperty('--panel-bg', panelBg);
   root.style.setProperty('--panel-border', panelBorder);
 
-  // Typography Settings
-  const fontPreset = FONT_STYLE_PRESETS.find(f => f.id === theme.fontStyleId) || FONT_STYLE_PRESETS[0];
-  const sizePreset = FONT_SIZE_PRESETS.find(s => s.id === theme.fontSizeId) || FONT_SIZE_PRESETS[0];
-  const linePreset = LINE_HEIGHT_PRESETS.find(l => l.id === theme.lineHeightId) || LINE_HEIGHT_PRESETS[1];
-
-  root.style.setProperty('--font-serif', fontPreset.headingFont);
-  root.style.setProperty('--font-sans', fontPreset.bodyFont);
-  root.style.setProperty('--base-font-size', sizePreset.sizePx);
-  root.style.setProperty('--base-line-height', linePreset.value);
-
-  // Apply to body directly
-  document.body.style.fontFamily = fontPreset.bodyFont;
-  document.body.style.fontSize = sizePreset.sizePx;
-  document.body.style.lineHeight = linePreset.value;
-
   try {
     localStorage.setItem('astraea_theme_config', JSON.stringify(theme));
   } catch (e) {}
@@ -224,10 +154,7 @@ export function loadSavedTheme() {
   } catch (e) {}
   
   const defaultTheme = {
-    ...THEME_PRESETS[0],
-    fontStyleId: 'playful',
-    fontSizeId: 'standard',
-    lineHeightId: 'relaxed'
+    ...THEME_PRESETS[0]
   };
   applyTheme(defaultTheme);
   return defaultTheme;

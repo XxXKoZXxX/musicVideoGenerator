@@ -1,122 +1,337 @@
-import React, { useState } from 'react';
-import StepOne from './components/StepOne';
-import StepTwo from './components/StepTwo';
-import StepThree from './components/StepThree';
-import StepFour from './components/StepFour';
-import { Sparkles, Music2, Film, Video, Wand2, CheckCircle2 } from 'lucide-react';
-import RENDER_STYLES from './services/RenderStyles';
-import './index.css';
-import './styles/Step.css';
+import React, { useState, useEffect } from 'react';
+import NavHeader from './components/navigation/NavHeader';
+import FloatingCosmicDock from './components/navigation/FloatingCosmicDock';
+import MobileNavBar from './components/navigation/MobileNavBar';
+import MobileStudiosDrawer from './components/navigation/MobileStudiosDrawer';
+import ProfileDrawer from './components/profile/ProfileDrawer';
+import ProfileForm from './components/profile/ProfileForm';
+import ThemeCustomizerModal from './components/theme/ThemeCustomizerModal';
+import InstallMobileBanner from './components/mobile/InstallMobileBanner';
+
+// Views
+import OverviewDashboard from './components/views/OverviewDashboard';
+import AstrologyView from './components/views/AstrologyView';
+import SecretLanguageView from './components/views/SecretLanguageView';
+import TransitsView from './components/views/TransitsView';
+import KarmaView from './components/views/KarmaView';
+import GrimoireView from './components/views/GrimoireView';
+import DreamInterpreterView from './components/views/DreamInterpreterView';
+import TarotView from './components/views/TarotView';
+import TarotLibraryView from './components/views/TarotLibraryView';
+import PodcastStudioView from './components/views/PodcastStudioView';
+import VideoStudioView from './components/views/VideoStudioView';
+import OracleChatView from './components/views/OracleChatView';
+import SoundscapeView from './components/views/SoundscapeView';
+import NumerologyView from './components/views/NumerologyView';
+import SynastryView from './components/views/SynastryView';
+import PersonalityTestView from './components/views/PersonalityTestView';
+import CosmicReportView from './components/views/CosmicReportView';
+
+import { loadSavedTheme } from './utils/themeEngine';
+import './App.css';
+
+// Default User Profile (Astraea from Newton, NJ)
+const DEFAULT_PROFILE = {
+  id: 'user_primary',
+  name: 'Astraea',
+  birthYear: 1993,
+  birthMonth: 7,
+  birthDay: 16,
+  birthHour: 12,
+  birthMinute: 0,
+  amPm: 'PM',
+  unknownTime: false,
+  cityName: 'Newton, NJ, USA',
+  lat: 41.0582,
+  lng: -74.7529,
+  tag: 'Self'
+};
+
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error('Astraea View Error:', error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="glass-panel p-8 text-center m-6 rounded-3xl border border-rose-500/40">
+          <h2 className="text-xl font-bold text-rose-400 mb-2">Cosmic Alignment Notice</h2>
+          <p className="text-sm text-silver mb-4">Something shifted in the celestial data flow.</p>
+          <button 
+            onClick={() => this.setState({ hasError: false })} 
+            className="btn-gold py-2 px-6 rounded-xl font-bold text-xs bg-amber-400 text-slate-950"
+          >
+            Reconnect to Stream
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export default function App() {
-  const [currentStep, setCurrentStep] = useState(1);
+  const [currentView, setCurrentView] = useState('overview');
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [isMobileStudiosOpen, setIsMobileStudiosOpen] = useState(false);
+  const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [currentTheme, setCurrentTheme] = useState(null);
 
-  // Shared project state
-  const [project, setProject] = useState({
-    renderStyle: 'photoreal',
-    images: RENDER_STYLES[0].defaultScenes || [],
-    singerImage: RENDER_STYLES[0].defaultSinger || '',
-    audioFile: null,
-    audioUrl: null,
-    audioTitle: 'Electric Dreams (Cyberpunk Mix)',
-    audioBuffer: null,
-    bpm: 128,
-    duration: 30,
-    lyrics: `[00:00.00] Rain falling down on the neon street\n[00:06.00] Chasing the ghost in the machine's heartbeat\n[00:12.00] We break through the firewall tonight\n[00:18.00] Caught in the pulse of the laser light\n[00:24.00] Fade into the digital sunrise`,
-    lyricsStyle: 'neon',
-    motionMode: '3d-parallax',
-    directorMode: 'hybrid',
-    pexelsApiKey: localStorage.getItem('pexels_api_key') || '',
+  // Profiles State with LocalStorage Persistence and Patrice -> Astraea Migration
+  const [profiles, setProfiles] = useState(() => {
+    try {
+      const saved = localStorage.getItem('astraea_user_profiles');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map(p => (p.name === 'Patrice' || !p.name ? { ...p, name: 'Astraea' } : p));
+        }
+      }
+    } catch (e) {}
+    return [DEFAULT_PROFILE];
   });
 
-  const handleNext = (stepData) => {
-    if (stepData && typeof stepData === 'object') {
-      setProject((prev) => ({
-        ...prev,
-        ...stepData,
-      }));
+  const [activeProfileId, setActiveProfileId] = useState(() => {
+    try {
+      const savedId = localStorage.getItem('astraea_active_profile_id');
+      if (savedId && profiles.some(p => p.id === savedId)) return savedId;
+    } catch (e) {}
+    return profiles[0]?.id || DEFAULT_PROFILE.id;
+  });
+
+  // Sync to LocalStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem('astraea_user_profiles', JSON.stringify(profiles));
+      localStorage.setItem('astraea_active_profile_id', activeProfileId);
+    } catch (e) {}
+  }, [profiles, activeProfileId]);
+
+  // Load Saved Aesthetic Theme
+  useEffect(() => {
+    const loaded = loadSavedTheme();
+    setCurrentTheme(loaded);
+  }, []);
+
+  const activeProfile = profiles.find(p => p.id === activeProfileId) || profiles[0] || DEFAULT_PROFILE;
+
+  // Safe fallback profile to guarantee 0 crashes if properties are missing
+  const safeProfile = {
+    ...DEFAULT_PROFILE,
+    ...activeProfile,
+    birthMonth: Number(activeProfile?.birthMonth) || 7,
+    birthDay: Number(activeProfile?.birthDay) || 16,
+    birthYear: Number(activeProfile?.birthYear) || 1993,
+    birthHour: Number(activeProfile?.birthHour) || 12,
+    birthMinute: Number(activeProfile?.birthMinute) || 0,
+    lat: Number(activeProfile?.lat) || 41.0582,
+    lng: Number(activeProfile?.lng) || -74.7529,
+    cityName: activeProfile?.cityName || 'Newton, NJ, USA',
+    name: activeProfile?.name === 'Patrice' ? 'Astraea' : (activeProfile?.name || 'Astraea')
+  };
+
+  const handleSaveProfile = (newProfile) => {
+    const existingIndex = profiles.findIndex(p => p.id === newProfile.id);
+    if (existingIndex >= 0) {
+      const updated = [...profiles];
+      updated[existingIndex] = newProfile;
+      setProfiles(updated);
+    } else {
+      setProfiles([...profiles, newProfile]);
     }
-    setCurrentStep((prev) => Math.min(prev + 1, 4));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setActiveProfileId(newProfile.id);
+    setCurrentView('overview');
   };
 
-  const handleBack = () => {
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleDeleteProfile = (idToDelete) => {
+    if (profiles.length <= 1) return;
+    const filtered = profiles.filter(p => p.id !== idToDelete);
+    setProfiles(filtered);
+    if (activeProfileId === idToDelete) {
+      setActiveProfileId(filtered[0].id);
+    }
   };
-
-  const stepsInfo = [
-    { number: 1, title: 'Visual Vibes', icon: Sparkles, desc: 'Style & Assets' },
-    { number: 2, title: 'Audio & Beats', icon: Music2, desc: 'Track & Lyrics' },
-    { number: 3, title: 'AI Storyboard', icon: Film, desc: 'Screenplay & Cuts' },
-    { number: 4, title: 'Studio Monitor', icon: Video, desc: '60 FPS Render' },
-  ];
 
   return (
-    <div className="musicvid-app-container">
-      {/* Sleek Dark Header & Interactive Stepper Navigation */}
-      <header className="studio-top-nav">
-        <div className="studio-brand">
-          <div className="brand-logo-glow">
-            <Wand2 size={24} className="logo-icon text-cyan" />
-          </div>
-          <div>
-            <h1 className="brand-title">
-              MusicVid <span className="text-pink">Studio Pro</span>
-            </h1>
-            <p className="brand-tagline">AI Music Video Generator & Storyboard Engine</p>
-          </div>
-        </div>
+    <div className="astraea-app-root">
+      <div className="starfield-bg">
+        <div className="stars"></div>
+        <div className="twinkling"></div>
+      </div>
 
-        {/* Interactive Top Stepper Nav */}
-        <nav className="stepper-nav">
-          {stepsInfo.map((step) => {
-            const Icon = step.icon;
-            const isActive = currentStep === step.number;
-            const isCompleted = currentStep > step.number;
+      {/* PWA & Mobile Install Banner */}
+      <InstallMobileBanner />
 
-            return (
-              <button
-                key={step.number}
-                className={`stepper-pill ${isActive ? 'active' : ''} ${isCompleted ? 'completed' : ''}`}
-                onClick={() => setCurrentStep(step.number)}
-              >
-                <div className="pill-badge">
-                  {isCompleted ? <CheckCircle2 size={16} /> : <Icon size={16} />}
-                </div>
-                <div className="pill-labels">
-                  <span className="pill-step">STEP {step.number}</span>
-                  <span className="pill-title">{step.title}</span>
-                </div>
-              </button>
-            );
-          })}
-        </nav>
-      </header>
+      {/* 2-Tier Categorized Navigation Header */}
+      <NavHeader 
+        currentView={currentView}
+        onNavigate={(view) => setCurrentView(view)}
+        activeProfile={safeProfile}
+        onOpenProfiles={() => setIsDrawerOpen(true)}
+        onCreateProfile={() => setCurrentView('newProfile')}
+        onOpenTheme={() => setIsThemeModalOpen(true)}
+      />
 
-      {/* Main Studio Viewport */}
-      <main className="studio-main-viewport">
-        {currentStep === 1 && (
-          <StepOne onNext={handleNext} project={project} />
-        )}
+      <main className="main-content-container">
+        <ErrorBoundary>
+          {currentView === 'newProfile' ? (
+            <div className="form-center-wrapper">
+              <ProfileForm 
+                onSaveProfile={handleSaveProfile} 
+                onCancel={() => setCurrentView('overview')} 
+              />
+            </div>
+          ) : currentView === 'editProfile' ? (
+            <div className="form-center-wrapper">
+              <ProfileForm 
+                initialData={safeProfile}
+                onSaveProfile={handleSaveProfile} 
+                onCancel={() => setCurrentView('overview')} 
+              />
+            </div>
+          ) : (
+            <>
+              {currentView === 'overview' && (
+                <OverviewDashboard 
+                  profile={safeProfile} 
+                  onNavigate={(view) => setCurrentView(view)} 
+                  onOpenTheme={() => setIsThemeModalOpen(true)}
+                />
+              )}
 
-        {currentStep === 2 && (
-          <StepTwo onNext={handleNext} onBack={handleBack} project={project} />
-        )}
+              {currentView === 'astrology' && (
+                <AstrologyView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
 
-        {currentStep === 3 && (
-          <StepThree onNext={handleNext} onBack={handleBack} project={project} />
-        )}
+              {currentView === 'secretLanguage' && (
+                <SecretLanguageView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
 
-        {currentStep === 4 && (
-          <StepFour onBack={handleBack} project={project} />
-        )}
+              {currentView === 'transits' && (
+                <TransitsView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'karma' && (
+                <KarmaView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'grimoire' && (
+                <GrimoireView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'dream' && (
+                <DreamInterpreterView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'tarot' && (
+                <TarotView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'tarotLibrary' && (
+                <TarotLibraryView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'podcast' && (
+                <PodcastStudioView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'video' && (
+                <VideoStudioView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'oracleChat' && (
+                <OracleChatView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'soundscape' && (
+                <SoundscapeView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'numerology' && (
+                <NumerologyView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
+              {currentView === 'synastry' && (
+                <SynastryView 
+                  profiles={profiles} 
+                  activeProfile={safeProfile} 
+                  onNavigate={(view) => setCurrentView(view)} 
+                  onAddProfile={() => setCurrentView('newProfile')}
+                />
+              )}
+
+              {currentView === 'personalityTest' && (
+                <PersonalityTestView 
+                  profile={safeProfile} 
+                  onNavigate={(view) => setCurrentView(view)} 
+                />
+              )}
+
+              {currentView === 'report' && (
+                <CosmicReportView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+            </>
+          )}
+        </ErrorBoundary>
       </main>
 
-      {/* Studio Footer */}
-      <footer className="studio-footer">
-        <p>⚡ MusicVid Studio Pro — AI Image-to-Video, Viseme Lip-Sync & Audio Visualizer Engine</p>
-      </footer>
+      {/* Floating Bottom Cosmic Dock (Desktop / Tablet) */}
+      <FloatingCosmicDock 
+        currentView={currentView} 
+        onNavigate={(view) => setCurrentView(view)} 
+      />
+
+      {/* Mobile Native Bottom Navigation Bar */}
+      <MobileNavBar 
+        currentView={currentView} 
+        onNavigate={(view) => setCurrentView(view)} 
+        onOpenStudios={() => setIsMobileStudiosOpen(true)} 
+        onOpenTheme={() => setIsThemeModalOpen(true)}
+      />
+
+      {/* Mobile Studios Bottom Sheet Drawer */}
+      {isMobileStudiosOpen && (
+        <MobileStudiosDrawer 
+          currentView={currentView} 
+          onNavigate={(view) => setCurrentView(view)} 
+          onClose={() => setIsMobileStudiosOpen(false)} 
+          onOpenTheme={() => {
+            setIsMobileStudiosOpen(false);
+            setIsThemeModalOpen(true);
+          }}
+        />
+      )}
+
+      {/* Profile Switcher Drawer */}
+      {isDrawerOpen && (
+        <ProfileDrawer 
+          profiles={profiles}
+          activeProfile={safeProfile}
+          onSelectProfile={(p) => setActiveProfileId(p.id)}
+          onCreateNew={() => setCurrentView('newProfile')}
+          onDeleteProfile={handleDeleteProfile}
+          onImportProfiles={(importedList) => {
+            setProfiles(importedList);
+            if (importedList[0]) setActiveProfileId(importedList[0].id);
+          }}
+          onClose={() => setIsDrawerOpen(false)}
+        />
+      )}
+
+      {/* App Color & Theme Customizer Modal */}
+      <ThemeCustomizerModal 
+        isOpen={isThemeModalOpen}
+        onClose={() => setIsThemeModalOpen(false)}
+        currentTheme={currentTheme}
+        onThemeChange={(newTheme) => setCurrentTheme(newTheme)}
+      />
     </div>
   );
 }

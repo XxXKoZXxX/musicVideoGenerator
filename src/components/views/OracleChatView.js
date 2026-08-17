@@ -202,7 +202,7 @@ export default function OracleChatView({ profile, onNavigate }) {
             {ORACLE_SUGGESTIONS.map((sug, idx) => (
               <button
                 key={idx}
-                className="sug-pill text-xs py-1.5 px-3 rounded-full bg-white/5 hover:bg-gold/15 border border-white/10 hover:border-gold/40 text-slate-200 hover:text-gold transition-all"
+                className="sug-pill text-xs py-1.5 px-3 rounded-full bg-slate-900/80 hover:bg-amber-400/15 border border-slate-700/60 hover:border-amber-400/40 text-slate-200 hover:text-amber-300 transition-all"
                 onClick={() => handleSendMessage(sug.query)}
               >
                 {sug.label}
@@ -214,7 +214,7 @@ export default function OracleChatView({ profile, onNavigate }) {
           <div className="chat-messages-scroll space-y-4 max-h-[520px] overflow-y-auto pr-2 pb-4">
             {messages.map((msg) => (
               <div key={msg.id} className={`chat-bubble-wrap flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`chat-bubble max-w-2xl p-4 rounded-2xl glass-panel ${msg.sender === 'user' ? 'bg-gold/15 border-gold/40 text-right' : 'bg-slate-900/85 border-white/10'}`}>
+                <div className={`chat-bubble max-w-2xl p-4 rounded-2xl glass-panel ${msg.sender === 'user' ? 'bg-gold/15 border-gold/40 text-right' : 'bg-slate-900/85 border-amber-400/20'}`}>
                   <div className="flex items-center gap-2 mb-1.5">
                     {msg.sender === 'oracle' ? (
                       <div className="w-6 h-6 rounded-full bg-cyan/20 flex items-center justify-center text-cyan">
@@ -245,10 +245,10 @@ export default function OracleChatView({ profile, onNavigate }) {
 
                   {/* Tags and Copy Button */}
                   {msg.sender === 'oracle' && (
-                    <div className="mt-3 pt-2 border-t border-white/10 flex justify-between items-center text-[11px] text-silver">
+                    <div className="mt-3 pt-2 border-t border-amber-400/20 flex justify-between items-center text-[11px] text-silver">
                       <div className="flex gap-1.5">
                         {msg.tags?.map((t, i) => (
-                          <span key={i} className="px-2 py-0.5 rounded-full bg-white/5 text-[10px] text-cyan">{t}</span>
+                          <span key={i} className="px-2 py-0.5 rounded-full bg-slate-900 border border-cyan/30 text-[10px] text-cyan">{t}</span>
                         ))}
                       </div>
                       <button 

@@ -23,8 +23,9 @@ export default function FloatingCosmicDock({ currentView, onNavigate }) {
     { id: 'oracleChat', label: 'AI Oracle', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'soundscape', label: 'Soundscapes', icon: <Headphones className="w-5 h-5" /> },
     { id: 'divider4', label: '', isDivider: true },
+    { id: 'personalityTest', label: 'Personality Test', icon: <Sparkles className="w-5 h-5 text-purple-400" /> },
+    { id: 'synastry', label: 'Partner Alignment', icon: <Heart className="w-5 h-5 text-pink-400" /> },
     { id: 'numerology', label: 'Numerology', icon: <Calculator className="w-5 h-5" /> },
-    { id: 'synastry', label: 'Dual Synastry', icon: <Heart className="w-5 h-5" /> },
     { id: 'report', label: 'Master Report', icon: <FileText className="w-5 h-5" /> }
   ];
 
@@ -33,7 +34,7 @@ export default function FloatingCosmicDock({ currentView, onNavigate }) {
       <div className="dock-container glass-panel bg-slate-950/90 border border-gold/30 shadow-2xl p-1.5 flex items-center gap-1 rounded-2xl">
         {dockItems.map(item => {
           if (item.isDivider) {
-            return <div key={item.id} className="dock-divider w-px h-6 bg-white/10 mx-0.5" />;
+            return <div key={item.id} className="dock-divider w-px h-6 bg-amber-400/20 mx-0.5" />;
           }
           const isActive = currentView === item.id;
           return (
@@ -41,8 +42,8 @@ export default function FloatingCosmicDock({ currentView, onNavigate }) {
               key={item.id}
               className={`dock-btn relative p-2 rounded-xl transition-all ${
                 isActive 
-                  ? 'active bg-gold text-slate-950 shadow-lg shadow-gold/30 scale-110' 
-                  : 'text-slate-400 hover:text-white hover:bg-white/10'
+                  ? 'active bg-amber-400 text-slate-950 shadow-lg shadow-amber-400/30 scale-110' 
+                  : 'bg-transparent text-slate-400 hover:text-amber-300 hover:bg-amber-400/10'
               }`}
               onClick={() => onNavigate(item.id)}
               title={item.label}

@@ -226,7 +226,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
             <div className="overflow-x-auto">
               <table className="report-table w-full text-xs text-left">
                 <thead>
-                  <tr className="border-b border-white/10 text-gold uppercase tracking-wider bg-white/5">
+                  <tr className="border-b border-amber-400/20 text-gold uppercase tracking-wider bg-slate-900/80">
                     <th className="p-3">Celestial Body</th>
                     <th className="p-3">Zodiac Sign & Degrees</th>
                     <th className="p-3">House</th>
@@ -234,12 +234,12 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                     <th className="p-3">Esoteric Function</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/5">
+                <tbody className="divide-y divide-slate-800">
                   {planetKeys.map(k => {
                     const p = astroData.planets[k];
                     const meta = PLANETS_META[k] || {};
                     return (
-                      <tr key={k} className="hover:bg-white/5 transition-colors">
+                      <tr key={k} className="hover:bg-amber-400/10 transition-colors">
                         <td className="p-3 font-bold text-white flex items-center gap-2">
                           <span style={{ color: meta.color || '#F59E0B' }}>{p.symbol}</span>
                           <span>{p.name}</span>
@@ -297,7 +297,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="flex items-center gap-1.5 text-rose-400"><Flame className="w-3.5 h-3.5" /> Fire (Passion & Drive)</span>
                       <span className="text-rose-400 font-bold">{astroData.elements.Fire}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-rose-500 rounded-full" style={{ width: `${astroData.elements.Fire}%` }}></div>
                     </div>
                   </div>
@@ -307,7 +307,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="flex items-center gap-1.5 text-emerald-400"><Mountain className="w-3.5 h-3.5" /> Earth (Structure & Practicality)</span>
                       <span className="text-emerald-400 font-bold">{astroData.elements.Earth}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${astroData.elements.Earth}%` }}></div>
                     </div>
                   </div>
@@ -317,7 +317,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="flex items-center gap-1.5 text-cyan"><Wind className="w-3.5 h-3.5" /> Air (Intellect & Communication)</span>
                       <span className="text-cyan font-bold">{astroData.elements.Air}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-cyan rounded-full" style={{ width: `${astroData.elements.Air}%` }}></div>
                     </div>
                   </div>
@@ -327,7 +327,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="flex items-center gap-1.5 text-blue-400"><Droplets className="w-3.5 h-3.5" /> Water (Emotion & Intuition)</span>
                       <span className="text-blue-400 font-bold">{astroData.elements.Water}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-blue-500 rounded-full" style={{ width: `${astroData.elements.Water}%` }}></div>
                     </div>
                   </div>
@@ -343,7 +343,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="text-white">Cardinal (Initiating Action)</span>
                       <span className="text-gold font-bold">{astroData.modalities.Cardinal}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-gold rounded-full" style={{ width: `${astroData.modalities.Cardinal}%` }}></div>
                     </div>
                   </div>
@@ -353,7 +353,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="text-white">Fixed (Sustained Focus & Stamina)</span>
                       <span className="text-cyan font-bold">{astroData.modalities.Fixed}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-cyan rounded-full" style={{ width: `${astroData.modalities.Fixed}%` }}></div>
                     </div>
                   </div>
@@ -363,7 +363,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
                       <span className="text-white">Mutable (Flexibility & Wisdom)</span>
                       <span className="text-purple font-bold">{astroData.modalities.Mutable}%</span>
                     </div>
-                    <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
                       <div className="h-full bg-purple rounded-full" style={{ width: `${astroData.modalities.Mutable}%` }}></div>
                     </div>
                   </div>
@@ -452,7 +452,7 @@ Location: ${profile.cityName} (${profile.lat}°, ${profile.lng}°)
 
             <table className="report-table w-full text-xs text-left">
               <thead>
-                <tr className="border-b border-white/10 text-gold uppercase tracking-wider bg-white/5">
+                <tr className="border-b border-amber-400/20 text-gold uppercase tracking-wider bg-slate-900/80">
                   <th className="p-3">Core Vibrational Number</th>
                   <th className="p-3">Value</th>
                   <th className="p-3">Metaphysical Significance & Life Impact</th>

@@ -12,12 +12,12 @@ export default function InstallMobileBanner() {
   const [activeTab, setActiveTab] = useState('phone'); // 'phone' | 'ios' | 'android' | 'zip'
 
   // Dynamically resolve current active origin for live QR code & links
-  const activeMobileUrl = typeof window !== 'undefined' && window.location.origin.includes('http') 
-    ? window.location.origin 
-    : 'http://localhost:3210';
-  const httpsUrl = activeMobileUrl;
-  const wifiUrl = 'http://192.168.86.182:3210';
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=F59E0B&bgcolor=060814&data=${encodeURIComponent(activeMobileUrl)}`;
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const httpsUrl = isLocalHost 
+    ? 'https://wonder-lobby-chelsea-enters.trycloudflare.com' 
+    : (typeof window !== 'undefined' ? window.location.origin : 'https://wonder-lobby-chelsea-enters.trycloudflare.com');
+  const wifiUrl = 'http://192.168.86.210:3210';
+  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&color=F59E0B&bgcolor=060814&data=${encodeURIComponent(httpsUrl)}`;
 
   useEffect(() => {
     // Check if running in standalone mode (already installed as PWA)
@@ -57,7 +57,7 @@ export default function InstallMobileBanner() {
 
   const handleCopyUrl = (urlToCopy) => {
     if (navigator.clipboard) {
-      navigator.clipboard.writeText(urlToCopy || activeMobileUrl);
+      navigator.clipboard.writeText(urlToCopy || httpsUrl);
       setCopiedUrl(true);
       setTimeout(() => setCopiedUrl(false), 2500);
     }

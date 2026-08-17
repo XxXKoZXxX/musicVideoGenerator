@@ -68,5 +68,6 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`✨ Astraea Mobile App Server running on:`);
   console.log(`   - Local:   http://localhost:${PORT}`);
-  console.log(`   - Network: http://192.168.86.182:${PORT}`);
+  console.log(`   - Wi-Fi:   http://192.168.86.210:${PORT}`);
+  console.log(`   - Public:  https://wonder-lobby-chelsea-enters.trycloudflare.com`);
 });

@@ -2,12 +2,22 @@ import React, { useRef, useEffect, useState } from 'react';
 import { VideoRenderEngine } from '../../utils/videoRenderEngine';
 import ChapterPagination from '../navigation/ChapterPagination';
 import { Video, Film, Download, Play, Pause, Sparkles } from 'lucide-react';
+import VideoGeneratorSelector from '../VideoGeneratorSelector';
 
 export default function VideoStudioView({ profile, onNavigate }) {
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
 
-  const [isPlaying, setIsPlaying] = useState(true);
+  const [renderer, setRenderer] = useState('ai-neural');
+
+  // UI: select video generator engine
+  const handleRendererSelect = (val) => {
+    setRenderer(val);
+    console.log('Selected video renderer:', val);
+  };
+
+  // (Later integration: pass renderer to generation logic)
+
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
 

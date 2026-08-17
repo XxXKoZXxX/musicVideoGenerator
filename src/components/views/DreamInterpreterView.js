@@ -132,7 +132,7 @@ export default function DreamInterpreterView({ profile, onNavigate }) {
                   <button
                     key={v.id}
                     onClick={() => setSelectedVibe(v.id)}
-                    className={`p-2.5 rounded-xl text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 ${selectedVibe === v.id ? 'bg-cyan/20 border-cyan text-white font-bold shadow-lg shadow-cyan/20' : 'bg-black/40 border-white/5 text-slate-300 hover:bg-white/5'}`}
+                    className={`p-2.5 rounded-xl text-xs text-center border transition-all flex flex-col items-center justify-center gap-1 ${selectedVibe === v.id ? 'bg-cyan/20 border-cyan text-white font-bold shadow-lg shadow-cyan/20' : 'bg-slate-900/80 border-slate-700/60 text-slate-300 hover:bg-cyan-500/10 hover:border-cyan-400/40 hover:text-cyan-300'}`}
                     title={v.desc}
                   >
                     <span className="text-base">{v.icon}</span>

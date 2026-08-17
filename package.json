@@ -28,6 +28,7 @@
     "electron-start": "wait-on http://localhost:3210 && electron . --dev",
     "start": "concurrently \"npm run react-start\" \"npm run electron-start\"",
     "dev": "npm start",
+    "video-server": "node server/index.js",
     "desktop": "npm run react-build && electron .",
     "electron-dev": "NODE_ENV=development npm run start",
     "build": "npm run react-build && electron-builder",

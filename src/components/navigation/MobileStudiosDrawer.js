@@ -24,8 +24,9 @@ export const ALL_STUDIO_MODULES = [
   { id: 'oracleChat', title: 'AI Oracle & Notebook', desc: 'Interactive esoteric Q&A assistant', icon: <MessageSquare className="w-5 h-5 text-cyan" />, category: 'Media & AI' },
   { id: 'soundscape', title: 'Solfeggio & Frequencies', desc: 'Harmonic binaural & sacred geometry visualizer', icon: <Headphones className="w-5 h-5 text-cyan" />, category: 'Media & AI' },
 
-  { id: 'numerology', title: 'Numerology Matrix', desc: 'Life Path, Expression & Soul Urge numbers', icon: <Calculator className="w-5 h-5 text-gold" />, category: 'Numerology & Love' },
-  { id: 'synastry', title: 'Dual Comparison Matrix', desc: 'Side-by-side comparison & Twin Flame quiz', icon: <HeartHandshake className="w-5 h-5 text-pink-400" />, category: 'Numerology & Love' }
+  { id: 'personalityTest', title: 'Soul Personality Test', desc: 'Elemental archetype quiz & ideal partner compatibility', icon: <Sparkles className="w-5 h-5 text-purple-400" />, category: 'Numerology & Love' },
+  { id: 'synastry', title: 'Dual Partner Alignment', desc: '10-subject comparison, green/red flags & longevity', icon: <HeartHandshake className="w-5 h-5 text-pink-400" />, category: 'Numerology & Love' },
+  { id: 'numerology', title: 'Numerology Matrix', desc: 'Life Path, Expression & Soul Urge numbers', icon: <Calculator className="w-5 h-5 text-gold" />, category: 'Numerology & Love' }
 ];
 
 export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, onOpenTheme }) {
@@ -52,24 +53,24 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
       >
         {/* Drag Handle Bar */}
         <div className="sheet-drag-handle-bar pt-3 pb-1 flex justify-center">
-          <div className="sheet-drag-handle w-12 h-1.5 rounded-full bg-white/20"></div>
+          <div className="sheet-drag-handle w-12 h-1.5 rounded-full bg-slate-700"></div>
         </div>
 
         {/* Sheet Header */}
-        <div className="sheet-header px-4 py-2 flex items-center justify-between border-b border-white/10">
+        <div className="sheet-header px-4 py-2 flex items-center justify-between border-b border-amber-400/20">
           <div>
-            <h3 className="font-serif text-lg font-bold text-white">All 16 Cosmic Studios</h3>
+            <h3 className="font-serif text-lg font-bold text-slate-100">All 16 Cosmic Studios</h3>
             <p className="text-xs text-slate-300">Tap any studio to launch directly</p>
           </div>
-          <button className="sheet-close-btn p-2 rounded-xl bg-white/5 text-slate-300 hover:text-white" onClick={onClose}>
+          <button className="sheet-close-btn p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-300 hover:text-amber-300 hover:bg-amber-400/10" onClick={onClose}>
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Search & Theme Quick Bar */}
-        <div className="p-3 bg-slate-900/60 border-b border-white/10 flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-white/10">
-            <Search className="w-4 h-4 text-gold flex-shrink-0" />
+        <div className="p-3 bg-slate-900/60 border-b border-amber-400/20 flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 bg-slate-950 px-3 py-2 rounded-xl border border-slate-700/60">
+            <Search className="w-4 h-4 text-amber-400 flex-shrink-0" />
             <input 
               type="text" 
               placeholder="Search studios & tools..." 
@@ -80,7 +81,7 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
           </div>
 
           <button 
-            className="p-2.5 rounded-xl bg-gold/15 border border-gold/30 text-gold hover:bg-gold/25 flex items-center gap-1 text-xs font-bold"
+            className="p-2.5 rounded-xl bg-amber-400/15 border border-amber-400/30 text-amber-300 hover:bg-amber-400/25 flex items-center gap-1 text-xs font-bold"
             onClick={() => {
               onOpenTheme();
               onClose();
@@ -95,7 +96,7 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
         <div className="sheet-content-scroll flex-1 overflow-y-auto p-4 space-y-4 pb-8">
           {searchQuery ? (
             <div className="space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-gold">Search Results ({filteredModules.length})</span>
+              <span className="text-xs font-bold uppercase tracking-wider text-amber-400">Search Results ({filteredModules.length})</span>
               <div className="grid grid-cols-1 gap-2">
                 {filteredModules.map(mod => {
                   const isActive = currentView === mod.id;
@@ -103,7 +104,7 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
                     <button
                       key={mod.id}
                       className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                        isActive ? 'bg-gold/20 border-gold' : 'bg-slate-900/80 border-white/10 hover:border-gold/50'
+                        isActive ? 'bg-amber-400/20 border-amber-400' : 'bg-slate-900/80 border-slate-700/60 hover:border-amber-400/50'
                       }`}
                       onClick={() => {
                         onNavigate(mod.id);
@@ -111,7 +112,7 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
                       }}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-950 border border-white/10 flex items-center justify-center flex-shrink-0">
+                        <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700/60 flex items-center justify-center flex-shrink-0">
                           {mod.icon}
                         </div>
                         <div>
@@ -136,7 +137,7 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
                       <button
                         key={mod.id}
                         className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
-                          isActive ? 'bg-gold/20 border-gold shadow-md' : 'bg-slate-900/80 border-white/10 hover:border-gold/50'
+                          isActive ? 'bg-amber-400/20 border-amber-400 shadow-md' : 'bg-slate-900/80 border-slate-700/60 hover:border-amber-400/50'
                         }`}
                         onClick={() => {
                           onNavigate(mod.id);
@@ -144,13 +145,13 @@ export default function MobileStudiosDrawer({ currentView, onNavigate, onClose, 
                         }}
                       >
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-slate-950 border border-white/10 flex items-center justify-center flex-shrink-0">
+                          <div className="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700/60 flex items-center justify-center flex-shrink-0">
                             {mod.icon}
                           </div>
                           <div>
                             <div className="flex items-center gap-2">
                               <strong className="text-sm text-white">{mod.title}</strong>
-                              {isActive && <span className="text-[9px] font-bold text-gold bg-gold/20 px-1.5 py-0.2 rounded-full">Active</span>}
+                              {isActive && <span className="text-[9px] font-bold text-amber-400 bg-amber-400/20 px-1.5 py-0.2 rounded-full">Active</span>}
                             </div>
                             <span className="text-xs text-slate-300 block line-clamp-1">{mod.desc}</span>
                           </div>

@@ -14,14 +14,16 @@ import {
   REFLEXOLOGY_ZONES,
   PRANAYAMA_BREATHWORK_SUITE,
   SOUL_TYPES_AND_STARSEEDS,
-  calculateVitalityMatrix
+  calculateVitalityMatrix,
+  SPIRITUAL_BANISHING_SUITE,
+  SUPERSTITIONS_ENCYCLOPEDIA
 } from '../../utils/grimoireEngine';
 import { calculatePlanetaryPositions } from '../../utils/astrologyEngine';
 import ChapterPagination from '../navigation/ChapterPagination';
 import { 
   BookOpen, Sparkles, Flame, Heart, Radio, 
   Sun, Copy, Check, Play, Square, 
-  Zap, Feather
+  Zap, Feather, Shield, CheckCircle2, Info, Eye
 } from 'lucide-react';
 
 export default function GrimoireView({ profile, onNavigate }) {
@@ -147,6 +149,9 @@ export default function GrimoireView({ profile, onNavigate }) {
     return () => clearInterval(timer);
   }, [isBreathing]);
 
+  const [banishingTab, setBanishingTab] = useState('methods'); // 'methods' | 'chants'
+  const [superstitionFilter, setSuperstitionFilter] = useState('all'); // 'all' | 'false' | 'practical' | 'energetic'
+
   const handleCopy = (id, text) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -155,6 +160,8 @@ export default function GrimoireView({ profile, onNavigate }) {
 
   const portals = [
     { id: 'philosophy', label: '🏛️ Philosophy & Quotes', desc: 'Socrates, Buddha, Jung, Freud & Daily Word' },
+    { id: 'banishing', label: '🛡️ Spirit Banishing & Chants', desc: '6 Eviction Methods, Black Salt & Chants' },
+    { id: 'superstitions', label: '🧿 Superstitions & Reality', desc: 'Origins, Truth Likelihood vs Debunked Myths' },
     { id: 'spells', label: '🔮 Spellcraft & Jars', desc: 'Spell Jars, Honey Bottles, Poppets & Candles' },
     { id: 'alchemy', label: '💫 Manifestation & Alchemy', desc: '369 Method, 7 Planetary Metals & Magnum Opus' },
     { id: 'soulmates', label: '🧬 Soulmates & Tantra', desc: 'Twin Flames, Red String & Kama Sutra Polarities' },
@@ -174,11 +181,11 @@ export default function GrimoireView({ profile, onNavigate }) {
           <BookOpen className="title-icon text-gold animate-pulse" />
           <div>
             <h2>Grand Esoteric Grimoire & Occult Super-Encyclopedia</h2>
-            <p>10 Portals of Ancient Wisdom: Philosophy, Spellcraft, Alchemy, Deities, Spirit Box, Palmistry, Kundalini & Tantra</p>
+            <p>12 Portals of Ancient Wisdom: Spirit Banishing, Superstition Matrix, Philosophy, Spellcraft, Alchemy, Deities & Kundalini</p>
           </div>
         </div>
 
-        {/* 10-Portal Scrollable Navigation Bar */}
+        {/* 12-Portal Scrollable Navigation Bar */}
         <div className="tab-pill-nav flex flex-wrap gap-1.5 mt-3">
           {portals.map(p => (
             <button
@@ -245,6 +252,211 @@ export default function GrimoireView({ profile, onNavigate }) {
                 </div>
               ))}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* PORTAL: SPIRIT BANISHING, ENTITY REMOVAL & PROTECTIVE CHANTS */}
+      {/* ============================================================ */}
+      {activePortal === 'banishing' && (
+        <div className="space-y-6">
+          <div className="glass-panel p-6 rounded-2xl border border-rose-500/30 bg-slate-900/80">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-base font-serif font-bold text-white mb-1 flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-rose-400" /> Sacred Entity Banishing, Warding & Protective Chants Suite
+                </h3>
+                <p className="text-xs text-silver leading-relaxed">
+                  Time-tested ceremonial methods to cleanse hostile spirits, sever psychic cords, seal spatial boundaries, and speak sovereign protection incantations.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setBanishingTab('methods')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    banishingTab === 'methods' 
+                      ? 'bg-rose-500 text-white shadow-lg shadow-rose-500/30' 
+                      : 'bg-slate-900/80 border border-slate-700/50 text-slate-300 hover:text-rose-300 hover:bg-rose-500/10'
+                  }`}
+                >
+                  🌿 6 Banishing Protocols
+                </button>
+                <button
+                  onClick={() => setBanishingTab('chants')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    banishingTab === 'chants' 
+                      ? 'bg-gold text-slate-950 shadow-lg shadow-gold/30' 
+                      : 'bg-slate-900/80 border border-slate-700/50 text-slate-300 hover:text-amber-300 hover:bg-amber-400/10'
+                  }`}
+                >
+                  📜 Protective Chants & Spells
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Banishing Methods Tab */}
+          {banishingTab === 'methods' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {SPIRITUAL_BANISHING_SUITE.methods.map(m => (
+                <div key={m.id} className="glass-panel p-5 rounded-2xl border border-white/10 hover:border-rose-500/40 transition-all space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h4 className="text-sm font-serif font-bold text-white flex items-center gap-2">
+                      <span className="text-lg">{m.icon}</span> {m.title}
+                    </h4>
+                    <span className="text-[10px] font-mono text-emerald-400 bg-emerald-950/50 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                      {m.potency}
+                    </span>
+                  </div>
+
+                  <div className="p-2.5 rounded-xl bg-black/40 border border-white/5 text-[11px] text-amber-300">
+                    <strong>🔑 Key Ingredients / Tools:</strong> {m.herbs}
+                  </div>
+
+                  <div className="space-y-1 text-xs text-slate-200">
+                    <strong className="text-gold text-[11px] uppercase tracking-wider block">Step-by-Step Ritual Protocol:</strong>
+                    <p className="whitespace-pre-line text-slate-300 text-xs leading-relaxed pl-2 border-l-2 border-rose-500/30">
+                      {m.protocol}
+                    </p>
+                  </div>
+
+                  <div className="pt-2 border-t border-white/5 text-[11px] text-cyan flex items-start gap-1.5">
+                    <Info className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
+                    <span><strong>Esoteric Mechanism:</strong> {m.mechanism}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Protective Chants & Incantations Tab */}
+          {banishingTab === 'chants' && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                {SPIRITUAL_BANISHING_SUITE.chants.map(c => (
+                  <div key={c.id} className="glass-panel p-5 rounded-2xl border border-gold/30 bg-slate-950/80 flex flex-col justify-between space-y-3">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="text-[10px] text-cyan uppercase font-bold px-2 py-0.5 rounded-full bg-cyan/10 border border-cyan/20">
+                          {c.tradition}
+                        </span>
+                        <button
+                          onClick={() => handleCopy(c.id, c.text)}
+                          className="flex items-center gap-1 text-xs text-slate-300 hover:text-amber-300 transition-colors px-2 py-1 rounded-lg bg-slate-900 border border-slate-700/60"
+                          title="Copy Chant to Clipboard"
+                        >
+                          {copiedId === c.id ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400 text-[10px]">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5" />
+                              <span className="text-[10px]">Copy Spoken Chant</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <h4 className="text-sm font-serif font-bold text-gold mb-1">{c.title}</h4>
+                      <p className="text-[11px] text-silver mb-3 italic">🎯 Purpose: {c.purpose}</p>
+                      
+                      <div className="p-4 rounded-xl bg-black/60 border border-gold/20 text-slate-100 font-serif text-xs leading-relaxed whitespace-pre-line italic">
+                        "{c.text}"
+                      </div>
+                    </div>
+
+                    <div className="pt-2 text-[10px] text-slate-400 flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                      <span>Speak aloud 3 times with steady breath & unwavering authority.</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ============================================================ */}
+      {/* PORTAL: SUPERSTITIONS, HISTORICAL ORIGINS & REALITY MATRIX   */}
+      {/* ============================================================ */}
+      {activePortal === 'superstitions' && (
+        <div className="space-y-6">
+          <div className="glass-panel p-6 rounded-2xl border border-cyan/30 bg-slate-900/80">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              <div>
+                <h3 className="text-base font-serif font-bold text-white mb-1 flex items-center gap-2">
+                  <Eye className="w-5 h-5 text-cyan" /> Superstitions & Folklore: Historical Origins & Reality Matrix
+                </h3>
+                <p className="text-xs text-silver leading-relaxed">
+                  Discover where famous superstitions originated in ancient history, and explore the objective truth: which are debunked myths versus which are rooted in genuine physical safety, psychology, or subtle energetics.
+                </p>
+              </div>
+
+              {/* Filter Pills */}
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: 'all', label: 'All (12)' },
+                  { id: 'false', label: '❌ Proven False' },
+                  { id: 'practical', label: '🔬 Practical & Safety Truth' },
+                  { id: 'energetic', label: '✨ Subtle Energetic / Psych' }
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setSuperstitionFilter(f.id)}
+                    className={`px-2.5 py-1 rounded-xl text-[11px] font-bold transition-all ${
+                      superstitionFilter === f.id
+                        ? 'bg-cyan text-slate-950 shadow-md shadow-cyan/20'
+                        : 'bg-slate-900/80 border border-slate-700/50 text-slate-300 hover:text-cyan-300 hover:bg-cyan-500/10'
+                    }`}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Superstitions Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            {SUPERSTITIONS_ENCYCLOPEDIA
+              .filter(s => {
+                if (superstitionFilter === 'false') return s.statusBadge === 'PROVEN FALSE';
+                if (superstitionFilter === 'practical') return s.statusBadge.includes('PRACTICAL') || s.statusBadge.includes('HYGIENIC');
+                if (superstitionFilter === 'energetic') return s.statusBadge.includes('ENERGETIC') || s.statusBadge.includes('PSYCHOLOGICAL') || s.statusBadge.includes('ALCHEMICAL') || s.statusBadge.includes('NEUROLOGICAL');
+                return true;
+              })
+              .map(s => (
+                <div key={s.id} className="glass-panel p-5 rounded-2xl border border-white/10 hover:border-cyan/40 transition-all space-y-3 flex flex-col justify-between">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-start">
+                      <h4 className="text-sm font-serif font-bold text-white flex items-center gap-2">
+                        <span className="text-xl">{s.icon}</span> {s.name}
+                      </h4>
+                      <span className={`text-[10px] font-bold border px-2 py-0.5 rounded-full ${s.badgeColor}`}>
+                        {s.statusBadge}
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-300 italic">"{s.summary}"</p>
+
+                    <div className="p-3 rounded-xl bg-black/40 border border-white/5 text-xs text-slate-300 space-y-1">
+                      <strong className="text-gold text-[11px] uppercase tracking-wider block">🏛️ Historical & Cultural Origin:</strong>
+                      <p className="text-slate-300 leading-relaxed">{s.origin}</p>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-950/60 border border-cyan/20 text-xs text-cyan-200 space-y-1">
+                      <div className="flex justify-between items-center">
+                        <strong className="text-cyan text-[11px] uppercase tracking-wider">🔬 Modern Reality & Scientific Verdict:</strong>
+                        <span className="text-[10px] text-amber-300 font-mono font-bold">Likelihood: {s.truthLikelihood}</span>
+                      </div>
+                      <p className="text-slate-200 leading-relaxed">{s.verdict}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
           </div>
         </div>
       )}

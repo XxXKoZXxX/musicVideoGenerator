@@ -70,8 +70,9 @@ export const CATEGORY_HUBS = [
     defaultView: 'numerology',
     color: 'from-pink-500/20 to-purple-500/10 border-pink-500/40 text-pink-300',
     views: [
-      { id: 'numerology', label: 'Numerology Matrix', icon: <Calculator className="w-4 h-4 text-amber-400" />, desc: 'Life Path, Expression, Soul Urge & Birthday numbers', tag: 'Numbers' },
-      { id: 'synastry', label: 'Dual Comparison Matrix', icon: <Heart className="w-4 h-4 text-pink-400" />, desc: '10-subject side-by-side comparison & Twin Flame quiz', tag: 'Twin Flame' }
+      { id: 'personalityTest', label: 'Soul Personality Test', icon: <Sparkles className="w-4 h-4 text-purple-400" />, desc: 'Elemental archetype quiz & ideal partner compatibility', tag: 'Personality' },
+      { id: 'synastry', label: 'Dual Partner Alignment', icon: <Heart className="w-4 h-4 text-pink-400" />, desc: '10-subject side-by-side comparison, green/red flags & longevity', tag: 'Partner Match' },
+      { id: 'numerology', label: 'Numerology Matrix', icon: <Calculator className="w-4 h-4 text-amber-400" />, desc: 'Life Path, Expression, Soul Urge & Birthday numbers', tag: 'Numbers' }
     ]
   }
 ];
@@ -156,7 +157,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
         </button>
 
         {/* 5 Playful Category Hub Buttons (Desktop) */}
-        <nav className="nav-category-menu hidden lg:flex items-center gap-1.5 bg-black/40 p-1.5 rounded-2xl border border-white/10" aria-label="Category Hubs">
+        <nav className="nav-category-menu hidden lg:flex items-center gap-1.5 bg-slate-950/60 p-1.5 rounded-2xl border border-amber-400/20" aria-label="Category Hubs">
           {CATEGORY_HUBS.map(hub => {
             const isHubActive = hub.id === currentHub.id;
             return (
@@ -165,7 +166,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
                 className={`hub-btn flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
                   isHubActive 
                     ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30 scale-105' 
-                    : 'text-slate-300 hover:text-white hover:bg-white/10'
+                    : 'bg-transparent text-slate-300 hover:text-amber-300 hover:bg-amber-400/10'
                 }`}
                 onClick={() => onNavigate(hub.defaultView)}
                 title={`Open ${hub.label}`}
@@ -197,7 +198,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
               {activeProfile.name ? activeProfile.name.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className="text-left hidden sm:block">
-              <span className="profile-name-text text-xs font-bold text-white block max-w-[85px] truncate leading-tight">
+              <span className="profile-name-text text-xs font-bold text-slate-100 block max-w-[85px] truncate leading-tight">
                 {activeProfile.name}
               </span>
               <span className="text-[10px] text-amber-300 font-semibold block leading-none">
@@ -208,7 +209,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
 
           {/* Switch Profile Drawer */}
           <button 
-            className="profile-switch-btn p-2.5 rounded-2xl bg-white/5 border border-white/10 hover:border-cyan-400 hover:text-cyan-300 text-slate-300 transition-all" 
+            className="profile-switch-btn p-2.5 rounded-2xl bg-slate-900/60 border border-slate-700/50 hover:border-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300 text-slate-300 transition-all" 
             onClick={onOpenProfiles} 
             title="Switch Between Saved Profiles"
           >
@@ -227,12 +228,12 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
       </div>
 
       {/* Sub-View Navigation Bar & Breadcrumb Pills */}
-      <div className="sub-view-bar-container glass-panel bg-slate-950/80 border border-white/10 rounded-2xl flex justify-between items-center px-4 py-2 mt-2">
+      <div className="sub-view-bar-container glass-panel bg-slate-950/60 border border-amber-400/20 rounded-2xl flex justify-between items-center px-4 py-2 mt-2">
         <div className="sub-view-pills flex items-center gap-2 overflow-x-auto py-1 w-full md:w-auto">
           {currentView !== 'overview' && (
             <button 
               onClick={() => onNavigate('overview')} 
-              className="breadcrumb-back-btn text-xs text-amber-300 hover:text-white flex items-center gap-1.5 mr-2 pr-3 border-r border-white/10 font-bold flex-shrink-0"
+              className="breadcrumb-back-btn text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1.5 mr-2 pr-3 border-r border-amber-400/20 font-bold flex-shrink-0"
               title="Return to Home Dashboard"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-amber-400" /> Home
@@ -248,7 +249,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
                 className={`sub-view-pill flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                   isViewActive 
                     ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25 scale-105' 
-                    : 'bg-white/5 text-slate-300 hover:text-white hover:bg-white/10 border border-white/5'
+                    : 'bg-transparent text-slate-300 hover:text-amber-300 hover:bg-amber-400/10 border border-slate-800/60 hover:border-amber-400/30'
                 }`}
                 onClick={() => onNavigate(view.id)}
               >
@@ -260,9 +261,9 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
         </div>
 
         {/* Current Active Studio Name */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-300 pl-4 border-l border-white/10 flex-shrink-0">
+        <div className="hidden md:flex items-center gap-2 text-xs text-slate-300 pl-4 border-l border-amber-400/20 flex-shrink-0">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-white font-bold">{activeViewObj.label}</span>
+          <span className="text-slate-100 font-bold">{activeViewObj.label}</span>
         </div>
       </div>
 
@@ -290,7 +291,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
               </div>
               <button 
                 onClick={() => setIsCommandModalOpen(false)}
-                className="p-2 rounded-xl bg-white/5 text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                className="p-2 rounded-xl bg-slate-900 border border-slate-700 text-slate-400 hover:text-amber-300 hover:bg-amber-400/10 transition-colors"
                 title="Close"
               >
                 <X className="w-5 h-5" />
@@ -377,7 +378,7 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
             {/* Modal Footer */}
             <div className="p-3 border-t border-white/10 bg-slate-900/80 flex items-center justify-between text-xs text-slate-300 font-medium">
               <span>✨ Tap any studio to launch right away</span>
-              <span>Press <kbd className="px-1.5 py-0.5 bg-white/10 rounded font-mono text-[10px] text-white">ESC</kbd> to close</span>
+              <span>Press <kbd className="px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded font-mono text-[10px] text-amber-300">ESC</kbd> to close</span>
             </div>
           </div>
         </div>

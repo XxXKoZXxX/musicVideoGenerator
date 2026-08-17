@@ -424,3 +424,236 @@ export function calculateVitalityMatrix(profile, astroData) {
     recommendations
   };
 }
+
+// 13. Comprehensive Spirit Banishing & Protective Chants Suite
+export const SPIRITUAL_BANISHING_SUITE = {
+  methods: [
+    {
+      id: 'smoke',
+      title: '🌿 Sacred Smoke & Herb Fumigation',
+      icon: '🌿',
+      potency: '95% Immediate Atmospheric Reset',
+      herbs: 'White Sage, Palo Santo, Dragon\'s Blood Resin, Frankincense & Dried Rosemary',
+      protocol: '1. Open at least one exterior window and door so displaced entities have an escape route.\n2. Light the herb bundle in an abalone shell or fireproof vessel until glowing.\n3. Fan the smoke into all 4 room corners starting from the furthest back room and moving toward the main exit.\n4. Speak the eviction decree with firm, fearless voice authority.',
+      mechanism: 'Aromatic monoterpenes and sacred resins radically alter the air\'s ion balance, clearing heavy astral debris and breaking entity anchoring.'
+    },
+    {
+      id: 'salt',
+      title: '🧂 Witches\' Black Salt & Crystalline Boundary',
+      icon: '🧂',
+      potency: '98% Perimeter Security',
+      herbs: 'Coarse Sea Salt + Activated Charcoal Ash + Iron Shavings + Black Pepper + Rosemary',
+      protocol: '1. Mix ingredients in a mortar and pestle while stating your intention for total protection.\n2. Pour an unbroken thin line across every exterior door threshold and windowsill.\n3. Place a pinch in the 4 corners of bedrooms.\n4. Command: "Only unconditional love and truth may enter; all negative spirits are barred and banished."',
+      mechanism: 'Salt forms a crystalline bio-electromagnetic shield that acts as an energetic barrier against low-vibrational astral parasites.'
+    },
+    {
+      id: 'sound',
+      title: '🔔 Acoustic Sound Shattering & Frequency Disruption',
+      icon: '🔔',
+      potency: '92% Stagnation Dissolution',
+      herbs: '417 Hz / 528 Hz Tuning Forks, Tibetan Brass Singing Bowls, Tingsha Bells or Rhythmic Clapping',
+      protocol: '1. Stand in each corner of your space where energy stagnates.\n2. Strike the bowl or bell firmly, allowing the sound wave to wash over the room.\n3. Notice if the tone sounds dull or muffled (indicating dense energetic presence).\n4. Repeat until the acoustic ring is crystal clear, sharp, and lingering.',
+      mechanism: 'Negative entities exist at low, dense vibrational harmonics; pure resonant metallic sound waves shatter their frequency lock on physical spaces.'
+    },
+    {
+      id: 'candle',
+      title: '🕯️ Black Candle Reversal & Cord-Cutting Ritual',
+      icon: '🕯️',
+      potency: '96% Psychic Attachment Severance',
+      herbs: '1 Black Candle (absorption), 1 White Candle (divine light), Natural Hemp Twine, Rosemary Oil',
+      protocol: '1. Carve entity burdens or unwanted feelings into the black candle.\n2. Tie the twine between the black and white candle.\n3. Light both candles. Speak: "I sever all parasitic cords, psychic hooks, and unauthorized attachments across all space and time."\n4. Let the flame burn through the twine and let candles burn down safely.',
+      mechanism: 'Elemental fire accelerates the transmutation of etheric attachments and returns sovereign power to the caster.'
+    },
+    {
+      id: 'amulets',
+      title: '🪞 Mirror Deflection & Protective Talismans',
+      icon: '🪞',
+      potency: '94% Continuous Passive Defense',
+      herbs: 'Convex Bagua Mirror, Raw Black Tourmaline, Obsidian, Evil Eye Nazar, Iron Horseshoe',
+      protocol: '1. Hang a convex Bagua mirror or Nazar amulet directly outside your front door facing outward.\n2. Place raw black tourmaline near your bed or entryway.\n3. Carry an iron talisman on your left side (the receptive psychic side of the body).\n4. Cleanse crystals under moonlight monthly.',
+      mechanism: 'Reflective and magnetic iron minerals absorb or deflect hostile spiritual gaze and psychic attacks before entering your energy field.'
+    },
+    {
+      id: 'bath',
+      title: '🛁 Sacred Uncrossing & Astral Cleansing Bath',
+      icon: '🛁',
+      potency: '93% Auric Field Rejuvenation',
+      herbs: '2 cups Epsom Salt, 1 cup Sea Salt, Rue (Ruda), Hyssop, Lavender, Rosemary, Florida Water',
+      protocol: '1. Brew herbs in hot water for 10 minutes, then strain tea into a warm bath with salts.\n2. Soak for 20 minutes from the neck down.\n3. Pour water over your crown 3 times, visualizing all heavy gray energy dissolving down the drain.\n4. Air dry naturally without rubbing vigorously with a towel.',
+      mechanism: 'Transdermal magnesium, sulfur, and solar herbs purge astral parasites directly attached to the etheric double.'
+    }
+  ],
+  chants: [
+    {
+      id: 'michael',
+      title: 'Archangel Michael Blue Flame Sword Invocation',
+      tradition: 'Angelic Theurgy & Hermetic Magic',
+      purpose: 'Instant emergency psychic defense, entity removal & panic relief',
+      text: 'Archangel Michael before me, Archangel Michael behind me, Archangel Michael to my right, Archangel Michael to my left, Archangel Michael above me, Archangel Michael below me. Archangel Michael wherever I go!\n\nI AM His divine blue lightning protecting here! Cut all negative cords with your sword of light, banish all dark shades and unholy attachments! In the name of the Supreme Divine Light, BEGONE!'
+    },
+    {
+      id: 'threshold',
+      title: 'The 3-Fold Sacred Threshold Ward',
+      tradition: 'Traditional Witchcraft & Folk Magic',
+      purpose: 'Home protection against nightmares, intruders & wandering spirits',
+      text: 'By salt and fire, by wind and stone,\nThis sacred space is mine alone.\nNo wicked spirit, shade, or blight,\nMay cross this threshold day or night.\nWhat entered here is cast away,\nThe golden light alone shall stay.\nAs I will it, so mote it be!'
+    },
+    {
+      id: 'maha_mantra',
+      title: 'Ancient Vedic Maha Mrityunjaya Mantra',
+      tradition: 'Vedic Sanskrit & Shiva Sacred Mantras',
+      purpose: 'Conquering fear, dissolving psychic attacks, illness & spiritual darkness',
+      text: 'Om Tryambakam Yajamahe Sugandhim Pushti-Vardhanam\nUrvarukamiva Bandhanan Mrityor Mukshiya Mamritat.\n\n(Translation: We worship the Three-Eyed Lord of divine fragrance who nourishes all beings. May He liberate our souls from the bondage of darkness and death, just as a ripe fruit is effortlessly released from the vine.)'
+    },
+    {
+      id: 'uncrossing',
+      title: 'Salt & Rue Uncrossing Rhyme',
+      tradition: 'Latin American Curanderismo & Hoodoo Folk Magic',
+      purpose: 'Removing heavy hexes, bad luck & spiritual residue',
+      text: 'Salt of the Earth, herb of the Sun,\nThe cleansing of this soul is done.\nReturn all dark intent thrice fold,\nMy spirit stands in sovereign gold!\nNo root or blade, no spoken harm,\nCan pierce my sacred radiant charm!'
+    },
+    {
+      id: 'celtic_circle',
+      title: 'The Celtic Golden Sun Encompassing Charm',
+      tradition: 'Ancient Celtic Druidic Lore',
+      purpose: 'Sealing the personal auric field before sleep or travel',
+      text: 'I circle around me the light of the Sun,\nThe depth of the sea and the breath of the storm.\nNo phantom of dark, no whisper of malice,\nCan enter this chalice where sovereignty runs!\nAbove and below, within and without,\nI am shielded in truth without fear or doubt.'
+    }
+  ]
+};
+
+// 14. Superstitions Encyclopedia: Historical Origins, Truth Likelihood vs Debunked Myths
+export const SUPERSTITIONS_ENCYCLOPEDIA = [
+  {
+    id: 'ladder',
+    name: 'Walking Under a Ladder',
+    icon: '🪜',
+    summary: 'Belief that walking under a leaned ladder brings catastrophic bad luck.',
+    origin: 'Ancient Egypt & Early Christianity. A ladder leaning against a wall forms a sacred triangle. In Egypt, the triangle represented the sacred trinity of the gods (Osiris, Isis, Horus), and walking through it violated divine geometry. Later, Christians associated the triangle with the Holy Trinity, believing passing through it welcomed demonic defilement.',
+    truthLikelihood: '85% (Rooted in Real Physics & Safety)',
+    statusBadge: 'PRACTICAL TRUTH',
+    badgeColor: 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30',
+    verdict: 'While walking under a ladder has zero supernatural power over your destiny, it is genuinely hazardous in the physical world — tools, paint, or collapsing rungs can fall on you. The superstition survived because practical safety warnings were dressed in religious taboos to keep people alert.'
+  },
+  {
+    id: 'mirror',
+    name: 'Breaking a Mirror = 7 Years Bad Luck',
+    icon: '🪞',
+    summary: 'Breaking reflective glass fractures your soul and curses you for seven years.',
+    origin: 'Ancient Rome & Greece (Catoptromancy). Ancient Romans believed that water reflections and polished metal mirrors captured the soul\'s spiritual essence. Furthermore, Roman physicians believed the human body completely rejuvenated and regenerated its cellular soul health every 7 years. Therefore, breaking your soul\'s reflection meant waiting 7 full years for your spiritual body to heal.',
+    truthLikelihood: '15% (Psychological Confirmation Bias)',
+    statusBadge: 'PSYCHOLOGICAL PLACEBO',
+    badgeColor: 'text-amber-400 bg-amber-950/40 border-amber-500/30',
+    verdict: 'Scientifically false. Mirrors are simply glass with a reflective silver or aluminum backing. However, psychological research shows that believers who break mirrors experience the "Nocebo Effect" — heightened anxiety that causes them to unconsciously notice and blame ordinary accidents on the broken mirror.'
+  },
+  {
+    id: 'salt_spill',
+    name: 'Throwing Spilled Salt Over the Left Shoulder',
+    icon: '🧂',
+    summary: 'Spilling salt invites bad luck; tossing a pinch over your left shoulder blinds the Devil.',
+    origin: 'Ancient Rome & Christian Folklore. Salt was so valuable in the Roman Empire that soldiers were partially paid in salt ("salarium" — origin of the word "salary"). Spilling salt was considered reckless waste of divine wealth. Later folklore placed the Devil lurking over the sinister left shoulder; throwing salt backward into his eyes blinded him before he could strike.',
+    truthLikelihood: '75% (Microbial & Alchemical Cleansing)',
+    statusBadge: 'ALCHEMICAL REALITY',
+    badgeColor: 'text-cyan-400 bg-cyan-950/40 border-cyan-500/30',
+    verdict: 'The Devil-blinding legend is myth, but salt itself has very real crystalline, preservative, and anti-microbial properties that purified food and sterilized wounds for millennia. Esoterically, salt is one of the most powerful natural energetic grounding agents in existence.'
+  },
+  {
+    id: 'black_cat',
+    name: 'Black Cat Crossing Your Path',
+    icon: '🐈‍⬛',
+    summary: 'A black cat crossing in front of you brings misfortune or death.',
+    origin: 'Middle Ages Witch Hysteria (Europe). In medieval Europe, black cats were falsely associated with witches and shapeshifting nocturnal spirits. In stark contrast, in Ancient Egypt, black cats were sacred incarnations of the goddess Bastet, revered as divine protectors of households bringing supreme good luck, wealth, and fertility.',
+    truthLikelihood: '0% (Completely Debunked Myth)',
+    statusBadge: 'PROVEN FALSE',
+    badgeColor: 'text-rose-400 bg-rose-950/40 border-rose-500/30',
+    verdict: '100% false and harmless folklore. Black cats have unique melanistic genetics and possess the exact same loving, affectionate nature as any other feline. In Britain, Scotland, and Japan, black cats are still celebrated as sacred harbingers of good fortune.'
+  },
+  {
+    id: 'knock_wood',
+    name: 'Knocking on Wood (Touch Wood)',
+    icon: '🪵',
+    summary: 'Tapping wood after speaking of good fortune prevents jinxing or tempting fate.',
+    origin: 'Ancient Celtic & Pagan Tree Animism. Pagan European tribes believed that sacred trees (oak, ash, hawthorn) were the physical dwellings of benevolent elemental dryads and nature spirits. Tapping the wood was both an acknowledgment of gratitude and a way to ask the tree spirits for protection against jealous entities who might overhear your pride.',
+    truthLikelihood: '65% (Psychological Somatic Grounding)',
+    statusBadge: 'PSYCHOLOGICAL GROUNDING',
+    badgeColor: 'text-purple-400 bg-purple-950/40 border-purple-500/30',
+    verdict: 'While oak trees do not physically intercept jealous demons, behavioral psychologists at the University of Chicago proved that the physical gesture of "knocking away" an outcome tangibly reduces cognitive anxiety and resets fear of catastrophic thinking through tactile grounding.'
+  },
+  {
+    id: 'umbrella',
+    name: 'Opening an Umbrella Indoors',
+    icon: '☂️',
+    summary: 'Opening an umbrella inside a building invites disaster onto the household.',
+    origin: 'Ancient Egypt & 18th-Century Victorian England. In ancient Egypt, peacock feather sunshades were sacred religious items representing the sky goddess Nut; opening them indoors was seen as an insult to the sun god Ra. In Victorian England, the first steel-ribbed spring umbrellas opened with violent force in small parlors, regularly breaking glassware, injuring eyes, and knocking over lamps.',
+    truthLikelihood: '90% (Victorian Mechanical Safety Hazard)',
+    statusBadge: 'PRACTICAL TRUTH',
+    badgeColor: 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30',
+    verdict: 'The curse aspect is mythological, but the origin was pure domestic safety! Large, spring-loaded Victorian umbrellas in confined spaces caused frequent domestic accidents, giving rise to the superstition.'
+  },
+  {
+    id: 'friday_13th',
+    name: 'Friday the 13th & Number 13 (Triskaidekaphobia)',
+    icon: '🗓️',
+    summary: 'The number 13 and Friday the 13th are inherently cursed with misfortune.',
+    origin: 'Norse Mythology & The Knights Templar. In Norse myth, 12 gods were dining at Valhalla when Loki, the uninvited 13th guest, crashed the banquet and caused Balder\'s death. In Christian history, 13 were present at the Last Supper before Jesus was crucified on a Friday. On Friday, October 13, 1307, King Philip IV of France arrested and executed the Knights Templar across Europe.',
+    truthLikelihood: '0% (Cultural Construct & Self-Fulfilling Prophecy)',
+    statusBadge: 'PROVEN FALSE',
+    badgeColor: 'text-rose-400 bg-rose-950/40 border-rose-500/30',
+    verdict: 'Statistically and mathematically false. Extensive insurance and traffic data shows Friday the 13th has no higher accident rate than any other Friday. In Mayan and ancient Chinese cultures, the number 13 was sacred, representing the 13 lunar cycles of the year.'
+  },
+  {
+    id: 'evil_eye',
+    name: 'The Evil Eye (Mal de Ojo / Mati)',
+    icon: '🧿',
+    summary: 'Envious or malevolent stares can project negative energy and illness onto others.',
+    origin: 'Ancient Mesopotamia, Greece & Mediterranean (over 5,000 years old). Mentioned in Sumerian cuneiform texts, classical Greek literature (Plutarch, Heliodorus), and Hebrew texts. It reflects the intuitive belief that human gaze carries bio-photonic and psychic intentional energy that can deplete vulnerable targets.',
+    truthLikelihood: '70% (Subtle Bio-Energetic Projection)',
+    statusBadge: 'ENERGETIC REALITY',
+    badgeColor: 'text-cyan-400 bg-cyan-950/40 border-cyan-500/30',
+    verdict: 'Modern psychoneuroimmunology confirms that hostile social judgment and intense envious micro-expressions cause measurable spikes in cortisol and nervous system distress in sensitive individuals. The ancient Nazar glass amulet acts as a conscious psychological anchor against social depletion.'
+  },
+  {
+    id: 'itchy_palms',
+    name: 'Itchy Palms (Money Incoming or Outgoing)',
+    icon: '✋',
+    summary: 'An itchy right palm means money is coming in; an itchy left palm means you will pay money out.',
+    origin: 'Saxon & Romani Gypsy Folklore. In ancient Saxon lore, rubbing silver coins against the skin was believed to cure physical ailments. Over centuries, Romani travelers popularized the belief that metabolic tingling in the palms signaled changes in financial fortune.',
+    truthLikelihood: '20% (Neurological Circulation vs Placebo)',
+    statusBadge: 'NEUROLOGICAL TRUTH',
+    badgeColor: 'text-purple-400 bg-purple-950/40 border-purple-500/30',
+    verdict: 'Medically, itchy palms are caused by dry skin, contact dermatitis, or micro-vascular circulation in the palm nerves. However, using the sensation as a psychological manifestation cue to focus on financial abundance has proven beneficial in subconscious reprogramming.'
+  },
+  {
+    id: 'night_sweeping',
+    name: 'Sweeping Floors After Sunset',
+    icon: '🧹',
+    summary: 'Sweeping your house at night sweeps out your family\'s luck and prosperity.',
+    origin: 'Pre-Electricity Agrarian Societies (India, West Africa, Medieval Europe). Before electrical light bulbs, sweeping in dark rooms by candlelight frequently led to accidentally sweeping out lost coins, jewelry, needles, or small valuables into the dirt outside.',
+    truthLikelihood: '90% (Pre-Electric Economic Common Sense)',
+    statusBadge: 'PRACTICAL TRUTH',
+    badgeColor: 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30',
+    verdict: 'A brilliant historical safety rule! Without bright overhead lights, sweeping at night literally swept away household wealth. Elders turned it into a superstition to prevent children and servants from losing valuables in the dark.'
+  },
+  {
+    id: 'shoes_table',
+    name: 'Placing Shoes on the Table',
+    icon: '👞',
+    summary: 'Putting new or old shoes on a table brings terrible quarrels, illness, or death.',
+    origin: 'Victorian Coal Mining Communities (UK). In Northern English coal mining towns, when a miner died in an underground mine disaster, his work shoes and boots were ceremonially placed on his kitchen table for his family to see. Putting shoes on a table was thus associated with death in the family.',
+    truthLikelihood: '85% (Hygiene & Victorian Mourning Taboo)',
+    statusBadge: 'HYGIENIC & CULTURAL TRUTH',
+    badgeColor: 'text-emerald-400 bg-emerald-950/40 border-emerald-500/30',
+    verdict: 'Aside from the grim mourning association, outdoor footwear carries dangerous street bacteria, dirt, and pathogens. Placing them where food is prepared and eaten is a genuine hygiene hazard.'
+  },
+  {
+    id: 'tongue_bite',
+    name: 'Biting Your Tongue While Eating',
+    icon: '👅',
+    summary: 'Accidentally biting your tongue means someone is gossiping about you.',
+    origin: 'Ancient Roman & Slavic Folk Beliefs. Ancient Romans viewed sudden involuntary bodily twitches (sneezes, hiccups, tongue bites) as omen-telepathic signals that someone was speaking your name across distance.',
+    truthLikelihood: '10% (Motor Muscle Misalignment)',
+    statusBadge: 'PROVEN FALSE',
+    badgeColor: 'text-rose-400 bg-rose-950/40 border-rose-500/30',
+    verdict: 'Medically, tongue bites occur when you are eating too fast, distracted, stressed, or experiencing minor jaw misalignment. It has no telepathic connection to external gossip.'
+  }
+];

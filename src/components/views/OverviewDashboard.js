@@ -6,7 +6,7 @@ import {
   Sparkles, Compass, HeartHandshake, 
   Radio, Film, MessageSquare, Headphones, Zap, Key, BookOpen, 
   Share2, Smartphone, Copy, Check, Eye, Calculator, FileText, ArrowRight, Palette,
-  Edit3, UserPlus, MapPin, Calendar, Clock, User, Flame, Moon, Star, Wand2
+  Edit3, UserPlus, MapPin, Calendar, Clock, User, Flame, Moon, Wand2
 } from 'lucide-react';
 import { shareCosmicContent } from '../../utils/mobileShare';
 
@@ -48,13 +48,14 @@ const STUDIO_COLLECTIONS = [
     ]
   },
   {
-    category: '💖 Numerology & Relationship Love',
+    category: '💖 Personality & Partner Alignment',
     icon: '💖',
     color: 'border-pink-500/30 bg-pink-500/5',
-    desc: 'Pythagorean vibrational numbers and deep dual-person compatibility tests.',
+    desc: 'Archetypal personality testing, deep partner alignment & Pythagorean vibrational numbers.',
     studios: [
-      { id: 'numerology', title: 'Pythagorean Numerology Matrix', desc: 'Life Path, Expression, Soul Urge & Birthday numbers.', icon: <Calculator className="w-6 h-6 text-amber-400" />, tag: 'Numbers' },
-      { id: 'synastry', title: 'Dual Comparison Matrix', desc: '10-subject side-by-side comparison & Twin Flame quiz.', icon: <HeartHandshake className="w-6 h-6 text-pink-400" />, tag: 'Twin Flame' }
+      { id: 'personalityTest', title: 'Soul Personality Test', desc: '8-Question elemental archetype test & ideal partner matching.', icon: <Sparkles className="w-6 h-6 text-purple-400" />, tag: 'Personality' },
+      { id: 'synastry', title: 'Dual Partner Alignment', desc: '10-subject comparison, 5 longevity pillars & green/red flags.', icon: <HeartHandshake className="w-6 h-6 text-pink-400" />, tag: 'Partner Match' },
+      { id: 'numerology', title: 'Pythagorean Numerology Matrix', desc: 'Life Path, Expression, Soul Urge & Birthday numbers.', icon: <Calculator className="w-6 h-6 text-amber-400" />, tag: 'Numbers' }
     ]
   },
   {
@@ -83,13 +84,15 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
   };
 
   const [copiedPhone, setCopiedPhone] = useState(false);
-  const phoneDirectUrl = typeof window !== 'undefined' && window.location.origin.includes('http') 
-    ? window.location.origin 
-    : 'http://localhost:3210';
-  const qrDirect = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&color=F59E0B&bgcolor=060814&data=${encodeURIComponent(phoneDirectUrl)}`;
+  const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+  const phoneDirectUrl = isLocalHost 
+    ? 'https://wonder-lobby-chelsea-enters.trycloudflare.com' 
+    : (typeof window !== 'undefined' ? window.location.origin : 'https://wonder-lobby-chelsea-enters.trycloudflare.com');
+  const wifiDirectUrl = 'http://192.168.86.210:3210';
+  const qrDirect = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&color=F59E0B&bgcolor=060814&data=${encodeURIComponent(phoneDirectUrl)}`;
 
-  const handleCopyPhoneLink = () => {
-    navigator.clipboard.writeText(phoneDirectUrl).then(() => {
+  const handleCopyPhoneLink = (url) => {
+    navigator.clipboard.writeText(url || phoneDirectUrl).then(() => {
       setCopiedPhone(true);
       setTimeout(() => setCopiedPhone(false), 2500);
     });
@@ -126,7 +129,7 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
               </button>
               <button 
                 onClick={() => onNavigate('newProfile')}
-                className="btn-secondary text-xs md:text-sm py-2.5 px-5 rounded-2xl flex items-center gap-2 text-slate-200 hover:text-white bg-white/10 border border-white/15 hover:border-amber-400/50 transition-all font-semibold"
+                className="btn-secondary text-xs md:text-sm py-2.5 px-5 rounded-2xl flex items-center gap-2 text-slate-200 hover:text-amber-300 bg-slate-900/80 border border-slate-700/60 hover:border-amber-400/50 hover:bg-slate-800 transition-all font-semibold"
               >
                 <UserPlus className="w-4 h-4 text-cyan-300" /> Add Another Person
               </button>
@@ -189,7 +192,7 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
             <button
               key={hub.id}
               onClick={() => onNavigate(hub.id)}
-              className={`p-4 rounded-2xl glass-panel bg-slate-900/80 border border-white/10 flex flex-col items-center justify-center gap-2 text-center transition-all hover:scale-105 shadow-md ${hub.color}`}
+              className={`p-4 rounded-2xl glass-panel bg-slate-900/80 border border-slate-700/60 flex flex-col items-center justify-center gap-2 text-center transition-all hover:scale-105 shadow-md ${hub.color}`}
             >
               <span className="text-2xl">{hub.emoji}</span>
               <strong className="text-xs md:text-sm font-bold text-white block">{hub.label}</strong>
@@ -268,15 +271,18 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
               <h4 className="text-base font-bold text-white">Instant Phone & Mobile App Access</h4>
             </div>
             <p className="text-xs md:text-sm text-slate-300 mt-1 leading-relaxed">
-              Scan this QR code with your phone camera to launch Astraea instantly with full touch controls!
+              Scan this QR code with your iPhone or Android camera to launch Astraea instantly with full touch controls!
             </p>
             <div className="phone-link-row mt-3 flex flex-wrap items-center gap-2">
               <code className="text-xs text-amber-300 font-mono font-bold bg-black/60 py-1.5 px-3 rounded-xl border border-amber-400/30 truncate max-w-full sm:max-w-md">
                 {phoneDirectUrl}
               </code>
-              <button onClick={handleCopyPhoneLink} className="btn-gold text-xs py-1.5 px-4 rounded-xl flex items-center gap-1.5 font-bold bg-amber-400 text-slate-950">
+              <button onClick={() => handleCopyPhoneLink(phoneDirectUrl)} className="btn-gold text-xs py-1.5 px-4 rounded-xl flex items-center gap-1.5 font-bold bg-amber-400 text-slate-950">
                 {copiedPhone ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy Link</>}
               </button>
+            </div>
+            <div className="mt-2 text-xs text-slate-400">
+              <span>Local Wi-Fi Alternative: <button onClick={() => handleCopyPhoneLink(wifiDirectUrl)} className="text-cyan-400 font-mono font-bold hover:underline">{wifiDirectUrl}</button></span>
             </div>
           </div>
         </div>
@@ -312,14 +318,14 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
                 <div
                   key={studio.id}
                   onClick={() => onNavigate(studio.id)}
-                  className="studio-card glass-panel p-5 rounded-3xl border border-white/10 bg-slate-950/85 hover:border-amber-400/60 hover:bg-slate-900/90 transition-all cursor-pointer group shadow-lg flex flex-col justify-between"
+                  className="studio-card glass-panel p-5 rounded-3xl border border-amber-400/20 bg-slate-950/85 hover:border-amber-400/60 hover:bg-slate-900/90 transition-all cursor-pointer group shadow-lg flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-white/10 flex items-center justify-center group-hover:scale-110 group-hover:border-amber-400/40 transition-all shadow-md">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-700/60 flex items-center justify-center group-hover:scale-110 group-hover:border-amber-400/40 transition-all shadow-md">
                         {studio.icon}
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-white/5 px-2.5 py-1 rounded-full border border-white/10 group-hover:border-amber-400/40 group-hover:text-amber-300 transition-colors">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-slate-900 px-2.5 py-1 rounded-full border border-slate-700/60 group-hover:border-amber-400/40 group-hover:text-amber-300 transition-colors">
                         {studio.tag}
                       </span>
                     </div>
@@ -332,7 +338,7 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
                     </p>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-white/5 flex items-center justify-between text-xs font-bold text-slate-400 group-hover:text-amber-300 transition-colors">
+                  <div className="mt-4 pt-3 border-t border-amber-400/10 flex items-center justify-between text-xs font-bold text-slate-400 group-hover:text-amber-300 transition-colors">
                     <span>Launch Studio</span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
                   </div>
