@@ -26,7 +26,7 @@
   "scripts": {
     "react-start": "react-scripts start",
     "react-build": "react-scripts build",
-    "electron-start": "wait-on http://localhost:3210 && electron . --dev",
+    "electron-start": "wait-on http://localhost:3220 && electron . --dev",
     "start": "concurrently \"npm run react-start\" \"npm run electron-start\"",
     "dev": "npm start",
     "video-server": "node server/index.js",
