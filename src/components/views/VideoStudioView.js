@@ -22,6 +22,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
   useEffect(() => {
     if (canvasRef.current) {
       const engine = new VideoRenderEngine(canvasRef.current, profile);
+      engine.renderer = renderer;
       engine.start();
       engineRef.current = engine;
     }
@@ -31,7 +32,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
         engineRef.current.stop();
       }
     };
-  }, [profile]);
+  }, [profile, renderer]);
 
   const togglePlay = () => {
     if (!engineRef.current) return;
