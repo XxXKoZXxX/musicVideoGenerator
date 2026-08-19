@@ -2960,14 +2960,12 @@ input[type="range"]::-webkit-slider-runnable-track {
     padding: 4px;
     gap: 6px;
     border-radius: 14px;
-    -webkit-overflow-scrolling: touch;
   }
   .stepper-nav::-webkit-scrollbar {
     display: none;
   }
   .stepper-nav {
     -ms-overflow-style: none;
-    scrollbar-width: none;
   }
 
   .stepper-pill {

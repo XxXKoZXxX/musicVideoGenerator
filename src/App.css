@@ -2052,6 +2052,7 @@ select:-webkit-autofill:focus {
   -webkit-tap-highlight-color: transparent !important;
   -webkit-appearance: none !important;
   appearance: none !important;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -2184,7 +2185,6 @@ select:-webkit-autofill:focus {
   overflow-y: auto;
   padding: 0.5rem 0;
   max-height: 68vh;
-  -webkit-overflow-scrolling: touch;
 }
 
 /* Category Filter Chips & Quick Actions */
@@ -2197,7 +2197,6 @@ select:-webkit-autofill:focus {
 .quick-actions-bar,
 .sub-view-pills {
   -ms-overflow-style: none;
-  scrollbar-width: none;
 }
 
 /* Profile Switcher Drawer */
