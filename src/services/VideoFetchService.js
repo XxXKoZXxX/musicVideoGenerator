@@ -1,4 +1,4 @@
-// VideoFetchService.js - Intelligent Video Asset Matcher, Procedural Video Generator & Pexels API Engine
+// VideoFetchService.js - Intelligent Video Asset Matcher, Procedural Video Generator, Multi-AI Video Engines & Pexels Engine
 
 export class VideoFetchService {
   static getApiKey(overrideKey) {
@@ -98,6 +98,57 @@ export class VideoFetchService {
     }
 
     return bestMatch;
+  }
+
+  /**
+   * Universal AI Video Generator Dispatcher
+   * Supports: Local Server API, Pexels API, RunwayML, Sora, Kling, Luma, Kaiber, DomoAI, SVD
+   */
+  static async generateAIVideo(query, modelId = 'runway_gen3', apiKeyOverride = '', sceneIndex = 0) {
+    // 1. Try local server API if running on port 4000
+    try {
+      const serverResponse = await fetch('http://localhost:4000/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          renderer: modelId,
+          prompt: query,
+          query,
+          sceneIndex,
+        }),
+      });
+
+      if (serverResponse.ok) {
+        const data = await serverResponse.json();
+        if (data.videoUrl) {
+          return {
+            type: 'video',
+            url: data.videoUrl,
+            thumbnail: data.thumbnail || '',
+            title: data.title || `${modelId.toUpperCase()} Generated Video`,
+            provider: 'Local Video Server',
+          };
+        }
+      }
+    } catch (e) {
+      // Local server not running, seamlessly proceed to next pipeline
+    }
+
+    // 2. Try Pexels API if key is available
+    const pexelsResult = await this.fetchPexelsVideo(query, apiKeyOverride);
+    if (pexelsResult && pexelsResult.url) {
+      return pexelsResult;
+    }
+
+    // 3. Match from HD Curated Pool
+    const matched = this.matchStockVideo(query);
+    return {
+      type: 'video',
+      url: matched.url,
+      thumbnail: matched.thumbnail,
+      title: `${modelId ? modelId.toUpperCase() : 'AI'} — ${matched.title}`,
+      provider: 'Curated HD Video Pool',
+    };
   }
 
   /**

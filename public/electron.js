@@ -2,8 +2,13 @@ const { app, BrowserWindow, ipcMain, dialog, Menu, shell } = require('electron')
 const path = require('path');
 const fs = require('fs');
 
+try {
+  require('dotenv').config({ path: path.join(__dirname, '../.env') });
+} catch (e) {}
+
 // Check if running in development mode
 const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
+const DEV_PORT = process.env.PORT || 3220;
 
 // Set FFmpeg path (assumes ffmpeg installed globally or in project)
 // ffmpeg.setFfmpegPath(path.join(__dirname, '..', 'ffmpeg', 'ffmpeg.exe'));
@@ -30,8 +35,21 @@ function createWindow() {
     show: true,
   });
 
+  let retryCount = 0;
+  const maxRetries = 10;
+
   mainWindow.webContents.on('did-fail-load', (_event, code, description, url) => {
-    dialog.showErrorBox('Astraea Studio', `Could not load ${url}\n\n${description} (${code})`);
+    if (isDev && retryCount < maxRetries) {
+      retryCount++;
+      console.log(`Waiting for dev server at ${url}... (attempt ${retryCount}/${maxRetries})`);
+      setTimeout(() => {
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.loadURL(`http://localhost:${DEV_PORT}`);
+        }
+      }, 1500);
+    } else {
+      dialog.showErrorBox('Astraea Studio', `Could not load ${url}\n\n${description} (${code})`);
+    }
   });
 
   const buildPath = path.join(__dirname, '../build/index.html');
@@ -40,7 +58,7 @@ function createWindow() {
   if (useBuild) {
     mainWindow.loadFile(buildPath);
   } else {
-    mainWindow.loadURL(`http://localhost:${process.env.PORT || 3210}`);
+    mainWindow.loadURL(`http://localhost:${DEV_PORT}`);
   }
 
   mainWindow.show();

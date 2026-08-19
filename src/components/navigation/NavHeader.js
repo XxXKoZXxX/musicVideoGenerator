@@ -3,7 +3,7 @@ import {
   Star, Users, Plus, Sparkles, Compass, BookOpen, 
   Radio, Film, MessageSquare, Eye, Headphones, 
   Calculator, Heart, FileText, Zap, Key, 
-  Search, ArrowLeft, Palette, Moon, Edit3, X, Flame, ChevronRight, Rocket
+  Search, ArrowLeft, Palette, Moon, Edit3, X, Flame, ChevronRight, Rocket, Share2
 } from 'lucide-react';
 
 export const CATEGORY_HUBS = [
@@ -57,7 +57,7 @@ export const CATEGORY_HUBS = [
     color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/40 text-emerald-300',
     views: [
       { id: 'podcast', label: 'Dual-Host Voice Podcast', icon: <Radio className="w-4 h-4 text-rose-400" />, desc: 'Atlas & Luna conversational voice audio reading', tag: 'Podcast' },
-      { id: 'video', label: 'Motion Video Studio', icon: <Film className="w-4 h-4 text-emerald-400" />, desc: '60 FPS animated cosmic forecast video exporter', tag: '60 FPS' },
+      { id: 'video', label: 'AI Music Video Studio', icon: <Film className="w-4 h-4 text-emerald-400" />, desc: '4-Step Studio with Sora, Runway, Kling & 60 FPS Export', tag: 'AI Studio' },
       { id: 'oracleChat', label: 'AI Oracle & Notebook', icon: <MessageSquare className="w-4 h-4 text-cyan-400" />, desc: 'Contextual AI Q&A & saved spiritual journal', tag: 'AI' },
       { id: 'soundscape', label: 'Sacred Frequencies', icon: <Headphones className="w-4 h-4 text-cyan-400" />, desc: '20+ Solfeggio frequencies & sacred visualizer', tag: 'Sound' }
     ]
@@ -79,7 +79,7 @@ export const CATEGORY_HUBS = [
 
 export const ALL_STUDIOS = CATEGORY_HUBS.flatMap(h => h.views);
 
-export default function NavHeader({ currentView, onNavigate, activeProfile, onOpenProfiles, onCreateProfile, onOpenTheme }) {
+export default function NavHeader({ currentView, onNavigate, activeProfile, onOpenProfiles, onCreateProfile, onOpenTheme, onOpenShare }) {
   const [isCommandModalOpen, setIsCommandModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef(null);
@@ -179,6 +179,15 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
 
         {/* Profile Pill & Theme Button */}
         <div className="nav-profile-section flex items-center gap-2">
+          {/* Share App Button */}
+          <button 
+            className="share-nav-btn p-2.5 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all shadow-sm"
+            onClick={onOpenShare}
+            title="Share App with Friends & Testers"
+          >
+            <Share2 className="w-4 h-4" />
+          </button>
+
           {/* Theme Palette Button */}
           <button 
             className="theme-nav-btn p-2.5 rounded-2xl bg-purple-500/15 border border-purple-500/40 text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm"

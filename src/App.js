@@ -6,6 +6,7 @@ import MobileStudiosDrawer from './components/navigation/MobileStudiosDrawer';
 import ProfileDrawer from './components/profile/ProfileDrawer';
 import ProfileForm from './components/profile/ProfileForm';
 import ThemeCustomizerModal from './components/theme/ThemeCustomizerModal';
+import ShareModal from './components/share/ShareModal';
 import InstallMobileBanner from './components/mobile/InstallMobileBanner';
 
 // Views
@@ -82,6 +83,7 @@ export default function App() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isMobileStudiosOpen, setIsMobileStudiosOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [currentTheme, setCurrentTheme] = useState(null);
 
   // Profiles State with LocalStorage Persistence and Patrice -> Astraea Migration
@@ -177,6 +179,7 @@ export default function App() {
         onOpenProfiles={() => setIsDrawerOpen(true)}
         onCreateProfile={() => setCurrentView('newProfile')}
         onOpenTheme={() => setIsThemeModalOpen(true)}
+        onOpenShare={() => setIsShareModalOpen(true)}
       />
 
       <main className="main-content-container">
@@ -203,6 +206,7 @@ export default function App() {
                   profile={safeProfile} 
                   onNavigate={(view) => setCurrentView(view)} 
                   onOpenTheme={() => setIsThemeModalOpen(true)}
+                  onOpenShare={() => setIsShareModalOpen(true)}
                 />
               )}
 
@@ -260,8 +264,8 @@ export default function App() {
 
               {currentView === 'synastry' && (
                 <SynastryView 
+                  profile={safeProfile}
                   profiles={profiles} 
-                  activeProfile={safeProfile} 
                   onNavigate={(view) => setCurrentView(view)} 
                   onAddProfile={() => setCurrentView('newProfile')}
                 />
@@ -294,6 +298,7 @@ export default function App() {
         onNavigate={(view) => setCurrentView(view)} 
         onOpenStudios={() => setIsMobileStudiosOpen(true)} 
         onOpenTheme={() => setIsThemeModalOpen(true)}
+        onOpenShare={() => setIsShareModalOpen(true)}
       />
 
       {/* Mobile Studios Bottom Sheet Drawer */}
@@ -305,6 +310,10 @@ export default function App() {
           onOpenTheme={() => {
             setIsMobileStudiosOpen(false);
             setIsThemeModalOpen(true);
+          }}
+          onOpenShare={() => {
+            setIsMobileStudiosOpen(false);
+            setIsShareModalOpen(true);
           }}
         />
       )}
@@ -331,6 +340,13 @@ export default function App() {
         onClose={() => setIsThemeModalOpen(false)}
         currentTheme={currentTheme}
         onThemeChange={(newTheme) => setCurrentTheme(newTheme)}
+      />
+
+      {/* Share with Friends & Testers Modal */}
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        activeProfile={safeProfile}
       />
     </div>
   );

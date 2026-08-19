@@ -42,7 +42,7 @@ const STUDIO_COLLECTIONS = [
     desc: 'Conversational audio readings, 60 FPS video animations & AI guidance.',
     studios: [
       { id: 'podcast', title: 'Dual-Host Voice Podcast', desc: 'Atlas & Luna conversational audio reading with 432 Hz music.', icon: <Radio className="w-6 h-6 text-rose-400" />, tag: 'Podcast' },
-      { id: 'video', title: 'Motion Video Studio', desc: '60 FPS animated cosmic forecast video with MP4 export.', icon: <Film className="w-6 h-6 text-emerald-400" />, tag: '60 FPS' },
+      { id: 'video', title: 'AI Music Video & Storyline Studio', desc: '4-Step Studio with Sora, Runway Gen-3, Kling, Storylines, Lip-Sync & 60 FPS Export.', icon: <Film className="w-6 h-6 text-emerald-400" />, tag: 'AI Studio' },
       { id: 'oracleChat', title: 'AI Oracle & Notebook', desc: 'Contextual AI Q&A & saved spiritual divination journal.', icon: <MessageSquare className="w-6 h-6 text-cyan-400" />, tag: 'AI Oracle' },
       { id: 'soundscape', title: 'Solfeggio Sound Sanctuary', desc: '20+ healing frequencies & sacred geometry visualizer.', icon: <Headphones className="w-6 h-6 text-cyan-400" />, tag: 'Frequencies' }
     ]
@@ -70,7 +70,7 @@ const STUDIO_COLLECTIONS = [
   }
 ];
 
-export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) {
+export default function OverviewDashboard({ profile, onNavigate, onOpenTheme, onOpenShare }) {
   const dateObj = new Date(profile.birthYear, profile.birthMonth - 1, profile.birthDay);
   const astroData = calculatePlanetaryPositions(dateObj, profile.birthHour || 12, profile.birthMinute || 0, profile.lat, profile.lng);
   const lifePath = calculateLifePath(dateObj);
@@ -280,6 +280,14 @@ export default function OverviewDashboard({ profile, onNavigate, onOpenTheme }) 
               <button onClick={() => handleCopyPhoneLink(phoneDirectUrl)} className="btn-gold text-xs py-1.5 px-4 rounded-xl flex items-center gap-1.5 font-bold bg-amber-400 text-slate-950">
                 {copiedPhone ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy Link</>}
               </button>
+              {onOpenShare && (
+                <button 
+                  onClick={onOpenShare} 
+                  className="py-1.5 px-4 rounded-xl text-xs font-bold bg-amber-400/15 border border-amber-400/40 text-amber-300 hover:bg-amber-400/25 flex items-center gap-1.5 transition-all"
+                >
+                  <Share2 className="w-3.5 h-3.5 text-amber-400" /> Invite Testers & Custom Message
+                </button>
+              )}
             </div>
             <div className="mt-2 text-xs text-slate-400">
               <span>Local Wi-Fi Alternative: <button onClick={() => handleCopyPhoneLink(wifiDirectUrl)} className="text-cyan-400 font-mono font-bold hover:underline">{wifiDirectUrl}</button></span>

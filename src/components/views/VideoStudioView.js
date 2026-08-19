@@ -1,26 +1,79 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { VideoRenderEngine } from '../../utils/videoRenderEngine';
 import ChapterPagination from '../navigation/ChapterPagination';
-import { Video, Film, Download, Play, Pause, Sparkles } from 'lucide-react';
+import { Video, Film, Download, Play, Pause, Sparkles, Wand2 } from 'lucide-react';
 import VideoGeneratorSelector from '../VideoGeneratorSelector';
 
+// 4-Step Professional Music Video Studio Components
+import StepOne from '../StepOne';
+import StepTwo from '../StepTwo';
+import StepThree from '../StepThree';
+import StepFour from '../StepFour';
+import { SINGER_PORTRAITS } from '../../services/StoryDirector';
+import '../../styles/Step.css';
+
 export default function VideoStudioView({ profile, onNavigate }) {
+  // Studio Mode: 'musicvid-wizard' (4-Step AI Music Video Studio) vs 'forecast-animator' (Quick Cosmic Forecast)
+  const [studioMode, setStudioMode] = useState('musicvid-wizard');
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Unified Project State across all 4 steps
+  const [project, setProject] = useState(() => ({
+    artistName: profile?.name || 'Astraea Cosmic',
+    renderStyle: 'photoreal',
+    rendererEngine: 'ai-neural',
+    selectedVideoModel: 'sora_ai',
+    selectedStoryGenerator: 'gemini_flash',
+    singerImageUrl: SINGER_PORTRAITS[0].url,
+    images: [
+      'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+      'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80',
+    ],
+    transition: 'zoom',
+    motionMode: '3d-parallax',
+    motionIntensity: 100,
+    atmosphereMode: 'rain',
+    enableTvBroadcastGraphic: true,
+    characterPerformance: true,
+    selectedTrackId: 'cyberpunk-neon',
+    audioTitle: 'Cyberpunk 2077 Night Drive',
+    bpm: 128,
+    duration: 32,
+    resolution: '1080p',
+    aspectRatio: '16:9',
+    lyricsStyle: 'neon',
+  }));
+
+  const handleStepOneNext = (data) => {
+    setProject((prev) => ({ ...prev, ...data }));
+    setCurrentStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStepTwoNext = (data) => {
+    setProject((prev) => ({ ...prev, ...data }));
+    setCurrentStep(3);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleStepThreeNext = (data) => {
+    setProject((prev) => ({ ...prev, ...data }));
+    setCurrentStep(4);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Cosmic Forecast Quick Animator State
   const canvasRef = useRef(null);
   const engineRef = useRef(null);
-
   const [renderer, setRenderer] = useState('ai-neural');
   const [isPlaying, setIsPlaying] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [recordedVideoUrl, setRecordedVideoUrl] = useState(null);
 
-  // UI: select video generator engine
-  const handleRendererSelect = (val) => {
-    setRenderer(val);
-    console.log('Selected video renderer:', val);
-  };
-
   useEffect(() => {
-    if (canvasRef.current) {
+    if (studioMode === 'forecast-animator' && canvasRef.current) {
       const engine = new VideoRenderEngine(canvasRef.current, profile);
       engine.renderer = renderer;
       engine.start();
@@ -32,7 +85,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
         engineRef.current.stop();
       }
     };
-  }, [profile, renderer]);
+  }, [profile, renderer, studioMode]);
 
   const togglePlay = () => {
     if (!engineRef.current) return;
@@ -51,7 +104,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
     setRecordedVideoUrl(null);
 
     const canvas = canvasRef.current;
-    const stream = canvas.captureStream(60); // 60 FPS
+    const stream = canvas.captureStream(60);
     const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
 
     const chunks = [];
@@ -68,7 +121,6 @@ export default function VideoStudioView({ profile, onNavigate }) {
 
     mediaRecorder.start();
 
-    // Record for 8 seconds (covers all 4 motion scenes)
     setTimeout(() => {
       if (mediaRecorder.state !== 'inactive') {
         mediaRecorder.stop();
@@ -78,74 +130,166 @@ export default function VideoStudioView({ profile, onNavigate }) {
 
   return (
     <div className="video-studio-page">
-      <div className="view-header glass-panel">
+      {/* STUDIO MODE SWITCHER HEADER */}
+      <div className="view-header glass-panel flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
         <div className="view-title">
           <Film className="title-icon text-gold" />
           <div>
-            <h2>Motion Video Forecast Studio</h2>
-            <p>Generate & Export Animated Cosmic Forecast Video for {profile.name}</p>
+            <h2>Astraea Video Generation Studio</h2>
+            <p>Generate Full AI Music Videos with Storylines, Lip-Sync, and AI Video Engines</p>
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <button 
-            onClick={handleRecordVideo} 
-            disabled={isRecording}
-            className="btn btn-primary-glow"
+        {/* Studio Mode Selector Pills */}
+        <div className="flex gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
+          <button
+            onClick={() => setStudioMode('musicvid-wizard')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              studioMode === 'musicvid-wizard'
+                ? 'bg-gradient-to-r from-cyan-500 to-fuchsia-500 text-white shadow-lg shadow-cyan-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
           >
-            {isRecording ? (
-              <>
-                <Sparkles className="w-5 h-5 mr-2 animate-spin" /> Recording Video (8s)...
-              </>
-            ) : (
-              <>
-                <Video className="w-5 h-5 mr-2" /> Record & Export Video
-              </>
-            )}
+            <Wand2 className="w-4 h-4" /> AI Music Video Creator (4-Step Studio)
+          </button>
+          <button
+            onClick={() => setStudioMode('forecast-animator')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              studioMode === 'forecast-animator'
+                ? 'bg-amber-400 text-slate-950 font-extrabold shadow-lg shadow-amber-400/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Sparkles className="w-4 h-4" /> Quick Cosmic Forecast Video
           </button>
         </div>
       </div>
 
-      <div className="mt-4">
-        <VideoGeneratorSelector selectedRenderer={renderer} onRendererSelect={handleRendererSelect} />
-      </div>
-
-      {/* Video Canvas Container */}
-      <div className="video-canvas-container glass-panel mt-6 text-center">
-        <div className="canvas-wrapper">
-          <canvas 
-            ref={canvasRef} 
-            width={720} 
-            height={480} 
-            className="forecast-canvas"
-          />
-        </div>
-
-        <div className="canvas-controls-row mt-4">
-          <button onClick={togglePlay} className="btn btn-secondary">
-            {isPlaying ? <Pause className="w-5 h-5 mr-2" /> : <Play className="w-5 h-5 mr-2" />}
-            {isPlaying ? 'Pause Animation' : 'Play Animation'}
-          </button>
-        </div>
-      </div>
-
-      {/* Download Video Banner if recorded */}
-      {recordedVideoUrl && (
-        <div className="glass-panel video-download-banner mt-6 text-center">
-          <h3>🎉 Cosmic Forecast Video Ready!</h3>
-          <p>Your 60 FPS WebM motion video was generated successfully.</p>
-          
-          <div className="video-preview-box mt-4">
-            <video src={recordedVideoUrl} controls autoPlay loop className="recorded-video-player" />
+      {/* MODE 1: FULL 4-STEP AI MUSIC VIDEO CREATOR */}
+      {studioMode === 'musicvid-wizard' && (
+        <div className="musicvid-wizard-wrapper">
+          {/* STEPPER PROGRESS BAR */}
+          <div className="stepper-nav mb-6">
+            <button
+              onClick={() => setCurrentStep(1)}
+              className={`stepper-pill ${currentStep === 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}
+            >
+              <span className="pill-badge">1</span>
+              <span>Visuals & Character</span>
+            </button>
+            <button
+              onClick={() => currentStep > 2 && setCurrentStep(2)}
+              className={`stepper-pill ${currentStep === 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}
+            >
+              <span className="pill-badge">2</span>
+              <span>Audio & Beats</span>
+            </button>
+            <button
+              onClick={() => currentStep > 3 && setCurrentStep(3)}
+              className={`stepper-pill ${currentStep === 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}
+            >
+              <span className="pill-badge">3</span>
+              <span>Storylines & Video Engines</span>
+            </button>
+            <button
+              onClick={() => currentStep >= 4 && setCurrentStep(4)}
+              className={`stepper-pill ${currentStep === 4 ? 'active' : ''}`}
+            >
+              <span className="pill-badge">4</span>
+              <span>Live Studio & 4K Render</span>
+            </button>
           </div>
 
-          <a 
-            href={recordedVideoUrl} 
-            download={`${profile.name.replace(/\s+/g, '_')}_Cosmic_Forecast_${renderer}.webm`} 
-            className="btn btn-primary-glow mt-4 inline-flex"
-          >
-            <Download className="w-5 h-5 mr-2" /> Download Video File (.webm)
-          </a>
+          {/* STEP CONTENT SWITCHER */}
+          {currentStep === 1 && (
+            <StepOne onNext={handleStepOneNext} project={project} />
+          )}
+
+          {currentStep === 2 && (
+            <StepTwo 
+              onNext={handleStepTwoNext} 
+              onBack={() => setCurrentStep(1)} 
+              project={project} 
+            />
+          )}
+
+          {currentStep === 3 && (
+            <StepThree 
+              onNext={handleStepThreeNext} 
+              onBack={() => setCurrentStep(2)} 
+              project={project} 
+            />
+          )}
+
+          {currentStep === 4 && (
+            <StepFour 
+              onBack={() => setCurrentStep(3)} 
+              project={project} 
+            />
+          )}
+        </div>
+      )}
+
+      {/* MODE 2: QUICK COSMIC FORECAST ANIMATOR */}
+      {studioMode === 'forecast-animator' && (
+        <div className="forecast-animator-wrapper">
+          <div className="flex justify-between items-center glass-panel p-4 mb-4">
+            <VideoGeneratorSelector selectedRenderer={renderer} onRendererSelect={setRenderer} />
+            <button 
+              onClick={handleRecordVideo} 
+              disabled={isRecording}
+              className="btn btn-primary-glow"
+            >
+              {isRecording ? (
+                <>
+                  <Sparkles className="w-5 h-5 mr-2 animate-spin" /> Recording Video (8s)...
+                </>
+              ) : (
+                <>
+                  <Video className="w-5 h-5 mr-2" /> Record & Export Video
+                </>
+              )}
+            </button>
+          </div>
+
+          {/* Video Canvas Container */}
+          <div className="video-canvas-container glass-panel text-center p-6 rounded-3xl">
+            <div className="canvas-wrapper flex justify-center">
+              <canvas 
+                ref={canvasRef} 
+                width={720} 
+                height={480} 
+                className="forecast-canvas rounded-2xl shadow-2xl border border-white/10"
+              />
+            </div>
+
+            <div className="canvas-controls-row mt-4 flex justify-center">
+              <button onClick={togglePlay} className="btn btn-secondary">
+                {isPlaying ? <Pause className="w-5 h-5 mr-2" /> : <Play className="w-5 h-5 mr-2" />}
+                {isPlaying ? 'Pause Animation' : 'Play Animation'}
+              </button>
+            </div>
+          </div>
+
+          {/* Download Video Banner if recorded */}
+          {recordedVideoUrl && (
+            <div className="glass-panel video-download-banner mt-6 text-center p-6 rounded-3xl">
+              <h3 className="text-xl font-bold text-cyan-400">🎉 Cosmic Forecast Video Ready!</h3>
+              <p className="text-silver text-sm">Your 60 FPS WebM motion video was generated successfully.</p>
+              
+              <div className="video-preview-box mt-4 flex justify-center">
+                <video src={recordedVideoUrl} controls autoPlay loop className="recorded-video-player rounded-xl max-w-lg shadow-xl" />
+              </div>
+
+              <a 
+                href={recordedVideoUrl} 
+                download={`${(profile?.name || 'Astraea').replace(/\s+/g, '_')}_Cosmic_Forecast_${renderer}.webm`} 
+                className="btn btn-primary-glow mt-4 inline-flex items-center"
+              >
+                <Download className="w-5 h-5 mr-2" /> Download Video File (.webm)
+              </a>
+            </div>
+          )}
         </div>
       )}
 

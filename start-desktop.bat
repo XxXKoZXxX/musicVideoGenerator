@@ -1,5 +1,5 @@
 @echo off
-echo Starting MusicVid Studio Desktop App...
+echo Starting MusicVid Studio Desktop App & Video Server...
 cd /d "%~dp0"
-npm start
+call npm run start:all
 pause

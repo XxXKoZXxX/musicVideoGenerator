@@ -20,7 +20,7 @@ export const ALL_STUDIO_MODULES = [
   { id: 'tarotLibrary', title: '78-Card Encyclopedia', desc: 'Complete card meanings & symbolism', icon: <BookOpen className="w-5 h-5 text-cyan" />, category: 'Grimoire & Divination' },
 
   { id: 'podcast', title: 'Dual-Host Podcast', desc: 'NotebookLM conversational audio reading', icon: <Radio className="w-5 h-5 text-rose-400" />, category: 'Media & AI' },
-  { id: 'video', title: 'Motion Video Studio', desc: '60 FPS animated forecast video generator', icon: <Film className="w-5 h-5 text-emerald-400" />, category: 'Media & AI' },
+  { id: 'video', title: 'AI Music Video Studio', desc: '4-Step AI Studio with Sora, Runway, Kling & 60 FPS Export', icon: <Film className="w-5 h-5 text-emerald-400" />, category: 'Media & AI' },
   { id: 'oracleChat', title: 'AI Oracle & Notebook', desc: 'Interactive esoteric Q&A assistant', icon: <MessageSquare className="w-5 h-5 text-cyan" />, category: 'Media & AI' },
   { id: 'soundscape', title: 'Solfeggio & Frequencies', desc: 'Harmonic binaural & sacred geometry visualizer', icon: <Headphones className="w-5 h-5 text-cyan" />, category: 'Media & AI' },
 

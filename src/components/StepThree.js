@@ -200,7 +200,7 @@ export default function StepThree({ onNext, onBack, project }) {
         
         try {
           const query = scene.lyricText || scene.title || scene.directive || 'cinematic cyberpunk neon';
-          const videoMedia = await VideoFetchService.fetchPexelsVideo(query, pexelsApiKey);
+          const videoMedia = await VideoFetchService.generateAIVideo(query, selectedVideoModel, pexelsApiKey, i);
 
           if (videoMedia && videoMedia.url) {
             updatedScenes.push({
@@ -256,7 +256,7 @@ export default function StepThree({ onNext, onBack, project }) {
     try {
       const scene = screenplay.scenes[sceneIndex];
       const query = scene.lyricText || scene.title || scene.directive || 'cinematic lighting motion';
-      const videoMedia = await VideoFetchService.fetchPexelsVideo(query, pexelsApiKey);
+      const videoMedia = await VideoFetchService.generateAIVideo(query, selectedVideoModel, pexelsApiKey, sceneIndex);
 
       const nextScenes = [...screenplay.scenes];
       nextScenes[sceneIndex] = {

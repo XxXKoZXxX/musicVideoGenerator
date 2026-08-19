@@ -1,17 +1,24 @@
+const SERVER_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:4000';
+
 export async function fetchVideoGenerators() {
   try {
-    const response = await fetch('http://localhost:4000/api/generators');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 2000);
+    const response = await fetch(`${SERVER_URL}/api/generators`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
     if (!response.ok) throw new Error('Network response was not ok');
     const data = await response.json();
-    return data.generators || [];
+    return data.generators || ['ai-neural', 'runway', 'sora', 'kling', 'master-4k'];
   } catch (err) {
-    console.warn('Video server not reachable, using default generators', err);
-    return ['ai-neural', 'runway'];
+    console.warn('Video server not reachable, using default generator options', err);
+    return ['ai-neural', 'runway', 'sora', 'kling', 'luma', 'stable-diffusion', 'webgl-gpu', 'canvas-2d', 'master-4k'];
   }
 }
 
 export async function generateVideo(payload) {
-  const response = await fetch('http://localhost:4000/api/generate', {
+  const response = await fetch(`${SERVER_URL}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),

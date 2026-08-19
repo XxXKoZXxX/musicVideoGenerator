@@ -223,6 +223,18 @@ export class VideoGenerator {
     if (!audioSource) return null;
 
     try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const tempCtx = new AudioCtx();
+      let audioBuffer = null;
+
+      try {
+        const response = await fetch(audioSource);
+        const arrayBuffer = await response.arrayBuffer();
+        audioBuffer = await tempCtx.decodeAudioData(arrayBuffer);
+      } catch (decodeErr) {
+        console.warn('Direct audio decode failed, falling back to Audio element:', decodeErr);
+      }
+
       const element = new Audio();
       if (typeof audioSource === 'string' && !audioSource.startsWith('blob:')) {
         element.crossOrigin = 'anonymous';
@@ -230,18 +242,18 @@ export class VideoGenerator {
       element.preload = 'auto';
       element.src = audioSource;
 
-      await new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => resolve(), 5000);
+      await new Promise((resolve) => {
+        const timeout = setTimeout(() => resolve(), 4000);
         element.onloadedmetadata = () => { clearTimeout(timeout); resolve(); };
         element.oncanplaythrough = () => { clearTimeout(timeout); resolve(); };
         element.onerror = () => { clearTimeout(timeout); resolve(); };
       });
 
-      const duration = Number.isFinite(element.duration) && element.duration > 0
-        ? element.duration
-        : (this.project.duration || 30);
+      const duration = audioBuffer?.duration || 
+        (Number.isFinite(element.duration) && element.duration > 0 ? element.duration : (this.project.duration || 30));
+
       this.audioElement = element;
-      return { element, duration };
+      return { element, audioBuffer, duration };
     } catch (err) {
       console.warn('Audio loading error fallback:', err);
       return null;
@@ -278,8 +290,9 @@ export class VideoGenerator {
     let analyser = null;
     let bassAnalyser = null;
     let midsAnalyser = null;
+    let bufferSource = null;
 
-    if (audio && audio.element) {
+    if (audio) {
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioCtx();
@@ -287,47 +300,50 @@ export class VideoGenerator {
           audioContext.resume();
         }
 
-        let sourceNode;
-        try {
-          sourceNode = audioContext.createMediaElementSource(audio.element);
-        } catch (e) {
-          console.warn('Reusing existing audio element source node:', e);
+        const gain = audioContext.createGain();
+        gain.gain.value = (this.settings.audioBoost || 100) / 100;
+
+        // Master Analyser
+        analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.8;
+
+        // Bass Filter & Analyser
+        const filterBass = audioContext.createBiquadFilter();
+        filterBass.type = 'lowpass';
+        filterBass.frequency.value = 140;
+        bassAnalyser = audioContext.createAnalyser();
+        bassAnalyser.fftSize = 64;
+
+        // Mids Filter & Analyser
+        const filterMids = audioContext.createBiquadFilter();
+        filterMids.type = 'bandpass';
+        filterMids.frequency.value = 1200;
+        midsAnalyser = audioContext.createAnalyser();
+        midsAnalyser.fftSize = 64;
+
+        if (audio.audioBuffer) {
+          bufferSource = audioContext.createBufferSource();
+          bufferSource.buffer = audio.audioBuffer;
+          bufferSource.connect(gain);
+        } else if (audio.element) {
+          try {
+            const sourceNode = audioContext.createMediaElementSource(audio.element);
+            sourceNode.connect(gain);
+          } catch (e) {
+            console.warn('Audio element source connection warning:', e);
+          }
         }
 
-        if (sourceNode) {
-          const gain = audioContext.createGain();
-          gain.gain.value = (this.settings.audioBoost || 100) / 100;
+        gain.connect(analyser);
+        gain.connect(filterBass);
+        gain.connect(filterMids);
+        filterBass.connect(bassAnalyser);
+        filterMids.connect(midsAnalyser);
 
-      // Master Analyser
-      analyser = audioContext.createAnalyser();
-      analyser.fftSize = 256;
-      analyser.smoothingTimeConstant = 0.8;
-
-      // Bass Filter & Analyser
-      const filterBass = audioContext.createBiquadFilter();
-      filterBass.type = 'lowpass';
-      filterBass.frequency.value = 140;
-      bassAnalyser = audioContext.createAnalyser();
-      bassAnalyser.fftSize = 64;
-
-      // Mids Filter & Analyser
-      const filterMids = audioContext.createBiquadFilter();
-      filterMids.type = 'bandpass';
-      filterMids.frequency.value = 1200;
-      midsAnalyser = audioContext.createAnalyser();
-      midsAnalyser.fftSize = 64;
-
-      sourceNode.connect(gain);
-      gain.connect(analyser);
-      gain.connect(filterBass);
-      gain.connect(filterMids);
-      filterBass.connect(bassAnalyser);
-      filterMids.connect(midsAnalyser);
-
-      const destination = audioContext.createMediaStreamDestination();
-      gain.connect(destination);
-      destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
-        }
+        const destination = audioContext.createMediaStreamDestination();
+        gain.connect(destination);
+        destination.stream.getAudioTracks().forEach((track) => stream.addTrack(track));
       } catch (err) {
         console.warn('MediaStream audio routing fallback:', err);
       }
@@ -378,8 +394,13 @@ export class VideoGenerator {
 
       const cleanup = () => {
         if (frameHandle) cancelAnimationFrame(frameHandle);
-        if (audio) audio.element.pause();
-        if (audioContext) audioContext.close();
+        if (bufferSource) {
+          try { bufferSource.stop(); } catch (e) {}
+        }
+        if (audio && audio.element) audio.element.pause();
+        if (audioContext) {
+          try { audioContext.close(); } catch (e) {}
+        }
         stream.getTracks().forEach((t) => t.stop());
       };
 
@@ -463,11 +484,14 @@ export class VideoGenerator {
 
       const startRecording = () => {
         startTime = performance.now();
+        if (bufferSource) {
+          try { bufferSource.start(0); } catch (e) {}
+        }
         recorder.start(1000);
         frameHandle = requestAnimationFrame(drawLoop);
       };
 
-      if (audio) {
+      if (audio && audio.element && !audio.audioBuffer) {
         audio.element.currentTime = 0;
         audio.element.play().then(startRecording, () => startRecording());
       } else {
