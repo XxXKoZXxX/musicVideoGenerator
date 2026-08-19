@@ -25,13 +25,15 @@ const COMPARISON_SUBJECTS = [
   { id: 'karma', label: '🗝️ Past-Life Karma & Destiny', icon: <ShieldAlert className="w-3.5 h-3.5 text-amber-400" /> }
 ];
 
-export default function SynastryView({ profiles, activeProfile, onNavigate, onAddProfile }) {
+export default function SynastryView({ profile, profiles = [], activeProfile: propActiveProfile, onNavigate, onAddProfile }) {
+  const currentActiveProfile = propActiveProfile || profile || profiles[0] || { id: 'user_primary', name: 'Astraea' };
+
   // Slot A (Person 1)
-  const [slotAId, setSlotAId] = useState(activeProfile.id);
+  const [slotAId, setSlotAId] = useState(currentActiveProfile.id);
 
   // Slot B (Person 2)
   const [slotBId, setSlotBId] = useState(
-    profiles.find(p => p.id !== activeProfile.id)?.id || 'custom'
+    profiles.find(p => p.id !== currentActiveProfile.id)?.id || 'custom'
   );
 
   // Custom Inline Second Person (if user doesn't have 2 saved profiles)
@@ -57,7 +59,7 @@ export default function SynastryView({ profiles, activeProfile, onNavigate, onAd
   const [quizSubmitted, setQuizSubmitted] = useState(false);
 
   // Resolve Profile A and Profile B
-  const profileA = profiles.find(p => p.id === slotAId) || activeProfile;
+  const profileA = profiles.find(p => p.id === slotAId) || currentActiveProfile;
   let profileB = profiles.find(p => p.id === slotBId);
   if (!profileB || slotBId === 'custom' || slotBId === slotAId) {
     profileB = customPersonB;

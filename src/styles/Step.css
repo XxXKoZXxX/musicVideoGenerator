@@ -2952,3 +2952,56 @@ input[type="range"]::-webkit-slider-runnable-track {
   100% { box-shadow: 0 0 40px rgba(236, 72, 153, 0.3); }
 }
 
+/* Mobile Responsive Studio Layout Rules */
+@media (max-width: 768px) {
+  .stepper-nav {
+    overflow-x: auto;
+    white-space: nowrap;
+    padding: 4px;
+    gap: 6px;
+    border-radius: 14px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .stepper-nav::-webkit-scrollbar {
+    display: none;
+  }
+  .stepper-nav {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .stepper-pill {
+    padding: 6px 10px;
+    gap: 6px;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+
+  .pill-badge {
+    width: 22px;
+    height: 22px;
+    font-size: 11px;
+  }
+
+  .step-container, .step-layout {
+    padding: 12px !important;
+  }
+
+  .step-grid, .styles-grid, .models-grid, .characters-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .studio-actions-footer, .step-footer-actions {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .studio-actions-footer button, .step-footer-actions button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+

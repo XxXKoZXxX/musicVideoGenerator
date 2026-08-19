@@ -2004,29 +2004,33 @@ select:-webkit-autofill:focus {
 
 /* Mobile Bottom Navigation Bar */
 .mobile-bottom-nav {
-  display: none; /* Hidden by default on desktop */
+  display: none; /* Hidden on desktop */
   position: fixed;
   bottom: 0;
   left: 0;
+  right: 0;
   width: 100vw;
-  z-index: 200;
+  z-index: 999;
   border-radius: 0;
-  border-top: 1px solid var(--panel-border);
+  border-top: 1px solid rgba(245, 158, 11, 0.28);
   border-left: none;
   border-right: none;
   border-bottom: none;
-  background: rgba(10, 14, 28, 0.95);
-  -webkit-backdrop-filter: blur(25px);
-  backdrop-filter: blur(25px);
-  padding-bottom: max(var(--sab), 8px);
+  background: rgba(7, 10, 24, 0.94);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  padding: 0.3rem 0.5rem calc(0.35rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 35px rgba(0, 0, 0, 0.8), 0 -2px 10px rgba(245, 158, 11, 0.08);
 }
 
 .mobile-nav-items {
   display: flex;
   align-items: center;
   justify-content: space-around;
-  padding: 0.4rem 0.5rem 0.2rem;
+  padding: 0.15rem 0.25rem 0;
   background: transparent !important;
+  max-width: 500px;
+  margin: 0 auto;
 }
 
 .mobile-tab-btn {
@@ -2035,18 +2039,20 @@ select:-webkit-autofill:focus {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.2rem;
+  gap: 0.15rem;
   background: transparent !important;
   background-color: transparent !important;
   border: none !important;
   outline: none !important;
-  color: #94A3B8;
+  color: #CBD5E1;
   cursor: pointer;
-  padding: 0.35rem 0;
+  padding: 0.25rem 0;
+  min-height: 48px;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   -webkit-tap-highlight-color: transparent !important;
   -webkit-appearance: none !important;
   appearance: none !important;
+  user-select: none;
 }
 
 .mobile-tab-btn:hover, .mobile-tab-btn:focus, .mobile-tab-btn:active {
@@ -2060,21 +2066,21 @@ select:-webkit-autofill:focus {
 }
 
 .tab-icon-box {
-  width: 32px;
-  height: 32px;
-  border-radius: 10px;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   background: transparent;
   background-color: transparent;
 }
 
 .tab-label {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   background: transparent !important;
 }
 
@@ -2083,42 +2089,44 @@ select:-webkit-autofill:focus {
 }
 
 .mobile-tab-btn.active .tab-icon-box {
-  background: rgba(245, 158, 11, 0.2) !important;
+  background: rgba(245, 158, 11, 0.22) !important;
   color: var(--gold) !important;
-  box-shadow: 0 0 12px var(--gold-glow);
+  box-shadow: 0 0 14px var(--gold-glow);
+  border: 1px solid rgba(245, 158, 11, 0.45);
 }
 
 /* Mobile Studios Bottom Sheet Drawer */
 .mobile-studios-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
+  inset: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.75);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  z-index: 300;
+  background: rgba(0, 0, 0, 0.82);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  z-index: 1000;
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  animation: fadeIn 0.25s ease-out;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .mobile-studios-sheet {
   width: 100%;
-  max-width: 600px;
-  max-height: 85vh;
+  max-width: 620px;
+  max-height: 88vh;
   border-bottom-left-radius: 0;
   border-bottom-right-radius: 0;
-  border-top-left-radius: 24px;
-  border-top-right-radius: 24px;
+  border-top-left-radius: 28px;
+  border-top-right-radius: 28px;
   border-bottom: none;
-  background: rgba(12, 17, 34, 0.98);
-  padding: 0.75rem 1.25rem max(var(--sab), 1.5rem);
+  background: rgba(10, 14, 28, 0.98);
+  border-top: 1px solid rgba(245, 158, 11, 0.4);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, 0.9), 0 0 30px rgba(245, 158, 11, 0.15);
+  padding: 0.5rem 1rem max(var(--sab), 1.25rem);
   display: flex;
   flex-direction: column;
-  animation: sheetSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: sheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 @keyframes sheetSlideUp {
@@ -2129,21 +2137,21 @@ select:-webkit-autofill:focus {
 .sheet-drag-handle-bar {
   display: flex;
   justify-content: center;
-  padding: 0.35rem 0 0.75rem;
+  padding: 0.35rem 0 0.5rem;
 }
 
 .sheet-drag-handle {
-  width: 42px;
+  width: 48px;
   height: 5px;
   border-radius: 10px;
-  background: rgba(51, 65, 85, 0.8);
+  background: rgba(100, 116, 139, 0.6);
 }
 
 .sheet-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-bottom: 0.75rem;
+  padding-bottom: 0.65rem;
   border-bottom: 1px solid rgba(245, 158, 11, 0.2);
 }
 
@@ -2155,89 +2163,177 @@ select:-webkit-autofill:focus {
 
 .sheet-close-btn {
   background: rgba(15, 23, 42, 0.85);
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  color: #94A3B8;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  border: 1px solid rgba(71, 85, 105, 0.6);
+  color: #CBD5E1;
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 .sheet-close-btn:hover {
-  background: rgba(245, 158, 11, 0.15);
+  background: rgba(245, 158, 11, 0.18);
   color: var(--gold);
-  border-color: rgba(245, 158, 11, 0.3);
+  border-color: rgba(245, 158, 11, 0.4);
 }
 
 .sheet-content-scroll {
   overflow-y: auto;
   padding: 0.5rem 0;
   max-height: 68vh;
+  -webkit-overflow-scrolling: touch;
 }
 
-.sheet-category-title {
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  color: var(--gold);
-  letter-spacing: 1px;
-  display: block;
-  margin-bottom: 0.4rem;
+/* Category Filter Chips & Quick Actions */
+.category-filter-chips::-webkit-scrollbar,
+.quick-actions-bar::-webkit-scrollbar,
+.sub-view-pills::-webkit-scrollbar {
+  display: none;
+}
+.category-filter-chips,
+.quick-actions-bar,
+.sub-view-pills {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
-.sheet-modules-grid {
+/* Profile Switcher Drawer */
+.profile-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.82);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  z-index: 1100;
   display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-}
-
-.sheet-module-item {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  padding: 0.65rem 0.85rem;
-  border-radius: 12px;
-  background: rgba(15, 23, 42, 0.75);
-  border: 1px solid rgba(51, 65, 85, 0.6);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.sheet-module-item:hover, .sheet-module-item:active, .sheet-module-item.active {
-  background: rgba(245, 158, 11, 0.15);
-  border-color: rgba(245, 158, 11, 0.4);
-}
-
-.sheet-mod-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(0, 0, 0, 0.4);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
-  flex-shrink: 0;
+  animation: fadeIn 0.2s ease-out;
 }
 
-.sheet-mod-info {
+@media (min-width: 769px) {
+  .profile-drawer-backdrop {
+    align-items: center;
+  }
+}
+
+.profile-drawer-content {
+  width: 100%;
+  max-width: 520px;
+  background: rgba(10, 14, 28, 0.98);
+  border: 1px solid var(--gold);
+  border-radius: 28px 28px 0 0;
+  padding: 1.5rem;
+  max-height: 88vh;
   display: flex;
   flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9), 0 0 30px var(--gold-glow);
+  animation: sheetSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-.sheet-mod-title {
-  font-size: 0.88rem;
-  font-weight: 600;
+@media (min-width: 769px) {
+  .profile-drawer-content {
+    border-radius: 24px;
+    animation: modalFadeIn 0.25s var(--ease-spring);
+  }
+}
+
+.drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.drawer-header .header-title {
+  display: flex;
+  align-items: center;
+  font-size: 1.1rem;
+  font-weight: 700;
   color: #FFF;
 }
 
-.sheet-mod-desc {
-  font-size: 0.72rem;
-  color: #94A3B8;
+.drawer-profiles-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  overflow-y: auto;
+  max-height: 50vh;
+  padding: 0.25rem 0;
+}
+
+.drawer-profile-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1rem;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(71, 85, 105, 0.5);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.drawer-profile-item:hover, .drawer-profile-item:active {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.drawer-profile-item.active {
+  background: rgba(245, 158, 11, 0.2) !important;
+  border-color: var(--gold) !important;
+  box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);
+}
+
+.drawer-profile-item .item-name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #FFF;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.drawer-profile-item .item-details {
+  font-size: 0.76rem;
+  color: #CBD5E1;
+  margin-top: 0.2rem;
+}
+
+.drawer-profile-item .active-tag {
+  font-size: 0.7rem;
+  background: rgba(245, 158, 11, 0.25);
+  color: var(--gold-bright);
+  padding: 0.1rem 0.45rem;
+  border-radius: 6px;
+  font-weight: 700;
+}
+
+.drawer-profile-item .tag-pill {
+  background: rgba(56, 189, 248, 0.15);
+  color: var(--cyan);
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 600;
+}
+
+.delete-profile-btn {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.4rem;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.delete-profile-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
 }
 
 /* Mobile Screen Responsive Rules */
@@ -2252,32 +2348,34 @@ select:-webkit-autofill:focus {
     display: block;
   }
 
-  /* Give space at bottom for mobile nav */
+  /* Room at bottom for mobile nav bar */
   .main-content-container {
-    padding: 0.75rem 1rem 5.5rem;
+    padding: 0.65rem 0.75rem calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .nav-header-wrapper {
-    margin: 0.5rem 0.75rem;
+    margin: 0.35rem 0.5rem 0.65rem !important;
   }
 
   .navbar-container {
-    padding: 0.65rem 1rem;
+    padding: 0.5rem 0.75rem !important;
+    border-radius: 18px !important;
   }
 
   .brand-title {
-    font-size: 1.2rem;
+    font-size: 1.15rem !important;
   }
 
   .brand-tagline {
-    display: none;
+    display: none !important;
   }
 
   .install-mobile-banner {
-    margin: 0.4rem 0.75rem;
+    margin: 0.35rem 0.5rem !important;
     flex-direction: column;
     align-items: stretch;
     text-align: center;
+    padding: 0.65rem 0.85rem !important;
   }
 
   .install-banner-content {
@@ -2286,17 +2384,49 @@ select:-webkit-autofill:focus {
 
   .install-actions-box {
     justify-content: center;
-    margin-top: 0.4rem;
+    margin-top: 0.35rem;
+  }
+
+  /* Reduce dense padding on cards for mobile */
+  .glass-panel {
+    padding: 1rem;
+    border-radius: 18px;
+  }
+
+  .view-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.85rem 1rem !important;
+  }
+
+  .view-title h2 {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .view-title p {
+    font-size: 0.8rem !important;
+  }
+
+  .dash-hero {
+    padding: 1.15rem 1rem !important;
+    border-radius: 20px !important;
+  }
+
+  .dash-hero h1 {
+    font-size: 1.75rem !important;
   }
 }
 
 /* Install Modal Sheet & QR Code */
 .install-modal-sheet {
   width: 540px;
-  max-width: 92vw;
-  background: rgba(12, 17, 34, 0.98);
+  max-width: 94vw;
+  background: rgba(10, 14, 28, 0.98);
   border: 1px solid var(--gold);
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8), 0 0 30px var(--gold-glow);
+  border-radius: 24px;
 }
 
 .modal-tab-nav {

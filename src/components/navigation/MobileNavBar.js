@@ -1,45 +1,67 @@
 import React from 'react';
-import { Sparkles, Compass, Flame, User, LayoutGrid } from 'lucide-react';
+import { Sparkles, Compass, Flame, Wand2, LayoutGrid } from 'lucide-react';
 
 export default function MobileNavBar({ currentView, onNavigate, onOpenStudios }) {
-  const tabs = [
-    { id: 'overview', label: 'Home', icon: <Sparkles className="w-5 h-5" /> },
-    { id: 'editProfile', label: 'Profile', icon: <User className="w-5 h-5" /> },
-    { id: 'astrology', label: 'Sky Chart', icon: <Compass className="w-5 h-5" /> },
-    { id: 'grimoire', label: 'Grimoire', icon: <Flame className="w-5 h-5" /> }
+  const primaryTabs = [
+    { id: 'overview', label: 'Home', icon: Sparkles },
+    { id: 'astrology', label: 'Sky Chart', icon: Compass },
+    { id: 'grimoire', label: 'Grimoire', icon: Flame },
+    { id: 'video', label: 'AI Studio', icon: Wand2 }
   ];
+
+  const isPrimaryActive = primaryTabs.some(tab => tab.id === currentView);
 
   return (
     <nav className="mobile-bottom-nav glass-panel no-print" aria-label="Mobile Navigation">
-      <div className="mobile-nav-items flex items-center justify-around w-full py-1">
-        {tabs.map((tab) => {
+      <div className="mobile-nav-items flex items-center justify-around w-full">
+        {primaryTabs.map((tab) => {
           const isActive = currentView === tab.id;
+          const Icon = tab.icon;
           return (
             <button
               key={tab.id}
-              className={`mobile-tab-btn flex flex-col items-center justify-center flex-1 py-1.5 px-1 transition-all ${isActive ? 'active text-amber-300 scale-105' : 'text-slate-400 hover:text-slate-200'}`}
+              className={`mobile-tab-btn flex flex-col items-center justify-center flex-1 py-1 px-0.5 transition-all ${
+                isActive 
+                  ? 'active text-amber-300 font-bold' 
+                  : 'text-slate-300 hover:text-white'
+              }`}
               onClick={() => onNavigate(tab.id)}
+              aria-label={tab.label}
             >
-              <div className={`tab-icon-box p-1 rounded-xl transition-all ${isActive ? 'bg-amber-400/20 text-amber-300 shadow-sm border border-amber-400/40' : 'text-slate-400'}`}>
-                {tab.icon}
+              <div 
+                className={`tab-icon-box p-1.5 rounded-xl transition-all duration-200 ${
+                  isActive 
+                    ? 'bg-amber-400/25 text-amber-300 shadow-lg shadow-amber-400/20 border border-amber-400/50 scale-105' 
+                    : 'text-slate-300 hover:text-white hover:bg-white/5'
+                }`}
+              >
+                <Icon className="w-5 h-5" />
               </div>
-              <span className={`tab-label text-[11px] font-bold mt-0.5 tracking-tight ${isActive ? 'text-amber-300' : 'text-slate-400'}`}>
+              <span className={`tab-label text-[11px] font-semibold mt-0.5 tracking-tight ${isActive ? 'text-amber-300 font-bold' : 'text-slate-300'}`}>
                 {tab.label}
               </span>
             </button>
           );
         })}
 
-        {/* All Studios Mega Drawer Trigger */}
+        {/* All Studios Drawer Launcher */}
         <button
-          className={`mobile-tab-btn flex flex-col items-center justify-center flex-1 py-1.5 px-1 transition-all ${!tabs.some(t => t.id === currentView) ? 'active text-cyan-300' : 'text-slate-400 hover:text-slate-200'}`}
+          className={`mobile-tab-btn flex flex-col items-center justify-center flex-1 py-1 px-0.5 transition-all ${
+            !isPrimaryActive ? 'active text-cyan-300 font-bold' : 'text-slate-300 hover:text-white'
+          }`}
           onClick={onOpenStudios}
-          title="Browse All 16 Studios"
+          aria-label="Browse All 16 Studios"
         >
-          <div className={`tab-icon-box p-1 rounded-xl transition-all ${!tabs.some(t => t.id === currentView) ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/40' : 'bg-cyan-500/10 text-cyan-400'}`}>
+          <div 
+            className={`tab-icon-box p-1.5 rounded-xl transition-all duration-200 ${
+              !isPrimaryActive 
+                ? 'bg-cyan-500/25 text-cyan-300 shadow-lg shadow-cyan-500/20 border border-cyan-400/50 scale-105' 
+                : 'text-slate-300 hover:text-white hover:bg-white/5'
+            }`}
+          >
             <LayoutGrid className="w-5 h-5" />
           </div>
-          <span className={`tab-label text-[11px] font-bold mt-0.5 tracking-tight ${!tabs.some(t => t.id === currentView) ? 'text-cyan-300' : 'text-cyan-400'}`}>
+          <span className={`tab-label text-[11px] font-semibold mt-0.5 tracking-tight ${!isPrimaryActive ? 'text-cyan-300 font-bold' : 'text-slate-300'}`}>
             Studios
           </span>
         </button>
@@ -47,3 +69,4 @@ export default function MobileNavBar({ currentView, onNavigate, onOpenStudios })
     </nav>
   );
 }
+

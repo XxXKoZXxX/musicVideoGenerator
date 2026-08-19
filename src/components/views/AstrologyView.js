@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import BirthChartWheel from './BirthChartWheel';
 import ChapterPagination from '../navigation/ChapterPagination';
+import { calculatePlanetaryPositions } from '../../utils/astrologyEngine';
 import { Sparkles, Flame, Globe, Wind, Droplets } from 'lucide-react';
 const getHouseDomainFocus = (hNum) => {
   const domains = {
@@ -20,12 +21,26 @@ const getHouseDomainFocus = (hNum) => {
   return domains[hNum] || "";
 };
 
-export default function AstrologyView({ astroData, profile, onNavigate = () => {} }) {
+export default function AstrologyView({ astroData: propAstroData, profile, onNavigate = () => {} }) {
   const [activeTab, setActiveTab] = useState('placements');
 
-  if (!astroData) return null;
+  const resolvedAstroData = propAstroData || (() => {
+    if (!profile) return null;
+    const dateObj = new Date(profile.birthYear, (profile.birthMonth || 1) - 1, profile.birthDay || 1);
+    return calculatePlanetaryPositions(
+      dateObj, 
+      profile.birthHour || 12, 
+      profile.birthMinute || 0, 
+      profile.lat || 41.0582, 
+      profile.lng || -74.7529
+    );
+  })();
 
+  if (!resolvedAstroData) return null;
+
+  const astroData = resolvedAstroData;
   const planets = Object.values(astroData.planets);
+
 
   return (
     <div className="astrology-view-page">

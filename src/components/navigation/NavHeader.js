@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Star, Users, Plus, Sparkles, Compass, BookOpen, 
+  Star, Plus, Sparkles, Compass, BookOpen, 
   Radio, Film, MessageSquare, Eye, Headphones, 
   Calculator, Heart, FileText, Zap, Key, 
   Search, ArrowLeft, Palette, Moon, Edit3, X, Flame, ChevronRight, Rocket, Share2
@@ -86,7 +86,6 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
 
   // Find which category hub contains the active currentView
   const currentHub = CATEGORY_HUBS.find(hub => hub.views.some(v => v.id === currentView)) || CATEGORY_HUBS[0];
-  const activeViewObj = ALL_STUDIOS.find(v => v.id === currentView) || ALL_STUDIOS[0];
 
   // Global Ctrl+K listener to trigger quick search palette
   useEffect(() => {
@@ -116,47 +115,43 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
   );
 
   return (
-    <header className="nav-header-wrapper no-print mb-4" role="banner">
-      {/* Top Playful Sticky Header */}
-      <div className="navbar-container glass-panel bg-slate-950/90 border border-amber-400/30 rounded-3xl p-3 md:p-4 shadow-2xl flex items-center justify-between gap-3">
+    <header className="nav-header-wrapper no-print mb-3 md:mb-4" role="banner">
+      <div className="navbar-container glass-panel bg-slate-950/90 border border-amber-400/30 rounded-2xl md:rounded-3xl p-2.5 md:p-4 shadow-2xl flex items-center justify-between gap-2 md:gap-3">
         
-        {/* Playful Brand Logo */}
         <div 
-          className="nav-brand cursor-pointer flex items-center gap-3 select-none group" 
+          className="nav-brand cursor-pointer flex items-center gap-2.5 select-none group" 
           onClick={() => onNavigate('overview')}
           title="Return to Home Dashboard"
         >
-          <div className="brand-logo flex items-center justify-center w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 shadow-lg shadow-amber-500/30 group-hover:rotate-12 group-hover:scale-110 transition-transform duration-300">
-            <Star className="logo-star w-6 h-6 fill-current" />
+          <div className="brand-logo flex items-center justify-center w-9 h-9 md:w-11 md:h-11 rounded-xl md:rounded-2xl bg-gradient-to-br from-amber-400 to-amber-600 text-slate-950 shadow-md md:shadow-lg shadow-amber-500/30 group-hover:scale-105 transition-transform duration-200">
+            <Star className="logo-star w-5 h-5 md:w-6 md:h-6 fill-current" />
           </div>
           <div>
-            <div className="flex items-center gap-1.5">
-              <h1 className="brand-title text-xl md:text-2xl font-bold tracking-normal text-white leading-none">
+            <div className="flex items-center gap-1">
+              <h1 className="brand-title text-lg md:text-2xl font-extrabold tracking-normal text-white leading-none">
                 Astraea <span className="text-amber-400">✨</span>
               </h1>
             </div>
-            <span className="brand-tagline text-[11px] font-medium text-slate-300 block mt-0.5">
+            <span className="brand-tagline text-[10px] md:text-[11px] font-medium text-slate-300 hidden sm:block mt-0.5">
               Cosmic Oracle & Studios
             </span>
           </div>
         </div>
 
-        {/* 🚀 Playful "Discover Studios" Button */}
         <button 
-          className="command-search-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-amber-400/15 border border-amber-400/40 hover:bg-amber-400/25 text-amber-300 transition-all shadow-md group"
+          className="command-search-btn flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-2 md:py-2.5 rounded-xl md:rounded-2xl bg-amber-400/15 border border-amber-400/40 hover:bg-amber-400/25 text-amber-300 transition-all shadow-sm group"
           onClick={() => setIsCommandModalOpen(true)}
           title="Browse All 16 Studios (Ctrl + K)"
         >
-          <Rocket className="w-4 h-4 text-amber-400 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
+          <Rocket className="w-3.5 h-3.5 md:w-4 md:h-4 text-amber-400 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 transition-transform" />
           <span className="text-xs md:text-sm font-bold block">
-            Explore 16 Studios
+            <span className="hidden sm:inline">Explore </span>16 Studios
           </span>
           <kbd className="hidden lg:inline-block ml-1 px-1.5 py-0.5 text-[10px] font-mono text-amber-200/80 bg-black/40 rounded-lg border border-amber-400/30">
             Ctrl K
           </kbd>
         </button>
 
-        {/* 5 Playful Category Hub Buttons (Desktop) */}
         <nav className="nav-category-menu hidden lg:flex items-center gap-1.5 bg-slate-950/60 p-1.5 rounded-2xl border border-amber-400/20" aria-label="Category Hubs">
           {CATEGORY_HUBS.map(hub => {
             const isHubActive = hub.id === currentHub.id;
@@ -177,104 +172,84 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
           })}
         </nav>
 
-        {/* Profile Pill & Theme Button */}
-        <div className="nav-profile-section flex items-center gap-2">
-          {/* Share App Button */}
+        <div className="nav-profile-section flex items-center gap-1.5 md:gap-2">
           <button 
-            className="share-nav-btn p-2.5 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all shadow-sm"
+            className="share-nav-btn hidden md:flex p-2.5 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all shadow-sm"
             onClick={onOpenShare}
             title="Share App with Friends & Testers"
+            aria-label="Share App"
           >
             <Share2 className="w-4 h-4" />
           </button>
 
-          {/* Theme Palette Button */}
           <button 
-            className="theme-nav-btn p-2.5 rounded-2xl bg-purple-500/15 border border-purple-500/40 text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm"
+            className="theme-nav-btn p-2 md:p-2.5 rounded-xl md:rounded-2xl bg-purple-500/15 border border-purple-500/40 text-purple-300 hover:bg-purple-500/25 transition-all shadow-sm"
             onClick={onOpenTheme}
             title="Customize Theme, Colors & Text Style"
+            aria-label="App Themes"
           >
             <Palette className="w-4 h-4" />
           </button>
 
-          {/* Active Profile Pill / Direct 1-Click Edit */}
           <button 
-            className="profile-active-btn flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-amber-400/15 border border-amber-400/40 hover:bg-amber-400/25 text-amber-300 transition-all shadow-sm group" 
-            onClick={() => onNavigate('editProfile')} 
-            title="Click to View or Edit Your Birth Details"
+            className="profile-active-btn flex items-center gap-2 px-2.5 md:px-3.5 py-1.5 md:py-2 rounded-xl md:rounded-2xl bg-amber-400/15 border border-amber-400/40 hover:bg-amber-400/25 text-amber-300 transition-all shadow-sm group" 
+            onClick={onOpenProfiles} 
+            title="Click to Switch Profiles or Edit Details"
           >
             <div className="w-6 h-6 rounded-full bg-amber-400 text-slate-950 font-bold text-xs flex items-center justify-center shadow">
               {activeProfile.name ? activeProfile.name.charAt(0).toUpperCase() : 'A'}
             </div>
             <div className="text-left hidden sm:block">
-              <span className="profile-name-text text-xs font-bold text-slate-100 block max-w-[85px] truncate leading-tight">
+              <span className="profile-name-text text-xs font-bold text-slate-100 block max-w-[80px] truncate leading-tight">
                 {activeProfile.name}
               </span>
               <span className="text-[10px] text-amber-300 font-semibold block leading-none">
-                Edit Details ✏️
+                Profiles ▾
               </span>
             </div>
           </button>
 
-          {/* Switch Profile Drawer */}
           <button 
-            className="profile-switch-btn p-2.5 rounded-2xl bg-slate-900/60 border border-slate-700/50 hover:border-cyan-400 hover:bg-cyan-500/10 hover:text-cyan-300 text-slate-300 transition-all" 
-            onClick={onOpenProfiles} 
-            title="Switch Between Saved Profiles"
-          >
-            <Users className="w-4 h-4" />
-          </button>
-
-          {/* Add Profile Quick Button */}
-          <button 
-            className="add-profile-quick-btn p-2.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 hover:bg-cyan-500/25 text-cyan-300 transition-all" 
+            className="add-profile-quick-btn hidden lg:flex p-2.5 rounded-2xl bg-cyan-500/15 border border-cyan-500/40 hover:bg-cyan-500/25 text-cyan-300 transition-all" 
             onClick={onCreateProfile}
-            title="Add New Person / Twin Flame Profile"
+            title="Add New Profile"
+            aria-label="Add Profile"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
       </div>
 
-      {/* Sub-View Navigation Bar & Breadcrumb Pills */}
-      <div className="sub-view-bar-container glass-panel bg-slate-950/60 border border-amber-400/20 rounded-2xl flex justify-between items-center px-4 py-2 mt-2">
-        <div className="sub-view-pills flex items-center gap-2 overflow-x-auto py-1 w-full md:w-auto">
-          {currentView !== 'overview' && (
+      {currentView !== 'overview' && (
+        <div className="sub-view-bar-container glass-panel bg-slate-950/70 border border-amber-400/20 rounded-xl md:rounded-2xl flex justify-between items-center px-3 md:px-4 py-1.5 md:py-2 mt-2">
+          <div className="sub-view-pills flex items-center gap-1.5 md:gap-2 overflow-x-auto py-1 w-full no-scrollbar">
             <button 
               onClick={() => onNavigate('overview')} 
-              className="breadcrumb-back-btn text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1.5 mr-2 pr-3 border-r border-amber-400/20 font-bold flex-shrink-0"
+              className="breadcrumb-back-btn text-xs text-amber-300 hover:text-amber-200 flex items-center gap-1 mr-1.5 pr-2.5 border-r border-amber-400/30 font-bold flex-shrink-0"
               title="Return to Home Dashboard"
             >
               <ArrowLeft className="w-3.5 h-3.5 text-amber-400" /> Home
             </button>
-          )}
 
-          {/* Sister Studio Pills inside Current Category */}
-          {currentHub.views.map(view => {
-            const isViewActive = view.id === currentView;
-            return (
-              <button
-                key={view.id}
-                className={`sub-view-pill flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  isViewActive 
-                    ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25 scale-105' 
-                    : 'bg-transparent text-slate-300 hover:text-amber-300 hover:bg-amber-400/10 border border-slate-800/60 hover:border-amber-400/30'
-                }`}
-                onClick={() => onNavigate(view.id)}
-              >
-                {view.icon}
-                <span>{view.label}</span>
-              </button>
-            );
-          })}
+            {currentHub.views.map(view => {
+              const isViewActive = view.id === currentView;
+              return (
+                <button
+                  key={view.id}
+                  className={`sub-view-pill flex items-center gap-1.5 px-3 py-1.5 rounded-lg md:rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    isViewActive 
+                      ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/25 scale-105' 
+                      : 'bg-slate-900/60 text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  onClick={() => onNavigate(view.id)}
+                >
+                  <span>{view.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
-
-        {/* Current Active Studio Name */}
-        <div className="hidden md:flex items-center gap-2 text-xs text-slate-300 pl-4 border-l border-amber-400/20 flex-shrink-0">
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span className="text-slate-100 font-bold">{activeViewObj.label}</span>
-        </div>
-      </div>
+      )}
 
       {/* ============================================================ */}
       {/* 🚀 Studios Directory & Command Palette Modal (All 16 Studios) */}
