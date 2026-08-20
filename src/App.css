@@ -1825,29 +1825,196 @@ select:-webkit-autofill:focus {
   .nav-category-menu { overflow-x: auto; max-width: 100%; }
   .dash-grid-triad, .module-nav-grid, .karma-cards-grid, .tarot-library-grid, .freq-grid {
     grid-template-columns: 1fr;
+    gap: 1rem;
   }
   .sec-grid { grid-template-columns: 1fr; }
   .synastry-grid { grid-template-columns: 1fr; }
   
-  html { font-size: 90%; }
+  /* DO NOT shrink html font-size — keep base 15px for readability */
+  
   .view-header { flex-wrap: wrap; gap: 1rem; }
   
   .dash-hero { flex-direction: column; text-align: center; gap: 1.5rem; }
-  .hero-quick-badges { justify-content: center; }
+  .hero-quick-badges { justify-content: center; flex-wrap: wrap; }
   .spotlight-header { flex-direction: column; }
   
   .form-row { flex-direction: column; gap: 0; }
   .hosts-banner { flex-direction: column; }
   .player-buttons-row { flex-wrap: wrap; justify-content: center; }
+
+  /* ── Mobile Typography: Bigger, Cleaner, Easier to Read ── */
+
+  /* Body text minimum: never smaller than 0.95rem (~14.25px) */
+  .module-nav-card p,
+  .karma-text,
+  .spotlight-body,
+  .freq-card p,
+  .sec-text-body,
+  .reading-text,
+  .grimoire-body,
+  .card-content-desc,
+  .dash-hero-sub {
+    font-size: 0.95rem !important;
+    line-height: 1.75 !important;
+  }
+
+  /* Small descriptors: bump from 0.75rem → 0.85rem minimum */
+  .badge-title,
+  .karma-badge,
+  .rec-badge,
+  .tag-chip,
+  .triad-sign-deg,
+  .cosmic-tag,
+  .spotlight-tag {
+    font-size: 0.82rem !important;
+  }
+
+  /* Card titles */
+  .module-nav-card h3,
+  .karma-card h3,
+  .freq-num {
+    font-size: 1.15rem !important;
+  }
+
+  /* Section titles */
+  .section-title-label {
+    font-size: 1.05rem !important;
+  }
+
+  /* ── Mobile Layout: More Breathing Room ── */
+
+  /* Cards get comfortable padding */
+  .glass-panel {
+    padding: 1.15rem;
+    border-radius: 16px;
+  }
+
+  .module-nav-card,
+  .triad-card,
+  .karma-card,
+  .freq-card,
+  .tarot-lib-card {
+    padding: 1.15rem !important;
+  }
+
+  .dash-sec-spotlight {
+    padding: 1.25rem !important;
+  }
+
+  /* Filter bar goes vertical on mobile */
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 1rem !important;
+    gap: 0.85rem;
+  }
+
+  .suit-filters {
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .suit-btn {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  /* Tab pills: readable size */
+  .tab-btn {
+    font-size: 0.88rem;
+    padding: 0.55rem 0.9rem;
+  }
+
+  .tab-pill-nav {
+    overflow-x: auto;
+    max-width: 100%;
+    white-space: nowrap;
+  }
+
+  /* Soundscape player grid */
+  .player-panel {
+    padding: 1.25rem !important;
+  }
+
+  .player-hero-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1.5rem;
+    text-align: center;
+  }
+
+  .subcontrols-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Goal chips readable */
+  .goal-chip {
+    font-size: 0.85rem;
+    padding: 0.5rem 0.9rem;
+  }
+
+  .preset-pill {
+    font-size: 0.82rem;
+    padding: 0.4rem 0.8rem;
+  }
+
+  /* Transits table */
+  .transits-table-container {
+    padding: 1rem !important;
+    overflow-x: auto;
+  }
 }
 
 @media (max-width: 480px) {
-  .hero-quick-badges { flex-direction: column; }
+  .hero-quick-badges { flex-direction: column; gap: 0.75rem; }
   .sub-view-pills { padding-bottom: 0.5rem; }
   .tab-pill-nav { overflow-x: auto; max-width: 100%; white-space: nowrap; }
-  .btn { width: 100%; }
+  .btn { width: 100%; font-size: 0.95rem; padding: 0.85rem 1.25rem; }
   .filter-bar { flex-direction: column; align-items: stretch; }
   .chat-input-row { flex-direction: column; }
+
+  /* Extra breathing room on tiny screens */
+  .view-header {
+    padding: 0.75rem 0.85rem !important;
+  }
+
+  .view-title h2 {
+    font-size: 1.2rem !important;
+  }
+
+  .view-title p {
+    font-size: 0.88rem !important;
+    line-height: 1.5 !important;
+  }
+
+  .dash-hero h1 {
+    font-size: 1.55rem !important;
+  }
+
+  /* Hero badges stack cleanly */
+  .hero-badge {
+    padding: 0.85rem 1rem;
+  }
+
+  .badge-value {
+    font-size: 1.25rem !important;
+  }
+
+  /* Transit table horizontal scroll */
+  .transits-table-container {
+    overflow-x: auto;
+  }
+
+  /* Readable form inputs */
+  .search-field,
+  input[type="text"],
+  input[type="date"],
+  input[type="time"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+    padding: 0.75rem 1rem !important;
+  }
 }
 
 /* ---------------------------------------------------
@@ -2349,7 +2516,7 @@ select:-webkit-autofill:focus {
 
   /* Room at bottom for mobile nav bar */
   .main-content-container {
-    padding: 0.65rem 0.75rem calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
+    padding: 0.75rem 0.85rem calc(5.5rem + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .nav-header-wrapper {
@@ -2357,7 +2524,7 @@ select:-webkit-autofill:focus {
   }
 
   .navbar-container {
-    padding: 0.5rem 0.75rem !important;
+    padding: 0.55rem 0.85rem !important;
     border-radius: 18px !important;
   }
 
@@ -2374,7 +2541,7 @@ select:-webkit-autofill:focus {
     flex-direction: column;
     align-items: stretch;
     text-align: center;
-    padding: 0.65rem 0.85rem !important;
+    padding: 0.75rem 1rem !important;
   }
 
   .install-banner-content {
@@ -2386,35 +2553,46 @@ select:-webkit-autofill:focus {
     margin-top: 0.35rem;
   }
 
-  /* Reduce dense padding on cards for mobile */
+  /* Glass panels: comfortable padding */
   .glass-panel {
-    padding: 1rem;
-    border-radius: 18px;
+    padding: 1.15rem;
+    border-radius: 16px;
   }
 
   .view-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.75rem;
-    padding: 0.85rem 1rem !important;
+    padding: 1rem 1.1rem !important;
   }
 
   .view-title h2 {
-    font-size: 1.25rem !important;
-    line-height: 1.3 !important;
+    font-size: 1.3rem !important;
+    line-height: 1.35 !important;
   }
 
   .view-title p {
-    font-size: 0.8rem !important;
+    font-size: 0.9rem !important;
+    line-height: 1.5 !important;
+    color: #CBD5E1 !important;
   }
 
   .dash-hero {
-    padding: 1.15rem 1rem !important;
+    padding: 1.25rem 1.1rem !important;
     border-radius: 20px !important;
   }
 
   .dash-hero h1 {
     font-size: 1.75rem !important;
+  }
+
+  .dash-hero-sub {
+    font-size: 0.95rem !important;
+  }
+
+  /* Profile drawer items */
+  .drawer-profile-item .item-details {
+    font-size: 0.82rem !important;
   }
 }
 
