@@ -1,8 +1,6 @@
 import { 
   detectDreamSymbols, 
-  interpretDream, 
-  DREAM_VIBES, 
-  DREAM_SYMBOLS_LEXICON 
+  interpretDream
 } from '../dreamInterpreterEngine';
 
 describe('Astraea Astral Dream Interpreter Engine Tests', () => {

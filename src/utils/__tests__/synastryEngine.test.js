@@ -3,10 +3,7 @@ import {
   getNumerologyHarmonicScore,
   getElementalAlchemy,
   getHouseFromAscendant,
-  calculateHouseOverlays,
   generateCommunicationAndIntimacyAdvice,
-  generateConflictResolutionProtocol,
-  calculateCompositeChart,
   evaluateTwinFlameTest,
   calculateFullDualComparison,
   TWIN_FLAME_DIAGNOSTIC_QUESTIONS
