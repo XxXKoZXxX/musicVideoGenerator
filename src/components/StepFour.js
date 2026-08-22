@@ -14,6 +14,7 @@ import {
   Monitor,
   RotateCcw,
 } from 'lucide-react';
+
 import {
   VideoGenerator,
   RESOLUTION_PRESETS,
@@ -30,7 +31,9 @@ import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
 import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
 import { AI_VIDEO_MODELS } from '../data/aiModels';
 import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
+import HiggsfieldDoPControls from './HiggsfieldDoPControls';
 import '../styles/Step.css';
+
 
 export default function StepFour({ onBack, project }) {
   // Live Studio Player State
@@ -499,7 +502,19 @@ export default function StepFour({ onBack, project }) {
 
             {error && <div className="export-error-msg">❌ {error}</div>}
           </div>
+
+          {/* HIGGSFIELD CINEMA DoP STUDIO CONTROLS */}
+          <div style={{ marginTop: 20 }}>
+            <HiggsfieldDoPControls
+              settings={settings}
+              onChange={(newSettings) => {
+                setSettings(newSettings);
+                Object.assign(project, newSettings);
+              }}
+            />
+          </div>
         </div>
+
 
         {/* RIGHT COLUMN: RENDERER SETTINGS & FX RACK */}
         <div className="studio-rack-column">

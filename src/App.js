@@ -27,8 +27,10 @@ import NumerologyView from './components/views/NumerologyView';
 import SynastryView from './components/views/SynastryView';
 import PersonalityTestView from './components/views/PersonalityTestView';
 import CosmicReportView from './components/views/CosmicReportView';
+import CharacterStudioView from './components/views/CharacterStudioView';
 
 import { loadSavedTheme } from './utils/themeEngine';
+
 import './App.css';
 
 // Default User Profile (Astraea from Newton, NJ)
@@ -249,6 +251,11 @@ export default function App() {
               {currentView === 'video' && (
                 <VideoStudioView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
               )}
+
+              {currentView === 'characterStudio' && (
+                <CharacterStudioView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />
+              )}
+
 
               {currentView === 'oracleChat' && (
                 <OracleChatView profile={safeProfile} onNavigate={(view) => setCurrentView(view)} />

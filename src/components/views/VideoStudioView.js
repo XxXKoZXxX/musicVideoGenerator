@@ -170,7 +170,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
         </div>
 
         {/* Studio Mode Selector Pills */}
-        <div className="flex gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
+        <div className="flex flex-wrap gap-2 bg-slate-900/80 p-1.5 rounded-2xl border border-white/10">
           <button
             onClick={() => setStudioMode('musicvid-wizard')}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
@@ -180,6 +180,12 @@ export default function VideoStudioView({ profile, onNavigate }) {
             }`}
           >
             <Wand2 className="w-4 h-4" /> AI Music Video Creator (4-Step Studio)
+          </button>
+          <button
+            onClick={() => onNavigate && onNavigate('characterStudio')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20"
+          >
+            <Sparkles className="w-4 h-4 text-amber-400" /> Character & Vocal Cloner 👤
           </button>
           <button
             onClick={() => setStudioMode('forecast-animator')}
@@ -192,6 +198,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
             <Sparkles className="w-4 h-4" /> Quick Cosmic Forecast Video
           </button>
         </div>
+
       </div>
 
       {/* MODE 1: FULL 4-STEP AI MUSIC VIDEO CREATOR */}

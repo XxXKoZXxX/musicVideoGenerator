@@ -1,9 +1,10 @@
-// VideoGenerator.js - Professional AI Music Video Compositor & Rendering Engine with Multi-Style Aesthetics
 import { LyricsEngine } from './LyricsEngine';
 import { lipSyncEngine } from './LipSyncEngine';
 import { StoryDirector, SINGER_PORTRAITS } from './StoryDirector';
 import { getRenderStyleById } from './RenderStyles';
 import { atmosphereEngine, ATMOSPHERE_MODES } from './AtmosphereEngine';
+import { characterCreationEngine } from './CharacterCreationEngine';
+
 
 export { ATMOSPHERE_MODES };
 
@@ -33,6 +34,13 @@ export const VISUALIZER_STYLES = [
 ];
 
 export const IMAGE_TO_VIDEO_MODES = [
+  { id: 'higgsfield-orbit-360', name: '360° Subject Orbit (Higgsfield DoP)', desc: 'Full 360-degree orbital camera rotation with dynamic depth parallax around focal subject' },
+  { id: 'higgsfield-vertigo-dolly', name: 'Hitchcock Vertigo Zoom (Higgsfield DoP)', desc: 'Simultaneous dolly push and optical wide zoom out for dramatic focal tension' },
+  { id: 'higgsfield-fpv-drone', name: 'FPV Acrobatic Drone (Higgsfield DoP)', desc: 'High-speed cinematic flythrough with 45° banking rolls and velocity punches' },
+  { id: 'higgsfield-crane-pedestal', name: 'Crane Pedestal Sweep (Higgsfield DoP)', desc: 'Dramatic high-to-low vertical crane sweep with focal tilt' },
+  { id: 'higgsfield-crash-zoom', name: 'Crash Zoom Transient (Higgsfield DoP)', desc: 'Explosive forward punch zoom snapping directly to audio transients & kick drops' },
+  { id: 'higgsfield-bullet-time', name: '120 FPS Bullet-Time (Higgsfield DoP)', desc: 'Slow-motion time freeze with continuous orbital camera panning' },
+  { id: 'higgsfield-speed-ramp', name: 'Action Speed Ramp (Higgsfield DoP)', desc: 'Slow-motion breakdown ramping up to 2x hyper-speed on drops' },
   { id: '3d-parallax', name: '3D Depth Parallax (Runway Gen-3)', desc: 'Simulates 3D depth camera movement and focal tilt from 2D images' },
   { id: 'fluid-warp', name: 'Audio Fluid Wave (Kling / Luma AI)', desc: 'Dynamic AI wave motion and organic pulse warping synced to beat drops' },
   { id: 'hyper-zoom', name: 'Hyper Speed Vertigo Push (Sora AI)', desc: 'Accelerated forward camera push with motion blur acceleration' },
@@ -40,6 +48,7 @@ export const IMAGE_TO_VIDEO_MODES = [
   { id: 'orbit-360', name: '360° Orbital Camera Spin (Kaiber AI)', desc: 'Continuous smooth orbital camera rotation around focal subject' },
   { id: 'kinetic-beat', name: 'Sub-Surface Kinetic Pulse (DomoAI)', desc: 'Audio-reactive micro-vibrations and focal depth pulses' },
 ];
+
 
 export const COLOR_LUTS = {
   none: { name: 'Standard (Clean)', filter: '' },
@@ -575,23 +584,40 @@ export class VideoGenerator {
     const activeMedia = images[index];
     const isVideo = activeMedia instanceof HTMLVideoElement;
 
-    if (directorCut.isSingerShot && this.singerImage && !isVideo) {
-      // SINGER PERFORMANCE SHOT WITH AUDIO-REACTIVE LIP-SYNCING
-      lipSyncEngine.renderLipSyncFace(
-        ctx,
-        this.singerImage,
-        audioMetrics,
-        elapsed,
-        this.project.bpm || 128,
-        width,
-        height,
-        {
+    if (directorCut.isSingerShot && (this.project.leadActor?.isProceduralActor || this.singerImage) && !isVideo) {
+      if (this.project.leadActor?.isProceduralActor) {
+        // PROCEDURAL CUSTOM 3D/2D AVATAR SINGER RIGGING
+        const visemeData = lipSyncEngine.extractViseme(audioMetrics, {
           sensitivity: this.settings.lipSyncSensitivity || 1.2,
-          showVocalGlow: true,
-          zoom: zoomPulse,
-        }
-      );
+        });
+        const blink = lipSyncEngine.getBlinkFactor(elapsed);
+        characterCreationEngine.renderCharacterFrame(ctx, width, height, {
+          viseme: visemeData.viseme,
+          openness: visemeData.openness,
+          widthScale: visemeData.widthScale,
+          blinkFactor: blink,
+          audioMetrics,
+          elapsed,
+        });
+      } else {
+        // SINGER PERFORMANCE SHOT WITH AUDIO-REACTIVE LIP-SYNCING
+        lipSyncEngine.renderLipSyncFace(
+          ctx,
+          this.singerImage,
+          audioMetrics,
+          elapsed,
+          this.project.bpm || 128,
+          width,
+          height,
+          {
+            sensitivity: this.settings.lipSyncSensitivity || 1.2,
+            showVocalGlow: true,
+            zoom: zoomPulse,
+          }
+        );
+      }
     } else {
+
       // CINEMATIC STORY WORLD SHOT
       this.paintDynamicScene(
         ctx,
@@ -687,6 +713,7 @@ export class VideoGenerator {
     // AI Model Engine Active HUD Badge Overlay (First 4 Seconds)
     if (selectedModel && elapsed < 4) {
       const modelLabels = {
+        higgsfield_dop: 'HIGGSFIELD AI · CINEMA DoP 6-AXIS 120FPS',
         sora_ai: 'SORA AI · WORLD SIMULATOR 60FPS',
         runway_gen3: 'RUNWAY GEN-3 ALPHA · CINEMA MOTION',
         kling_ai: 'KLING 1.5 AI · PHOTOREAL FLUID DYNAMICS',
@@ -703,9 +730,9 @@ export class VideoGenerator {
       ctx.save();
       ctx.globalAlpha = fadeAlpha * 0.85;
       ctx.fillStyle = 'rgba(6, 11, 25, 0.75)';
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.6)';
+      ctx.strokeStyle = selectedModel === 'higgsfield_dop' ? 'rgba(245, 158, 11, 0.8)' : 'rgba(6, 182, 212, 0.6)';
       ctx.lineWidth = 1;
-      const rectW = 280;
+      const rectW = 310;
       const rectH = 26;
       ctx.beginPath();
       ctx.roundRect(width - rectW - 20, 20, rectW, rectH, 6);
@@ -713,11 +740,12 @@ export class VideoGenerator {
       ctx.stroke();
 
       ctx.font = '700 10px "Space Grotesk", sans-serif';
-      ctx.fillStyle = '#38bdf8';
+      ctx.fillStyle = selectedModel === 'higgsfield_dop' ? '#fbbf24' : '#38bdf8';
       ctx.textAlign = 'center';
       ctx.fillText(label, width - rectW / 2 - 20, 37);
       ctx.restore();
     }
+
 
     // SHADER A: Japanese Anime Radial Action Speed Lines (on beat drops / kick)
     if (
@@ -884,7 +912,8 @@ export class VideoGenerator {
     let motionMode = this.settings.motionMode || '3d-parallax';
 
     // Auto-map AI Video Models to their signature camera dynamics if selected
-    if (selectedModel === 'sora_ai') motionMode = 'hyper-zoom';
+    if (selectedModel === 'higgsfield_dop') motionMode = this.settings.motionMode || 'higgsfield-orbit-360';
+    else if (selectedModel === 'sora_ai') motionMode = 'hyper-zoom';
     else if (selectedModel === 'runway_gen3') motionMode = '3d-parallax';
     else if (selectedModel === 'kling_ai') motionMode = 'fluid-warp';
     else if (selectedModel === 'luma_dream') motionMode = 'cinematic-pan';
@@ -900,8 +929,50 @@ export class VideoGenerator {
     let offsetY = 0;
     let rotation = 0;
 
-    // Advanced Generative AI Camera Motion Engines (Sora, Runway, Kling, Luma, Pika, Kaiber, DomoAI, SVD)
-    if (motionMode === 'fluid-warp' || selectedModel === 'kling_ai') {
+    // Advanced Higgsfield AI & Multi-Engine Directorial Camera Paths
+    if (motionMode === 'higgsfield-orbit-360' || motionMode === 'orbit-360' || cameraMove === '360-orbit') {
+      // 360° Subject Orbit with continuous focal parallax & depth tilt
+      const orbitAngle = progress * Math.PI * 2 * 0.35 * motionIntensity;
+      rotation = isIncoming ? (1 - blend) * 0.15 : Math.sin(orbitAngle) * 0.08 * motionIntensity;
+      scale = zoomPulse * (1.18 + Math.cos(orbitAngle) * 0.12 * motionIntensity);
+      offsetX = Math.sin(orbitAngle) * (width * 0.07) * motionIntensity;
+      offsetY = Math.sin(orbitAngle * 2) * (height * 0.03) * motionIntensity;
+    } else if (motionMode === 'higgsfield-vertigo-dolly' || cameraMove === 'vertigo-zoom') {
+      // Hitchcock Vertigo Dolly Zoom (forward camera push with optical perspective compression)
+      const vertigoFactor = Math.pow(progress, 1.2);
+      scale = zoomPulse * (1.05 + vertigoFactor * 0.45 * motionIntensity);
+      offsetX = Math.sin(progress * Math.PI * 4) * (width * 0.015) * (1 - progress);
+      offsetY = (progress - 0.5) * (height * 0.05) * motionIntensity;
+    } else if (motionMode === 'higgsfield-fpv-drone' || cameraMove === 'fpv-drone') {
+      // Acrobatic FPV Drone Flythrough with 35° banking tilt roll & velocity punches
+      const flightCurve = Math.sin(progress * Math.PI * 2);
+      rotation = flightCurve * 0.14 * motionIntensity;
+      offsetX = Math.cos(progress * Math.PI * 3) * (width * 0.06) * motionIntensity;
+      offsetY = (progress - 0.5) * (height * 0.12) * motionIntensity;
+      scale = zoomPulse * (1.15 + Math.abs(flightCurve) * 0.18 * motionIntensity);
+    } else if (motionMode === 'higgsfield-crane-pedestal' || cameraMove === 'crane-sweep') {
+      // Dramatic High-to-Low Studio Crane Pedestal Sweep
+      offsetY = (0.5 - progress) * (height * 0.22) * motionIntensity;
+      rotation = (0.5 - progress) * -0.04 * motionIntensity;
+      scale = zoomPulse * (1.12 + Math.sin(progress * Math.PI) * 0.08);
+    } else if (motionMode === 'higgsfield-crash-zoom' || cameraMove === 'crash-zoom') {
+      // Explosive Crash Zoom Punch snapping to beat drops
+      const snapProgress = progress > 0.85 ? (progress - 0.85) / 0.15 : progress * 0.2;
+      scale = zoomPulse * (1.0 + snapProgress * 0.5 * motionIntensity);
+      offsetX = (Math.random() - 0.5) * (width * 0.01) * motionIntensity;
+    } else if (motionMode === 'higgsfield-bullet-time' || cameraMove === 'bullet-time') {
+      // 120 FPS Ultra Slow-Mo Bullet Time Freeze
+      const slowOrbit = progress * Math.PI * 0.5 * motionIntensity;
+      rotation = Math.sin(slowOrbit) * 0.05;
+      scale = zoomPulse * (1.2 + Math.sin(slowOrbit * 2) * 0.06);
+      offsetX = Math.cos(slowOrbit) * (width * 0.04);
+      offsetY = Math.sin(slowOrbit) * (height * 0.02);
+    } else if (motionMode === 'higgsfield-speed-ramp' || cameraMove === 'speed-ramp') {
+      // Velocity Speed Ramping (slow in verse, accelerating on beat drops)
+      const rampProgress = Math.sin(progress * Math.PI);
+      scale = zoomPulse * (1.08 + rampProgress * 0.28 * motionIntensity);
+      offsetX = Math.sin(progress * Math.PI * 4) * (width * 0.03) * rampProgress;
+    } else if (motionMode === 'fluid-warp' || selectedModel === 'kling_ai') {
       const wavePhase = progress * Math.PI * 4;
       offsetX = Math.sin(wavePhase) * (width * 0.035) * motionIntensity;
       offsetY = Math.cos(wavePhase * 0.7) * (height * 0.025) * motionIntensity;
@@ -913,12 +984,6 @@ export class VideoGenerator {
       offsetX = isIncoming ? (1 - blend) * -width * 0.4 : (progress - 0.5) * width * 0.22 * motionIntensity;
       offsetY = Math.sin(progress * Math.PI) * (height * 0.04) * motionIntensity;
       scale = zoomPulse * 1.12;
-    } else if (motionMode === 'orbit-360' || selectedModel === 'kaiber_ai') {
-      const orbitAngle = progress * Math.PI * 0.45 * motionIntensity;
-      rotation = isIncoming ? (1 - blend) * 0.2 : orbitAngle - 0.2;
-      scale = zoomPulse * (1.15 + Math.sin(progress * Math.PI) * 0.1 * motionIntensity);
-      offsetX = Math.cos(orbitAngle) * (width * 0.04) * motionIntensity;
-      offsetY = Math.sin(orbitAngle) * (height * 0.04) * motionIntensity;
     } else if (motionMode === 'kinetic-beat' || selectedModel === 'pika_20') {
       const pulseFreq = progress * Math.PI * 8;
       scale = zoomPulse * (1 + Math.abs(Math.sin(pulseFreq)) * 0.08 * motionIntensity);
@@ -942,6 +1007,7 @@ export class VideoGenerator {
       scale *= (1.25 - progress * 0.2);
       offsetY += progress * height * 0.06;
     }
+
 
     // Cover Fit Image/Video calculation
     const mediaWidth = image.videoWidth || image.naturalWidth || image.width || width;

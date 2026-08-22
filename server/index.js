@@ -10,6 +10,7 @@ app.use(express.json());
 
 // List of supported video generators (renderer back‑ends)
 const GENERATORS = [
+  { id: 'higgsfield-dop', name: 'Higgsfield Cinema DoP Studio', provider: 'Higgsfield AI' },
   { id: 'ai-neural', name: 'AI Neural Motion Engine', provider: 'Runway / Neural' },
   { id: 'runway', name: 'RunwayML Gen-3 Alpha', provider: 'Runway' },
   { id: 'sora', name: 'OpenAI Sora Video', provider: 'OpenAI' },
@@ -23,11 +24,22 @@ const GENERATORS = [
 ];
 
 const SAMPLE_VIDEOS = {
+  'higgsfield-dop': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnail: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80',
+    title: 'Higgsfield Cinema DoP 6-Axis Motion Sequence',
+  },
+  'higgsfield_dop': {
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    thumbnail: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80',
+    title: 'Higgsfield Cinema DoP 6-Axis Motion Sequence',
+  },
   'ai-neural': {
     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
     title: 'AI Neural Motion Sequence',
   },
+
   'runway': {
     url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',

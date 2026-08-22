@@ -16,6 +16,7 @@ import {
   Layers,
   Monitor,
   RotateCcw,
+  Camera,
 } from 'lucide-react';
 import { generateStorylineFromAudio, generateLyricVisualScenes, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
@@ -23,7 +24,9 @@ import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { VideoFetchService } from '../services/VideoFetchService';
 import { AI_VIDEO_MODELS, AI_STORYLINE_GENERATORS } from '../data/aiModels';
 import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
+import HiggsfieldDoPControls from './HiggsfieldDoPControls';
 import '../styles/Step.css';
+
 
 export default function StepThree({ onNext, onBack, project }) {
   const [activeTab, setActiveTab] = useState('models');
@@ -384,6 +387,12 @@ export default function StepThree({ onNext, onBack, project }) {
         {/* Navigation Tabs */}
         <div className="mode-tabs">
           <button
+            className={`tab-btn ${activeTab === 'higgsfield' ? 'active' : ''}`}
+            onClick={() => setActiveTab('higgsfield')}
+          >
+            <Camera size={18} /> Higgsfield Cinema DoP Suite 🔥
+          </button>
+          <button
             className={`tab-btn ${activeTab === 'models' ? 'active' : ''}`}
             onClick={() => setActiveTab('models')}
           >
@@ -415,9 +424,23 @@ export default function StepThree({ onNext, onBack, project }) {
           </button>
         </div>
 
+        {/* TAB: HIGGSFIELD CINEMA DoP SUITE */}
+        {activeTab === 'higgsfield' && (
+          <div className="tab-pane">
+            <HiggsfieldDoPControls
+              settings={project}
+              onChange={(updated) => {
+                Object.assign(project, updated);
+                setScreenplay(StoryDirector.generateScreenplay(project, project.images || []));
+              }}
+            />
+          </div>
+        )}
+
         {/* TAB 0: RENDERER ENGINES & AI MODELS */}
         {activeTab === 'models' && (
           <div className="tab-pane">
+
             {/* SECTION 1: MASTER RENDERER SELECTION */}
             <div className="section-title">
               <Monitor size={20} color="#38bdf8" />

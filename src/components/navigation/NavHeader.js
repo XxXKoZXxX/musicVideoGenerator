@@ -57,8 +57,9 @@ export const CATEGORY_HUBS = [
     color: 'from-emerald-500/20 to-teal-500/10 border-emerald-500/40 text-emerald-300',
     views: [
       { id: 'podcast', label: 'Dual-Host Voice Podcast', icon: <Radio className="w-4 h-4 text-rose-400" />, desc: 'Atlas & Luna conversational voice audio reading', tag: 'Podcast' },
-      { id: 'video', label: 'AI Music Video Studio', icon: <Film className="w-4 h-4 text-emerald-400" />, desc: '4-Step Studio with Sora, Runway, Kling & 60 FPS Export', tag: 'AI Studio' },
-      { id: 'oracleChat', label: 'AI Oracle & Notebook', icon: <MessageSquare className="w-4 h-4 text-cyan-400" />, desc: 'Contextual AI Q&A & saved spiritual journal', tag: 'AI' },
+      { id: 'video', label: 'AI Music Video Studio', icon: <Film className="w-4 h-4 text-emerald-400" />, desc: '4-Step Studio with Higgsfield, Sora, Runway & 60 FPS Export', tag: 'AI Studio' },
+      { id: 'characterStudio', label: 'AI Character & Vocal Cloner', icon: <Sparkles className="w-4 h-4 text-amber-400" />, desc: 'Sculpt 3D lead singer avatars and clone vocal formant profiles', tag: 'Vocal Cloner' },
+      { id: 'oracleChat', label: 'Hermetic Oracle Chat', icon: <MessageSquare className="w-4 h-4 text-cyan-400" />, desc: 'Stream chat with Alexandria mystical AI oracle', tag: 'AI Chat' },
       { id: 'soundscape', label: 'Sacred Frequencies', icon: <Headphones className="w-4 h-4 text-cyan-400" />, desc: '20+ Solfeggio frequencies & sacred visualizer', tag: 'Sound' }
     ]
   },

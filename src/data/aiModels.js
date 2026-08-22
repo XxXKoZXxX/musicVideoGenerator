@@ -1,6 +1,18 @@
-// aiModels.js - Comprehensive Matrix of Top AI Video Models & Storyline Generators
+// aiModels.js - Comprehensive Matrix of Top AI Video Models & Storyline Generators with Higgsfield AI DoP Integration
 
 export const AI_VIDEO_MODELS = [
+  {
+    id: 'higgsfield_dop',
+    name: 'Higgsfield Cinema DoP Studio',
+    badge: 'DIRECTOR OF PHOTOGRAPHY',
+    provider: 'Higgsfield AI',
+    tagline: 'Precision Director of Photography camera steering: 360° orbit, Hitchcock vertigo dolly, FPV drone flythrough, and bullet-time velocity.',
+    maxResolution: '4K Cinema 60/120 FPS',
+    motionQuality: 'Directorial 6-Axis Physics & Motion Vector',
+    motionMode: 'higgsfield-orbit-360',
+    icon: '🎥',
+    color: '#f59e0b',
+  },
   {
     id: 'sora_ai',
     name: 'Sora AI (OpenAI)',
@@ -96,6 +108,140 @@ export const AI_VIDEO_MODELS = [
     motionMode: 'vortex',
     icon: '🎥',
     color: '#10b981',
+  },
+];
+
+// Higgsfield DoP (Director of Photography) Camera Paths
+export const HIGGSFIELD_CAMERA_PATHS = [
+  {
+    id: 'higgsfield-orbit-360',
+    name: '360° Subject Orbit',
+    desc: 'Smooth 360-degree orbital rotation with depth parallax around focal center',
+    icon: '🔄',
+    category: 'Orbital',
+  },
+  {
+    id: 'higgsfield-vertigo-dolly',
+    name: 'Hitchcock Vertigo Zoom',
+    desc: 'Simultaneous dolly push and optical wide zoom out for dramatic focal tension',
+    icon: '🎯',
+    category: 'Dynamic Dolly',
+  },
+  {
+    id: 'higgsfield-fpv-drone',
+    name: 'FPV Acrobatic Drone',
+    desc: 'High-speed cinematic flythrough with 45° banking rolls and velocity punches',
+    icon: '🚁',
+    category: 'Aerial',
+  },
+  {
+    id: 'higgsfield-crane-pedestal',
+    name: 'Crane Pedestal Sweep',
+    desc: 'Dramatic high-to-low vertical crane sweep with focal tilt',
+    icon: '🏗️',
+    category: 'Studio Crane',
+  },
+  {
+    id: 'higgsfield-crash-zoom',
+    name: 'Crash Zoom Transient',
+    desc: 'Explosive forward punch zoom snapping directly to audio transients & kick drops',
+    icon: '⚡',
+    category: 'Action',
+  },
+  {
+    id: 'higgsfield-tracking-dolly',
+    name: 'Hollywood Tracking Dolly',
+    desc: 'Smooth lateral tracking shot with dynamic foreground occlusion',
+    icon: '🎬',
+    category: 'Cinematic',
+  },
+];
+
+// Higgsfield Cinematic Lenses & Optical Profiles
+export const HIGGSFIELD_LENSES = [
+  {
+    id: 'anamorphic-239',
+    name: 'Anamorphic 2.39:1',
+    desc: 'Hollywood widescreen anamorphic lens with horizontal cyan flare streaks',
+    aspect: '21:9',
+    filter: 'contrast(1.15) saturate(1.2)',
+  },
+  {
+    id: 'imax-70mm',
+    name: 'IMAX 70mm Master',
+    desc: 'Ultra-crisp large-format cinema capture with rich dynamic range',
+    aspect: '16:9',
+    filter: 'contrast(1.1) saturate(1.15)',
+  },
+  {
+    id: 'kodak-35mm',
+    name: 'Kodak 5219 35mm',
+    desc: 'Warm organic film grain, natural skin tones, and subtle gate weave',
+    aspect: '16:9',
+    filter: 'sepia(0.18) contrast(1.12) saturate(1.2)',
+  },
+  {
+    id: 'fisheye-wide',
+    name: '180° Skateboard Fish-Eye',
+    desc: 'Curved ultra-wide barrel distortion for 90s hip-hop and MTV music videos',
+    aspect: '4:5',
+    filter: 'contrast(1.2) saturate(1.3)',
+  },
+];
+
+// Higgsfield Studio Lighting Rigs
+export const HIGGSFIELD_LIGHTING_RIGS = [
+  {
+    id: 'volumetric-fog',
+    name: 'Volumetric Laser Fog',
+    desc: 'Atmospheric light beams scattering through misty haze',
+    color: '#06b6d4',
+  },
+  {
+    id: 'studio-rim',
+    name: '3-Point Studio Rim Light',
+    desc: 'High-contrast backlight carving out actor silhouette and features',
+    color: '#f59e0b',
+  },
+  {
+    id: 'cyber-neon',
+    name: 'Cyberpunk Dual Neon',
+    desc: 'Vibrant contrasting cyan and magenta edge lighting',
+    color: '#ec4899',
+  },
+  {
+    id: 'golden-hour',
+    name: 'California Golden Hour',
+    desc: 'Warm sunset solar flares and golden specular highlights',
+    color: '#fbbf24',
+  },
+];
+
+// Higgsfield Motion Velocity Curves
+export const HIGGSFIELD_VELOCITY_PRESETS = [
+  {
+    id: 'bullet-time',
+    name: '120 FPS Bullet-Time',
+    desc: 'Slow-motion time freeze with continuous orbital camera panning',
+    multiplier: 0.35,
+  },
+  {
+    id: 'speed-ramp',
+    name: 'Action Speed Ramp',
+    desc: 'Slow-motion breakdown ramping up to 2x hyper-speed on drops',
+    multiplier: 1.0,
+  },
+  {
+    id: 'audio-pulse',
+    name: 'Sub-Bass Kinetic Warp',
+    desc: 'Micro-vibrations and camera impulse thrusts synced to kick drums',
+    multiplier: 1.25,
+  },
+  {
+    id: 'constant-smooth',
+    name: 'Master Steadycam',
+    desc: 'Ultra-smooth constant-velocity Hollywood gimbal movement',
+    multiplier: 1.0,
   },
 ];
 

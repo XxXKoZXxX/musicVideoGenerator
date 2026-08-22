@@ -65,8 +65,24 @@ export class StoryDirector {
       'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200&auto=format&fit=crop&q=80',
     ];
 
-    const cameraMoves = ['slow-dolly', 'tracking-shot', 'whip-pan', 'hyper-zoom', 'vortex', 'crane-pullout', '3d-tilt', 'orbit-360'];
+    const cameraMoves = [
+      '360-orbit',
+      'vertigo-zoom',
+      'fpv-drone',
+      'crane-sweep',
+      'crash-zoom',
+      'bullet-time',
+      'speed-ramp',
+      'slow-dolly',
+      'tracking-shot',
+      'whip-pan',
+      'hyper-zoom',
+      'vortex',
+      'crane-pullout',
+      '3d-tilt',
+    ];
     const scenes = [];
+
     
     // Parse lyrics to generate scenes
     const rawLyrics = songInfo.lyrics || songInfo.aiStoryboard?.lyrics;

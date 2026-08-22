@@ -74,11 +74,34 @@ function selectQRVersion(textBytesLength) {
   return QR_VERSIONS[QR_VERSIONS.length - 1];
 }
 
+function encodeStringToUtf8Bytes(str) {
+  if (typeof TextEncoder !== 'undefined') {
+    return new TextEncoder().encode(str);
+  }
+  if (typeof Buffer !== 'undefined') {
+    return Buffer.from(str, 'utf8');
+  }
+  const bytes = [];
+  for (let i = 0; i < str.length; i++) {
+    const code = str.charCodeAt(i);
+    if (code < 128) bytes.push(code);
+    else if (code < 2048) {
+      bytes.push((code >> 6) | 192);
+      bytes.push((code & 63) | 128);
+    } else {
+      bytes.push((code >> 12) | 224);
+      bytes.push(((code >> 6) & 63) | 128);
+      bytes.push((code & 63) | 128);
+    }
+  }
+  return new Uint8Array(bytes);
+}
+
 export function generateQRCodeMatrix(text) {
-  const encoder = new TextEncoder();
-  const textBytes = encoder.encode(text);
+  const textBytes = encodeStringToUtf8Bytes(text);
   const ver = selectQRVersion(textBytes.length);
   const size = ver.size;
+
 
   // Matrix: null = unassigned, true = dark, false = light
   const matrix = Array.from({ length: size }, () => Array(size).fill(null));
