@@ -8,18 +8,41 @@ export class VideoRenderEngine {
   constructor(canvas, profile) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
-    this.profile = profile;
+    this.profile = profile || {
+      name: 'Astraea',
+      birthYear: 1993,
+      birthMonth: 7,
+      birthDay: 16,
+      cityName: 'Newton, NJ, USA',
+      lat: 41.0582,
+      lng: -74.7529,
+    };
 
-    const dateObj = new Date(profile.birthYear, profile.birthMonth - 1, profile.birthDay);
-    this.astro = calculatePlanetaryPositions(dateObj, profile.birthHour || 12, profile.birthMinute || 0, profile.lat, profile.lng);
+    const bYear = this.profile.birthYear || 1993;
+    const bMonth = this.profile.birthMonth || 7;
+    const bDay = this.profile.birthDay || 16;
+    const dateObj = new Date(bYear, bMonth - 1, bDay);
+
+    this.astro = calculatePlanetaryPositions(
+      dateObj,
+      this.profile.birthHour || 12,
+      this.profile.birthMinute || 0,
+      this.profile.lat || 41.0582,
+      this.profile.lng || -74.7529
+    );
     this.lifePath = calculateLifePath(dateObj);
-    this.secData = getSecretLanguageProfile(profile.birthMonth, profile.birthDay);
+    this.secData = getSecretLanguageProfile(bMonth, bDay) || {
+      dateFormatted: 'July 16',
+      title: 'The Uncompromising Dynamo',
+      meditation: 'Ride the wave of destiny.',
+    };
 
-    this.width = canvas.width;
-    this.height = canvas.height;
+    this.width = canvas.width || 640;
+    this.height = canvas.height || 360;
     this.frame = 0;
     this.isRendering = false;
     this.animId = null;
+
 
     // Particles array
     this.particles = Array.from({ length: 80 }, () => ({

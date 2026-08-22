@@ -39,11 +39,13 @@
     "build-mac": "npm run react-build && electron-builder --mac",
     "build-linux": "npm run react-build && electron-builder --linux",
     "build-all": "npm run react-build && electron-builder -mwl",
-    "build:mobile": "react-scripts build",
+    "build:mobile": "react-scripts build && node package-mobile.js",
+    "package:mobile": "node package-mobile.js",
     "mobile:sync": "npx @capacitor/cli sync",
     "mobile:android": "npx @capacitor/cli open android",
     "mobile:ios": "npx @capacitor/cli open ios"
   },
+
   "build": {
     "appId": "com.astraea.studio",
     "productName": "Astraea Cosmic Studio",

@@ -1,13 +1,37 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 const { spawn, exec } = require('child_process');
 
 const PORT = 3210;
 const BUILD_DIR = path.join(__dirname, 'build');
 const CLOUDFLARED_BIN = path.join(__dirname, 'cloudflared.exe');
 
-let currentTunnelUrl = 'https://wonder-lobby-chelsea-enters.trycloudflare.com';
+// Detect real local LAN IP address dynamically
+function getLocalIpAddress() {
+  const ifaces = os.networkInterfaces();
+  for (const dev in ifaces) {
+    for (const details of ifaces[dev]) {
+      if (details.family === 'IPv4' && !details.internal) {
+        return details.address;
+      }
+    }
+  }
+  return '127.0.0.1';
+}
+
+const LOCAL_IP = getLocalIpAddress();
+const LOCAL_WIFI_URL = `http://${LOCAL_IP}:${PORT}`;
+
+// Read existing public_url.txt if present
+let currentTunnelUrl = '';
+try {
+  const savedUrlPath = path.join(__dirname, 'public_url.txt');
+  if (fs.existsSync(savedUrlPath)) {
+    currentTunnelUrl = fs.readFileSync(savedUrlPath, 'utf8').trim();
+  }
+} catch (e) {}
 
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
@@ -20,6 +44,7 @@ const MIME_TYPES = {
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.webm': 'video/webm',
+  '.mp4': 'video/mp4',
   '.mp3': 'audio/mpeg',
   '.zip': 'application/zip'
 };
@@ -29,14 +54,21 @@ const server = http.createServer((req, res) => {
   try {
     let reqPath = req.url.split('?')[0];
 
-    // API endpoint for real-time live tunnel detection
+    // API endpoint for real-time live tunnel & network detection
     if (reqPath === '/active_url.json') {
       res.writeHead(200, {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
         'Cache-Control': 'no-cache'
       });
-      return res.end(JSON.stringify({ url: currentTunnelUrl, status: 'online' }));
+      return res.end(JSON.stringify({
+        url: currentTunnelUrl || LOCAL_WIFI_URL,
+        publicUrl: currentTunnelUrl,
+        wifiUrl: LOCAL_WIFI_URL,
+        localIp: LOCAL_IP,
+        port: PORT,
+        status: 'online'
+      }));
     }
 
     let filePath = path.join(BUILD_DIR, reqPath);
@@ -85,6 +117,7 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`\n===================================================================`);
   console.log(`  ✨ Astraea Server running locally on port ${PORT}...`);
+  console.log(`  📱 Local Wi-Fi Network: ${LOCAL_WIFI_URL}`);
   console.log(`  🌐 Connecting to Cloudflare Tunnel for Public Sharing...`);
   console.log(`===================================================================\n`);
   
@@ -96,7 +129,7 @@ function startTunnel() {
   if (!fs.existsSync(CLOUDFLARED_BIN)) {
     console.log(`[!] cloudflared.exe not found. Running in local network mode only.`);
     console.log(`    Local:  http://localhost:${PORT}`);
-    console.log(`    Wi-Fi:  http://192.168.86.210:${PORT}\n`);
+    console.log(`    Wi-Fi:  ${LOCAL_WIFI_URL}\n`);
     return;
   }
 
@@ -119,7 +152,14 @@ function startTunnel() {
       // Save link to file
       try {
         fs.writeFileSync(path.join(__dirname, 'public_url.txt'), currentTunnelUrl);
-        fs.writeFileSync(path.join(BUILD_DIR, 'active_url.json'), JSON.stringify({ url: currentTunnelUrl, status: 'online' }));
+        fs.writeFileSync(path.join(BUILD_DIR, 'active_url.json'), JSON.stringify({
+          url: currentTunnelUrl,
+          publicUrl: currentTunnelUrl,
+          wifiUrl: LOCAL_WIFI_URL,
+          localIp: LOCAL_IP,
+          port: PORT,
+          status: 'online'
+        }));
       } catch (e) {}
 
       // Copy to clipboard on Windows
@@ -131,7 +171,7 @@ function startTunnel() {
       console.log(`\n  👉 Send this link to anyone to test (iPhone, Android, PC):`);
       console.log(`     \x1b[33m\x1b[1m${currentTunnelUrl}\x1b[0m\n`);
       console.log(`  📋 Copied to Windows Clipboard! Just press Ctrl+V to paste.`);
-      console.log(`  📱 Home Wi-Fi link: http://192.168.86.210:${PORT}`);
+      console.log(`  📱 Home Wi-Fi link: ${LOCAL_WIFI_URL}`);
       console.log(`  💻 Local Machine:   http://localhost:${PORT}\n`);
       console.log(`  (Keep this window open while testers are using the app)`);
       console.log(`===================================================================\n`);

@@ -185,3 +185,36 @@ ipcMain.handle('save-video', async (event, { videoBuffer, filename }) => {
   }
   return { success: false };
 });
+
+ipcMain.handle('get-sharing-urls', async () => {
+  const os = require('os');
+  let localIp = '127.0.0.1';
+  try {
+    const ifaces = os.networkInterfaces();
+    for (const dev in ifaces) {
+      for (const details of ifaces[dev]) {
+        if (details.family === 'IPv4' && !details.internal) {
+          localIp = details.address;
+          break;
+        }
+      }
+      if (localIp !== '127.0.0.1') break;
+    }
+  } catch (e) {}
+
+  let publicUrl = '';
+  try {
+    const publicUrlPath = path.join(__dirname, '../public_url.txt');
+    if (fs.existsSync(publicUrlPath)) {
+      publicUrl = fs.readFileSync(publicUrlPath, 'utf8').trim();
+    }
+  } catch (e) {}
+
+  return {
+    localIp,
+    wifiUrl: `http://${localIp}:3210`,
+    publicUrl: publicUrl || '',
+    localhostUrl: 'http://localhost:3210',
+  };
+});
+

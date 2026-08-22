@@ -975,34 +975,41 @@ export class VideoGenerator {
     }
 
     // 1. Draw Main Dynamic Motion Scene (Video or Image)
-    ctx.drawImage(
-      image,
-      centerX - drawWidth / 2,
-      centerY - drawHeight / 2,
-      drawWidth,
-      drawHeight
-    );
-
-    // 2. Simulated Depth Parallax Foreground Glow/Rays layer for realistic Video Depth
-    if (motionMode === '3d-parallax' && alpha > 0.5) {
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
-      ctx.globalAlpha = alpha * 0.12 * motionIntensity;
-
-      // Subtle enlarged depth blur overlay
-      const depthScale = 1.06;
+    try {
       ctx.drawImage(
         image,
-        centerX - (drawWidth * depthScale) / 2,
-        centerY - (drawHeight * depthScale) / 2,
-        drawWidth * depthScale,
-        drawHeight * depthScale
+        centerX - drawWidth / 2,
+        centerY - drawHeight / 2,
+        drawWidth,
+        drawHeight
       );
-      ctx.restore();
+
+      // 2. Simulated Depth Parallax Foreground Glow/Rays layer for realistic Video Depth
+      if (motionMode === '3d-parallax' && alpha > 0.5) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = alpha * 0.12 * motionIntensity;
+
+        // Subtle enlarged depth blur overlay
+        const depthScale = 1.06;
+        ctx.drawImage(
+          image,
+          centerX - (drawWidth * depthScale) / 2,
+          centerY - (drawHeight * depthScale) / 2,
+          drawWidth * depthScale,
+          drawHeight * depthScale
+        );
+        ctx.restore();
+      }
+    } catch (drawErr) {
+      // Fallback background in case of image frame decode error
+      ctx.fillStyle = '#1e1b4b';
+      ctx.fillRect(0, 0, width, height);
     }
 
     ctx.restore();
   }
+
 
   paintVisualizer(ctx, audioMetrics, elapsed, width, height) {
     const style = this.settings.visualizerStyle || 'radial';

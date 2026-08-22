@@ -103,30 +103,59 @@ export default function VideoStudioView({ profile, onNavigate }) {
     setIsRecording(true);
     setRecordedVideoUrl(null);
 
-    const canvas = canvasRef.current;
-    const stream = canvas.captureStream(60);
-    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm;codecs=vp9' });
+    try {
+      const canvas = canvasRef.current;
+      const stream = canvas.captureStream(60);
 
-    const chunks = [];
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) chunks.push(e.data);
-    };
-
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunks, { type: 'video/webm' });
-      const videoUrl = URL.createObjectURL(blob);
-      setRecordedVideoUrl(videoUrl);
-      setIsRecording(false);
-    };
-
-    mediaRecorder.start();
-
-    setTimeout(() => {
-      if (mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
+      const mimeCandidates = [
+        'video/webm;codecs=vp9',
+        'video/webm;codecs=vp8',
+        'video/webm',
+        'video/mp4',
+      ];
+      let selectedMime = '';
+      for (const cand of mimeCandidates) {
+        if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(cand)) {
+          selectedMime = cand;
+          break;
+        }
       }
-    }, 8000);
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        ...(selectedMime ? { mimeType: selectedMime } : {}),
+        videoBitsPerSecond: 8_000_000,
+      });
+
+      const chunks = [];
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) chunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const blob = new Blob(chunks, { type: selectedMime || 'video/webm' });
+        const videoUrl = URL.createObjectURL(blob);
+        setRecordedVideoUrl(videoUrl);
+        setIsRecording(false);
+      };
+
+      mediaRecorder.onerror = (e) => {
+        console.error('MediaRecorder error:', e);
+        setIsRecording(false);
+      };
+
+      mediaRecorder.start(1000);
+
+      setTimeout(() => {
+        if (mediaRecorder.state !== 'inactive') {
+          mediaRecorder.stop();
+        }
+      }, 8000);
+    } catch (err) {
+      console.error('Failed to record forecast video:', err);
+      setIsRecording(false);
+    }
   };
+
 
   return (
     <div className="video-studio-page">

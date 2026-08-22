@@ -1,41 +1,79 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Share2, Copy, Check, Smartphone, Globe, 
-  Send, Sparkles, Heart, MessageCircle, ShieldCheck 
+  Send, Sparkles, Heart, MessageCircle, ShieldCheck, Wifi 
 } from 'lucide-react';
+import { generateQRCodeSVG } from '../../utils/qrGenerator';
 
 export default function ShareModal({ isOpen, onClose, activeProfile }) {
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [selectedInviteTemplate, setSelectedInviteTemplate] = useState('general');
-  const [activeShareUrl, setActiveShareUrl] = useState(() => {
-    if (typeof window !== 'undefined') {
-      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-        return window.location.origin;
-      }
-    }
-    return 'https://wonder-lobby-chelsea-enters.trycloudflare.com';
+  const [urlType, setUrlType] = useState('public');
+
+  const [networkInfo, setNetworkInfo] = useState({
+    publicUrl: 'https://postcard-teaching-reaction-disabilities.trycloudflare.com',
+    wifiUrl: 'http://192.168.86.21:3210',
+    localhostUrl: 'http://localhost:3210',
   });
 
-  // Fetch real-time active tunnel URL if available from serve/share script
+  // Fetch real-time active tunnel URL & local network IP
   useEffect(() => {
     let isMounted = true;
+
+    // Check Electron IPC first
+    if (window.electron?.getSharingUrls) {
+      window.electron.getSharingUrls().then((res) => {
+        if (isMounted && res) {
+          setNetworkInfo((prev) => ({
+            ...prev,
+            publicUrl: res.publicUrl || prev.publicUrl,
+            wifiUrl: res.wifiUrl || prev.wifiUrl,
+            localhostUrl: res.localhostUrl || prev.localhostUrl,
+          }));
+        }
+      }).catch(() => {});
+    }
+
+    // Fetch from active_url.json API
     fetch('/active_url.json')
       .then(res => res.json())
       .then(data => {
-        if (isMounted && data && data.url) {
-          setActiveShareUrl(data.url);
+        if (isMounted && data) {
+          setNetworkInfo(prev => ({
+            ...prev,
+            publicUrl: data.publicUrl || data.url || prev.publicUrl,
+            wifiUrl: data.wifiUrl || prev.wifiUrl,
+          }));
         }
       })
-      .catch(() => {
-        // Fallback gracefully to default
-      });
+      .catch(() => {});
+
+    // Check if running in browser with external origin
+    if (typeof window !== 'undefined') {
+      const hostname = window.location.hostname;
+      if (hostname !== 'localhost' && hostname !== '127.0.0.1') {
+        setNetworkInfo(prev => ({
+          ...prev,
+          publicUrl: window.location.origin,
+        }));
+      }
+    }
+
     return () => { isMounted = false; };
   }, []);
 
   if (!isOpen) return null;
 
-  const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=240x240&color=F59E0B&bgcolor=060814&data=${encodeURIComponent(activeShareUrl)}`;
+  const activeShareUrl = urlType === 'wifi'
+    ? networkInfo.wifiUrl
+    : (networkInfo.publicUrl || networkInfo.wifiUrl);
+
+  const qrCodeSvgDataUri = generateQRCodeSVG(activeShareUrl, {
+    size: 240,
+    color: '#F59E0B',
+    bgColor: '#060814',
+  });
 
   const inviteTemplates = {
     general: {
@@ -108,14 +146,38 @@ export default function ShareModal({ isOpen, onClose, activeProfile }) {
           </button>
         </div>
 
+        {/* URL Type Selector */}
+        <div className="flex gap-2 bg-slate-900/80 p-1 rounded-xl border border-white/10">
+          <button
+            onClick={() => setUrlType('public')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              urlType === 'public'
+                ? 'bg-amber-400 text-slate-950 font-bold'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Globe className="w-3.5 h-3.5" /> 🌐 Public Web Link
+          </button>
+          <button
+            onClick={() => setUrlType('wifi')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              urlType === 'wifi'
+                ? 'bg-amber-400 text-slate-950 font-bold'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Wifi className="w-3.5 h-3.5" /> 📶 Local Wi-Fi
+          </button>
+        </div>
+
         {/* Live Link Copy Box */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-cyan-400" /> Live Shareable Web Link
+              {urlType === 'public' ? <><Globe className="w-3.5 h-3.5 text-cyan-400" /> Live Shareable Web Link</> : <><Wifi className="w-3.5 h-3.5 text-cyan-400" /> Local Wi-Fi Link</>}
             </span>
             <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> HTTPS Secure
+              <ShieldCheck className="w-3.5 h-3.5" /> {urlType === 'public' ? 'HTTPS Secure' : 'Home Network'}
             </span>
           </div>
 
@@ -148,7 +210,7 @@ export default function ShareModal({ isOpen, onClose, activeProfile }) {
         {/* QR Code Section for In-Person Testing */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4">
           <div className="p-2 bg-slate-950 rounded-2xl border border-amber-400/40 shadow-md flex-shrink-0">
-            <img src={qrCodeUrl} alt="Scan to test Astraea" width={110} height={110} className="rounded-xl" />
+            <img src={qrCodeSvgDataUri} alt="Scan to test Astraea" width={110} height={110} className="rounded-xl" />
           </div>
           <div className="text-center sm:text-left space-y-1">
             <div className="flex items-center justify-center sm:justify-start gap-1.5 text-xs font-bold text-white">
