@@ -45,7 +45,7 @@ try {
 
   // Use PowerShell Compress-Archive on Windows
   if (fs.existsSync(publicZipPath)) fs.unlinkSync(publicZipPath);
-  
+
   const psCmd = `powershell -Command "Compress-Archive -Path '${stagingDir}\\*' -DestinationPath '${publicZipPath}' -Force"`;
   execSync(psCmd, { stdio: 'inherit', cwd: rootDir });
 
