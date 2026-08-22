@@ -2979,3 +2979,44 @@ h2, h3, h4 {
 .font-serif {
   font-family: var(--font-serif);
 }
+
+/* ---------------------------------------------------
+   19. Ultra-Luxury Aesthetic Polish & Micro-Interactions
+--------------------------------------------------- */
+.glass-panel {
+  background: var(--panel-bg);
+  -webkit-backdrop-filter: blur(28px);
+  backdrop-filter: blur(28px);
+  border: 1px solid var(--panel-border);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
+}
+
+.studio-card {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.studio-card:hover {
+  transform: translateY(-5px) scale(1.015) !important;
+  border-color: rgba(245, 158, 11, 0.55) !important;
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.7), 0 0 25px rgba(245, 158, 11, 0.25) !important;
+}
+
+/* Subtle glowing pulse for featured badges */
+@keyframes gold-pulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(245, 158, 11, 0.25); }
+  50% { box-shadow: 0 0 28px rgba(245, 158, 11, 0.55); }
+}
+
+.pulse-gold {
+  animation: gold-pulse 4s ease-in-out infinite;
+}
+
+/* Scrollbar polish */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+}
+
+
