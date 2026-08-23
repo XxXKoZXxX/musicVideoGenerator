@@ -18,6 +18,7 @@
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
+    "cross-env": "^10.1.0",
     "electron": "^27.0.0",
     "electron-builder": "^24.6.0",
     "electron-is-dev": "^3.0.1",
@@ -38,14 +39,16 @@
     "build-win": "npm run react-build && electron-builder --win",
     "build-mac": "npm run react-build && electron-builder --mac",
     "build-linux": "npm run react-build && electron-builder --linux",
-    "build-all": "npm run react-build && electron-builder -mwl",
     "build:mobile": "react-scripts build && node package-mobile.js",
     "package:mobile": "node package-mobile.js",
+    "start:musicvid": "cross-env REACT_APP_STANDALONE_MUSICVID=true react-scripts start",
+    "build:musicvid": "cross-env REACT_APP_STANDALONE_MUSICVID=true react-scripts build && node package-standalone-musicvid.js",
+    "electron:musicvid": "wait-on http://localhost:3220 && electron public/electron-musicvid.js --dev",
+    "package:musicvid": "node package-standalone-musicvid.js",
     "mobile:sync": "npx @capacitor/cli sync",
     "mobile:android": "npx @capacitor/cli open android",
     "mobile:ios": "npx @capacitor/cli open ios"
   },
-
   "build": {
     "appId": "com.astraea.studio",
     "productName": "Astraea Cosmic Studio",
