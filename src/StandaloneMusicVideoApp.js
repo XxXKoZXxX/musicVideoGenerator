@@ -1,22 +1,37 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import ModernStudioWorkstation from './components/studio/ModernStudioWorkstation';
 import VideoStudioView from './components/views/VideoStudioView';
 import CharacterStudioView from './components/views/CharacterStudioView';
 import ShareModal from './components/share/ShareModal';
 import ThemeCustomizerModal from './components/theme/ThemeCustomizerModal';
+import FreebeatAutoDirectorModal from './components/common/FreebeatAutoDirectorModal';
+import FeatureStudioModal from './components/studio/FeatureStudioModal';
+import { loadSavedTheme } from './utils/themeEngine';
 import {
   Film,
   User,
   Share2,
   Palette,
+  Compass,
+  Sliders,
+  Flame,
+  Mic,
 } from 'lucide-react';
 import './styles/StandaloneMusicVideoApp.css';
 
 
 export default function StandaloneMusicVideoApp() {
-  // Modes: 'musicvid-creator' | 'character-creator' | 'vocal-cloner' | 'forecast-animator'
-  const [currentMode, setCurrentMode] = useState('musicvid-creator');
+  // Modes: 'musicvid-studio' | 'musicvid-wizard' | 'character-creator' | 'vocal-cloner'
+  const [currentMode, setCurrentMode] = useState('musicvid-studio');
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
+  const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
+  const [autoModalMode, setAutoModalMode] = useState(undefined);
+  const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
+
+  useEffect(() => {
+    loadSavedTheme();
+  }, []);
 
   // Global Project State for Video & Character Engine
   const [project, setProject] = useState(() => ({
@@ -51,9 +66,18 @@ export default function StandaloneMusicVideoApp() {
       setCurrentMode('character-creator');
     } else if (target === 'vocal') {
       setCurrentMode('vocal-cloner');
+    } else if (target === 'wizard') {
+      setCurrentMode('musicvid-wizard');
     } else {
-      setCurrentMode('musicvid-creator');
+      setCurrentMode('musicvid-studio');
     }
+  };
+
+  const handleSwitchToCosmicStudio = () => {
+    localStorage.removeItem('app_mode');
+    const url = new URL(window.location.href);
+    url.searchParams.delete('app');
+    window.location.href = url.pathname;
   };
 
   return (
@@ -64,54 +88,115 @@ export default function StandaloneMusicVideoApp() {
           <div className="app-brand-badge">
             <Film className="w-5 h-5 text-amber-400" />
             <span className="brand-title">Astraea Cinema & Vocal Studio</span>
-            <span className="brand-pill">STANDALONE 4K PRO</span>
+            <span className="brand-pill">FREEBEAT 4K PRO</span>
           </div>
 
-          {/* Core Studio Navigation Tabs */}
-          <nav className="header-nav-tabs">
-            <button
-              type="button"
-              className={`nav-tab-pill ${currentMode === 'musicvid-creator' ? 'active' : ''}`}
-              onClick={() => setCurrentMode('musicvid-creator')}
-            >
-              <Film className="w-4 h-4 text-cyan-400" />
-              <span>AI Music Video Creator</span>
-            </button>
-            <button
-              type="button"
-              className={`nav-tab-pill ${currentMode === 'character-creator' || currentMode === 'vocal-cloner' ? 'active' : ''}`}
-              onClick={() => setCurrentMode('character-creator')}
-            >
-              <User className="w-4 h-4 text-amber-400" />
-              <span>Character & Vocal Cloner</span>
-            </button>
+          {/* Core Studio Navigation Tabs — pure navigation, no feature-launch actions */}
+          <nav className="header-mode-nav">
+            <div className="header-nav-tabs">
+              <button
+                type="button"
+                className={`nav-tab-pill ${currentMode === 'musicvid-studio' ? 'active' : ''}`}
+                onClick={() => setCurrentMode('musicvid-studio')}
+              >
+                <Film className="w-4 h-4 text-cyan-400" />
+                <span>Studio DAW & Timeline</span>
+              </button>
+              <button
+                type="button"
+                className={`nav-tab-pill ${currentMode === 'musicvid-wizard' ? 'active' : ''}`}
+                onClick={() => setCurrentMode('musicvid-wizard')}
+              >
+                <Sliders className="w-4 h-4 text-fuchsia-400" />
+                <span>4-Step Wizard</span>
+              </button>
+              <button
+                type="button"
+                className={`nav-tab-pill ${currentMode === 'character-creator' || currentMode === 'vocal-cloner' ? 'active' : ''}`}
+                onClick={() => setCurrentMode('character-creator')}
+              >
+                <User className="w-4 h-4 text-amber-400" />
+                <span>Character & Vocal Cloner</span>
+              </button>
+            </div>
+
+            {/* Automatic mode — one-click entry points, reusing FreebeatAutoDirectorModal's
+                existing Singing/Storytelling step rather than new modal plumbing */}
+            <div className="header-automatic-group">
+              <button
+                type="button"
+                className="automatic-mode-pill"
+                onClick={() => {
+                  setAutoModalMode('singing');
+                  setIsAutoModalOpen(true);
+                }}
+              >
+                <Mic className="w-3.5 h-3.5" />
+                <span>⚡ Automatic · Singing</span>
+              </button>
+              <button
+                type="button"
+                className="automatic-mode-pill storytelling"
+                onClick={() => {
+                  setAutoModalMode('storytelling');
+                  setIsAutoModalOpen(true);
+                }}
+              >
+                <Film className="w-3.5 h-3.5" />
+                <span>⚡ Automatic · Storytelling</span>
+              </button>
+            </div>
           </nav>
         </div>
 
-        {/* Header Actions */}
+        {/* Header Actions — feature launchers, not navigation */}
         <div className="header-right">
           <button
             type="button"
-            className="btn btn-ghost btn-sm flex items-center gap-1.5"
-            onClick={() => setIsThemeModalOpen(true)}
+            className="toolbar-quick-btn hot-features"
+            onClick={() => setIsFeatureModalOpen(true)}
           >
-            <Palette className="w-4 h-4 text-purple-400" />
-            <span className="hidden sm:inline">Theme</span>
+            <Flame className="w-4 h-4" />
+            <span>🔥 Hot & Free AI Features</span>
           </button>
           <button
             type="button"
-            className="btn btn-secondary btn-sm flex items-center gap-1.5"
+            className="btn btn-ghost btn-sm header-action-btn"
+            onClick={handleSwitchToCosmicStudio}
+            title="Switch to Astraea Astrology & Tarot Studio"
+          >
+            <Compass className="w-4 h-4 text-amber-400" />
+            <span>Cosmic Studio</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm header-action-btn"
+            onClick={() => setIsThemeModalOpen(true)}
+          >
+            <Palette className="w-4 h-4 text-purple-400" />
+            <span>Theme</span>
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm header-action-btn"
             onClick={() => setIsShareModalOpen(true)}
           >
             <Share2 className="w-4 h-4 text-cyan-400" />
-            <span className="hidden sm:inline">Network Share & Mobile App</span>
+            <span>Network Share & Mobile App</span>
           </button>
         </div>
       </header>
 
       {/* MAIN STUDIO VIEWPORT */}
       <main className="standalone-main-content">
-        {currentMode === 'musicvid-creator' && (
+        {currentMode === 'musicvid-studio' && (
+          <ModernStudioWorkstation
+            project={project}
+            onNavigate={handleNavigate}
+          />
+        )}
+
+        {currentMode === 'musicvid-wizard' && (
           <VideoStudioView
             profile={{ name: project.artistName }}
             onNavigate={handleNavigate}
@@ -134,13 +219,60 @@ export default function StandaloneMusicVideoApp() {
       </main>
 
       {/* MODALS */}
+      {isFeatureModalOpen && (
+        <FeatureStudioModal
+          isOpen={isFeatureModalOpen}
+          onClose={() => setIsFeatureModalOpen(false)}
+          project={project}
+          onUpdateProject={(updates) => setProject((prev) => ({ ...prev, ...updates }))}
+          onAddScene={(newScene) => {
+            setProject((prev) => ({
+              ...prev,
+              images: [...prev.images, newScene.imageUrl || newScene],
+            }));
+          }}
+        />
+      )}
       {isShareModalOpen && (
-        <ShareModal onClose={() => setIsShareModalOpen(false)} />
+        <ShareModal
+          isOpen={isShareModalOpen}
+          onClose={() => setIsShareModalOpen(false)}
+          appName="Astraea Cinema & Vocal Studio"
+          inviteTemplates={{
+            general: {
+              label: '🌟 General',
+              title: '🌟 General Test Invitation',
+              text: (url) => `✨ Hey! I'm testing Astraea Cinema — an AI music video, character studio & vocal cloner. Try it out here:\n👉 ${url}`,
+            },
+            singing: {
+              label: '🎤 Singing Mode',
+              title: '🎤 AI Vocal Performance Test',
+              text: (url) => `🎬 Check out this AI singer lip-sync demo I made on Astraea Cinema:\n👉 ${url}`,
+            },
+            storytelling: {
+              label: '🎬 Storytelling',
+              title: '🎬 Cinematic Story Mode Test',
+              text: (url) => `🔥 I generated a cinematic AI music video on Astraea Cinema — take a look:\n👉 ${url}`,
+            },
+          }}
+        />
       )}
       {isThemeModalOpen && (
         <ThemeCustomizerModal
           isOpen={isThemeModalOpen}
           onClose={() => setIsThemeModalOpen(false)}
+        />
+      )}
+      {isAutoModalOpen && (
+        <FreebeatAutoDirectorModal
+          isOpen={isAutoModalOpen}
+          onClose={() => setIsAutoModalOpen(false)}
+          initialVideoMode={autoModalMode}
+          onAutoGenerateComplete={(autoProject) => {
+            setProject(autoProject);
+            setCurrentMode('musicvid-creator');
+          }}
+          project={project}
         />
       )}
     </div>

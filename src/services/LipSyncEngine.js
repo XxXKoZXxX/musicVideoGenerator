@@ -116,7 +116,12 @@ export class LipSyncEngine {
     height,
     options = {}
   ) {
-    if (!image) return;
+    let imageToDraw = image;
+    if (typeof image === 'string' && typeof document !== 'undefined') {
+      const cached = document.createElement('img');
+      cached.src = image;
+      imageToDraw = cached;
+    }
 
     const {
       faceCenter = { x: 0.5, y: 0.44 },
@@ -145,18 +150,18 @@ export class LipSyncEngine {
     ctx.save();
 
     // 1. Draw Singing Luminescence / Vocal Energy Glow Aura
-    if (showVocalGlow && vocalEnergy > 0.25) {
-      const glowIntensity = (vocalEnergy - 0.25) * 1.5;
+    if (showVocalGlow && (vocalEnergy > 0.2 || openness > 0.1)) {
+      const glowIntensity = Math.max(0.3, vocalEnergy * 1.5);
       const grad = ctx.createRadialGradient(
         width * faceCenter.x,
         height * faceCenter.y,
-        width * 0.15,
+        width * 0.1,
         width * faceCenter.x,
         height * faceCenter.y,
-        width * 0.45
+        width * 0.5
       );
-      grad.addColorStop(0, 'rgba(6, 182, 212, 0.25)');
-      grad.addColorStop(0.5, 'rgba(236, 72, 153, 0.15)');
+      grad.addColorStop(0, 'rgba(6, 182, 212, 0.35)');
+      grad.addColorStop(0.5, 'rgba(236, 72, 153, 0.2)');
       grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
 
       ctx.save();
@@ -173,22 +178,90 @@ export class LipSyncEngine {
     ctx.scale(zoom * breathScale, zoom * breathScale);
     ctx.translate(-width / 2, -height / 2);
 
-    // 3. Render Base Singer Portrait (Cover fit)
-    const frameRatio = width / height;
-    const imgRatio = image.width / image.height;
-    let drawW = width;
-    let drawH = height;
+    // 3. Render Base Singer Portrait or Procedural Stylized Performer
+    let renderedImageSuccessfully = false;
 
-    if (imgRatio > frameRatio) {
-      drawW = height * imgRatio;
-    } else {
-      drawH = width / imgRatio;
+    if (imageToDraw && (imageToDraw.naturalWidth || imageToDraw.width)) {
+      try {
+        const frameRatio = width / height;
+        const imgRatio = (imageToDraw.naturalWidth || imageToDraw.width) / (imageToDraw.naturalHeight || imageToDraw.height);
+        let drawW = width;
+        let drawH = height;
+
+        if (imgRatio > frameRatio) {
+          drawW = height * imgRatio;
+        } else {
+          drawH = width / imgRatio;
+        }
+
+        const drawX = (width - drawW) / 2;
+        const drawY = (height - drawH) / 2;
+
+        ctx.drawImage(imageToDraw, drawX, drawY, drawW, drawH);
+        renderedImageSuccessfully = true;
+      } catch (e) {
+        renderedImageSuccessfully = false;
+      }
     }
 
-    const drawX = (width - drawW) / 2;
-    const drawY = (height - drawH) / 2;
+    if (!renderedImageSuccessfully) {
+      // Stylized Procedural Cyber Singer Silhouette
+      const cx = width / 2;
+      const cy = height * 0.44;
 
-    ctx.drawImage(image, drawX, drawY, drawW, drawH);
+      // Deep studio background
+      const bgGrad = ctx.createRadialGradient(cx, cy, width * 0.1, cx, cy, width * 0.6);
+      bgGrad.addColorStop(0, '#1e1b4b');
+      bgGrad.addColorStop(0.6, '#0f172a');
+      bgGrad.addColorStop(1, '#020617');
+      ctx.fillStyle = bgGrad;
+      ctx.fillRect(0, 0, width, height);
+
+      // Cyber stage lights
+      ctx.fillStyle = 'rgba(6, 182, 212, 0.15)';
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(cx + 80, height);
+      ctx.lineTo(cx - 80, height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Performer Silhouette Body & Shoulders
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.ellipse(cx, height * 0.88, width * 0.28, height * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Performer Head / Face Contour
+      const faceGrad = ctx.createLinearGradient(cx, cy - height * 0.15, cx, cy + height * 0.18);
+      faceGrad.addColorStop(0, '#fcd34d');
+      faceGrad.addColorStop(0.5, '#f59e0b');
+      faceGrad.addColorStop(1, '#d97706');
+      ctx.fillStyle = faceGrad;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, width * 0.11, height * 0.15, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hair
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.ellipse(cx, cy - height * 0.08, width * 0.125, height * 0.11, 0, Math.PI, Math.PI * 2);
+      ctx.fill();
+
+      // Eyes
+      ctx.fillStyle = '#090d16';
+      ctx.beginPath();
+      ctx.ellipse(cx - width * 0.045, cy - height * 0.03, 5, 3, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx + width * 0.045, cy - height * 0.03, 5, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Stage Microphone
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(cx, cy + height * 0.11, 14, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillRect(cx - 3, cy + height * 0.11, 6, height * 0.4);
+    }
 
     // 4. Render Dynamic Lip-Sync Mouth Deformation
     const mouthCenterX = width * mouthPos.x;

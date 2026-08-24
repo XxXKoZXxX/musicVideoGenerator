@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Music, Play, Pause, Upload, Sparkles, Volume2, Activity, Zap } from 'lucide-react';
+import { Music, Play, Pause, Upload, Sparkles, Volume2, Activity, Zap, Link, Flame } from 'lucide-react';
 import { audioEngine, BUILT_IN_TRACKS } from '../services/AudioEngine';
 import { generateStorylineFromAudio } from '../services/AIService';
+import { SongStructureAnalyzer } from '../services/SongStructureAnalyzer';
+import { ExternalAudioImportService } from '../services/ExternalAudioImportService';
+import SongStructureTimeline from './common/SongStructureTimeline';
 import '../styles/Step.css';
 
 export default function StepTwo({ onNext, onBack, project }) {
@@ -17,6 +20,12 @@ export default function StepTwo({ onNext, onBack, project }) {
   const [audioBoost, setAudioBoost] = useState(project.audioBoost || 100);
   const [trackTitle, setTrackTitle] = useState(project.audioTitle || 'Cyberpunk 2077 Night Drive');
   const [isCustomAudio, setIsCustomAudio] = useState(false);
+  const [songStructure, setSongStructure] = useState(() =>
+    project.songStructure ||
+    SongStructureAnalyzer.analyzeSongStructure(project.duration || 32, project.bpm || 128, 'Cyberpunk / Electro')
+  );
+  const [externalLinkUrl, setExternalLinkUrl] = useState('');
+  const [isImportingLink, setIsImportingLink] = useState(false);
 
   const audioRef = useRef(null);
   const animFrameRef = useRef(null);
@@ -49,12 +58,19 @@ export default function StepTwo({ onNext, onBack, project }) {
   const loadSynthesizedTrack = (trackId) => {
     try {
       const trackData = audioEngine.createSynthesizedTrack(trackId);
+      const baseTrack = BUILT_IN_TRACKS.find((t) => t.id === trackId) || BUILT_IN_TRACKS[0];
+      const structure = SongStructureAnalyzer.analyzeSongStructure(
+        trackData.duration,
+        trackData.bpm,
+        baseTrack.genre
+      );
       setAudioBlobUrl(trackData.blobUrl);
       setDuration(trackData.duration);
       setBpm(trackData.bpm);
       setWaveformPeaks(trackData.peaks);
       setTrackTitle(trackData.title);
       setSelectedTrackId(trackId);
+      setSongStructure(structure);
       setTrackStoryline(trackData.storyline);
       setRecommendedLut(trackData.recommendedLut || 'cyberpunk');
       setRecommendedVisualizer(trackData.recommendedVisualizer || 'radial');
@@ -62,12 +78,52 @@ export default function StepTwo({ onNext, onBack, project }) {
       setIsPlaying(false);
       setCurrentTime(0);
 
+      project.songStructure = structure;
+
       if (audioRef.current) {
         audioRef.current.src = trackData.blobUrl;
         audioRef.current.currentTime = 0;
       }
     } catch (err) {
       console.error('Failed to create synthesized audio:', err);
+    }
+  };
+
+  const handleImportExternalLink = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (!externalLinkUrl.trim()) return;
+    setIsImportingLink(true);
+    try {
+      const imported = await ExternalAudioImportService.importAudioFromUrl(externalLinkUrl);
+      setAudioBlobUrl(imported.blobUrl);
+      setDuration(imported.duration);
+      setBpm(imported.bpm);
+      setWaveformPeaks(imported.peaks);
+      setTrackTitle(imported.title);
+      setSongStructure(imported.structure);
+      setTrackStoryline(imported.storyline);
+      setIsCustomAudio(true);
+      setSelectedTrackId(null);
+      setIsPlaying(false);
+      setCurrentTime(0);
+
+      project.audio = imported.blobUrl;
+      project.audioBlobUrl = imported.blobUrl;
+      project.audioTitle = imported.title;
+      project.bpm = imported.bpm;
+      project.duration = imported.duration;
+      project.waveformPeaks = imported.peaks;
+      project.songStructure = imported.structure;
+
+      if (audioRef.current) {
+        audioRef.current.src = imported.blobUrl;
+        audioRef.current.currentTime = 0;
+      }
+      setIsImportingLink(false);
+      setExternalLinkUrl('');
+    } catch (err) {
+      alert('Failed to import audio from link: ' + err.message);
+      setIsImportingLink(false);
     }
   };
 
@@ -90,7 +146,14 @@ export default function StepTwo({ onNext, onBack, project }) {
       setIsCustomAudio(true);
       setSelectedTrackId(null);
       setIsPlaying(false);
-      setCurrentTime(0);
+      setCurrentTime(0);      
+      const structure = SongStructureAnalyzer.analyzeSongStructure(
+        audioData.duration,
+        audioData.bpm,
+        'Custom Audio'
+      );
+      setSongStructure(structure);
+      project.songStructure = structure;
 
       project.audio = blobUrl;
       project.audioBlobUrl = blobUrl;
@@ -136,6 +199,14 @@ export default function StepTwo({ onNext, onBack, project }) {
       const file = new File([blob], filename, { type: blob.type || 'audio/mpeg' });
 
       const audioData = await audioEngine.loadUserAudio(file);
+      const structure = SongStructureAnalyzer.analyzeSongStructure(
+        audioData.duration,
+        audioData.bpm,
+        'Custom Audio'
+      );
+      setSongStructure(structure);
+      project.songStructure = structure;
+
       setAudioBlobUrl(result.dataUrl);
       setDuration(audioData.duration);
       setBpm(audioData.bpm);
@@ -180,15 +251,18 @@ export default function StepTwo({ onNext, onBack, project }) {
   };
 
   const updatePlaybackProgress = () => {
-    if (audioRef.current) {
-      setCurrentTime(audioRef.current.currentTime);
-      if (!audioRef.current.paused && !audioRef.current.ended) {
-        animFrameRef.current = requestAnimationFrame(updatePlaybackProgress);
-      } else if (audioRef.current.ended) {
-        setIsPlaying(false);
-        setCurrentTime(0);
-      }
+    if (!audioRef.current) return;
+    setCurrentTime(audioRef.current.currentTime);
+    if (!audioRef.current.paused && !audioRef.current.ended) {
+      animFrameRef.current = requestAnimationFrame(updatePlaybackProgress);
+    } else {
+      setIsPlaying(false);
     }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
   };
 
   const handleSeek = (e) => {
@@ -212,6 +286,7 @@ export default function StepTwo({ onNext, onBack, project }) {
       duration,
       waveformPeaks,
       audioBoost,
+      songStructure,
       aiStoryboard: trackStoryline,
       lyrics: trackStoryline?.lyrics,
       recommendedLut,
@@ -241,7 +316,7 @@ export default function StepTwo({ onNext, onBack, project }) {
         <audio
           ref={audioRef}
           src={audioBlobUrl || ''}
-          onEnded={() => setIsPlaying(false)}
+          onEnded={handleAudioEnded}
           preload="auto"
         />
 
@@ -283,6 +358,58 @@ export default function StepTwo({ onNext, onBack, project }) {
               );
             })}
           </div>
+        </div>
+
+        {/* External Link Audio Importer (Suno, Udio, Spotify, YouTube, SoundCloud) */}
+        <div className="glass-panel p-4 rounded-2xl border border-cyan-500/20 mb-6 bg-slate-900/60">
+          <div className="flex items-center gap-2 mb-2">
+            <Link className="w-4 h-4 text-cyan-400" />
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+              Import from Suno AI, Udio, Spotify, YouTube or Direct URL
+            </h4>
+            <span className="text-[9px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30">
+              FREEBEAT INGESTION
+            </span>
+          </div>
+          <form onSubmit={handleImportExternalLink} className="flex gap-2">
+            <input
+              type="text"
+              className="flex-1 bg-slate-950/80 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+              placeholder="Paste Suno/Udio/Spotify/YouTube track link or prompt..."
+              value={externalLinkUrl}
+              onChange={(e) => setExternalLinkUrl(e.target.value)}
+            />
+            <button
+              type="submit"
+              disabled={isImportingLink || !externalLinkUrl.trim()}
+              className="btn btn-primary-glow px-4 py-2 rounded-xl text-xs font-bold bg-cyan-500 hover:bg-cyan-400 text-slate-950 disabled:opacity-50 flex items-center gap-1.5"
+            >
+              {isImportingLink ? (
+                <>
+                  <Sparkles className="w-3.5 h-3.5 animate-spin" /> Ingesting...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-3.5 h-3.5" /> Ingest & Analyze
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        {/* Music-Aware Song Structure & Beat Drop Timeline */}
+        <div className="mb-6">
+          <SongStructureTimeline
+            structure={songStructure}
+            currentTime={currentTime}
+            duration={duration}
+            onSeek={(seekTime) => {
+              if (audioRef.current) {
+                audioRef.current.currentTime = seekTime;
+                setCurrentTime(seekTime);
+              }
+            }}
+          />
         </div>
 
         {/* Custom Audio Upload Drop Area */}
@@ -336,6 +463,10 @@ export default function StepTwo({ onNext, onBack, project }) {
                 </span>
                 <span className="stat-pill">Duration: {formatTime(duration)}</span>
                 {isCustomAudio && <span className="stat-pill custom-pill">Custom Audio</span>}
+                <span className="stat-pill bg-rose-500/20 text-rose-300 font-bold border border-rose-500/30">
+                  <Flame size={12} className="inline mr-1" />
+                  {songStructure?.sections?.filter((s) => s.isDrop).length || 1} Beat Drops
+                </span>
               </div>
             </div>
 

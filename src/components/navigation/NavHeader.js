@@ -175,6 +175,19 @@ export default function NavHeader({ currentView, onNavigate, activeProfile, onOp
 
         <div className="nav-profile-section flex items-center gap-1.5 md:gap-2">
           <button 
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-cyan-500/20 border border-amber-400/40 text-amber-300 hover:scale-105 transition-all text-xs font-bold shadow-sm"
+            onClick={() => {
+              localStorage.setItem('app_mode', 'musicvid');
+              window.location.search = '?app=musicvid';
+            }}
+            title="Open Standalone AI Music Video & Vocal Cloner App (Freebeat 4K Studio)"
+          >
+            <Film className="w-3.5 h-3.5 text-amber-400" />
+            <span className="hidden xl:inline">Standalone Video Studio</span>
+            <span className="xl:hidden">Video App</span>
+          </button>
+
+          <button 
             className="share-nav-btn hidden md:flex p-2.5 rounded-2xl bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20 transition-all shadow-sm"
             onClick={onOpenShare}
             title="Share App with Friends & Testers"

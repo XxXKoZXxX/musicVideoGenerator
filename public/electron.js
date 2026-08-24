@@ -30,8 +30,8 @@ function createWindow() {
       enableRemoteModule: false,
       nodeIntegration: false,
     },
-    title: 'Astraea - Secret Language & Cosmic Oracle Studio',
-    backgroundColor: '#060814',
+    title: 'Astraea Cinema & AI Music Video Studio (Freebeat 4K Pro)',
+    backgroundColor: '#060913',
     show: true,
   });
 

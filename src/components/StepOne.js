@@ -4,6 +4,8 @@ import { CURATED_VISUAL_ASSETS, CINEMATIC_STOCK_VIDEOS, TRANSITION_EFFECTS } fro
 import { SINGER_PORTRAITS } from '../services/StoryDirector';
 import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
 import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
+import { CHARACTER_PERSONAS } from '../services/CharacterLockEngine';
+import FreebeatAutoDirectorModal from './common/FreebeatAutoDirectorModal';
 import '../styles/Step.css';
 
 export default function StepOne({ onNext, project }) {
@@ -32,6 +34,16 @@ export default function StepOne({ onNext, project }) {
   );
   const [characterPerformance, setCharacterPerformance] = useState(
     project.characterPerformance ?? true
+  );
+  const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
+  const [isCharacterLockEnabled, setIsCharacterLockEnabled] = useState(
+    project.isCharacterLockEnabled ?? true
+  );
+  const [selectedPersonaId, setSelectedPersonaId] = useState(
+    project.characterLockPersona?.id || 'cyber-vocalist'
+  );
+  const [customFaceRefUrl, setCustomFaceRefUrl] = useState(
+    project.customFaceRefUrl || null
   );
 
   const handleSelectRenderStyle = (styleId) => {
@@ -89,6 +101,7 @@ export default function StepOne({ onNext, project }) {
   const handleNext = () => {
     if (images.length > 0) {
       const styleObj = getRenderStyleById(renderStyle);
+      const persona = CHARACTER_PERSONAS.find((p) => p.id === selectedPersonaId) || CHARACTER_PERSONAS[0];
       onNext({
         renderStyle,
         recommendedLut: styleObj.lutId || 'cinema35',
@@ -102,6 +115,9 @@ export default function StepOne({ onNext, project }) {
         enableTvBroadcastGraphic,
         transition,
         characterPerformance,
+        isCharacterLockEnabled,
+        characterLockPersona: persona,
+        customFaceRefUrl,
       });
     } else {
       alert('Please select or upload at least one visual asset for your music video.');
@@ -122,6 +138,33 @@ export default function StepOne({ onNext, project }) {
       </div>
 
       <div className="step-content">
+        {/* FREEBEAT 1-CLICK AUTO DIRECTOR PROMPT BANNER */}
+        <div className="glass-panel p-4 mb-4 rounded-2xl border border-amber-400/30 bg-gradient-to-r from-amber-500/10 via-cyan-500/10 to-purple-500/10 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-black shadow-lg shadow-amber-400/20">
+              ⚡
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-white">Freebeat 1-Click Fast Music Video Generator</h4>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-extrabold border border-amber-400/40">
+                  AUTO MODE
+                </span>
+              </div>
+              <p className="text-xs text-slate-300">
+                Instantly analyze track beats, lock consistent character identity, and generate a full 4K music video with 1 click.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsAutoModalOpen(true)}
+            className="btn btn-primary-glow py-2 px-4 rounded-xl text-xs font-black bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 whitespace-nowrap shadow-lg shadow-amber-400/20"
+          >
+            Launch 1-Click Auto Director ⚡
+          </button>
+        </div>
+
         {/* TOP: ACTIVE RENDERING STYLE STRIP */}
         <div className="render-style-hero-card">
           <div className="style-hero-info">
@@ -146,6 +189,12 @@ export default function StepOne({ onNext, project }) {
             onClick={() => setTab('styles')}
           >
             <Palette size={18} /> Video Rendering Aesthetics ({RENDER_STYLES.length})
+          </button>
+          <button
+            className={`tab-btn ${tab === 'characterLock' ? 'active' : ''}`}
+            onClick={() => setTab('characterLock')}
+          >
+            <UserCheck size={18} /> Character Consistency Lock ({CHARACTER_PERSONAS.length})
           </button>
           <button
             className={`tab-btn ${tab === 'singer' ? 'active' : ''}`}
@@ -199,6 +248,126 @@ export default function StepOne({ onNext, project }) {
                       ) : (
                         <span className="style-select-btn">Select Style</span>
                       )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB: CHARACTER CONSISTENCY LOCK (FREEBEAT AI ANTI-DRIFT) */}
+        {tab === 'characterLock' && (
+          <div className="character-lock-panel glass-panel p-6 rounded-3xl border border-amber-400/30 mb-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 pb-4 border-b border-white/10">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white">Freebeat Character Consistency Lock</h3>
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-extrabold border border-amber-400/40 uppercase">
+                    Anti-Drift Engine
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 mt-1">
+                  Locks the artist's face, facial bone structure, hairstyle, and wardrobe across all video cuts to prevent AI character drifting.
+                </p>
+              </div>
+
+              {/* Character Lock Toggle */}
+              <div className="flex items-center gap-3 bg-slate-900/80 px-4 py-2 rounded-2xl border border-white/10">
+                <span className="text-xs font-bold text-slate-300">Lock Consistency:</span>
+                <button
+                  type="button"
+                  onClick={() => setIsCharacterLockEnabled(!isCharacterLockEnabled)}
+                  className={`px-3 py-1 rounded-xl text-xs font-black transition-all ${
+                    isCharacterLockEnabled
+                      ? 'bg-amber-400 text-slate-950 shadow-md shadow-amber-400/30'
+                      : 'bg-slate-800 text-slate-400'
+                  }`}
+                >
+                  {isCharacterLockEnabled ? 'LOCKED ON' : 'DISABLED'}
+                </button>
+              </div>
+            </div>
+
+            {/* Custom Face Reference Anchor Upload */}
+            <div className="mb-6 p-4 rounded-2xl bg-slate-950/60 border border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+              <div className="flex items-center gap-3">
+                {customFaceRefUrl ? (
+                  <img
+                    src={customFaceRefUrl}
+                    alt="Custom Face Lock Anchor"
+                    className="w-14 h-14 rounded-full object-cover border-2 border-amber-400 shadow-md"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-full bg-slate-800 border border-dashed border-amber-400/50 flex items-center justify-center text-amber-400 text-xs font-bold">
+                    FACE
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-xs font-bold text-white">Custom Face Reference Anchor</h4>
+                  <p className="text-[11px] text-slate-400">
+                    Upload your own photo or custom avatar to lock your personal likeness throughout the entire music video.
+                  </p>
+                </div>
+              </div>
+
+              <label className="btn btn-secondary btn-sm whitespace-nowrap cursor-pointer" htmlFor="custom-face-ref-input">
+                <Upload size={14} className="mr-1.5" />
+                {customFaceRefUrl ? 'Change Reference Face' : 'Upload Face Photo'}
+                <input
+                  id="custom-face-ref-input"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      const url = URL.createObjectURL(file);
+                      setCustomFaceRefUrl(url);
+                      setSingerImageUrl(url);
+                    }
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+
+            {/* PERSONAS GRID */}
+            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-300 mb-3">
+              Or Choose Curated Artist Persona
+            </h4>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {CHARACTER_PERSONAS.map((p) => {
+                const isSelected = selectedPersonaId === p.id && !customFaceRefUrl;
+                return (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      setSelectedPersonaId(p.id);
+                      setCustomFaceRefUrl(null);
+                      setSingerImageUrl(p.avatarUrl);
+                      setArtistName(p.name);
+                    }}
+                    className={`p-4 rounded-2xl border transition-all cursor-pointer flex gap-3 items-center ${
+                      isSelected
+                        ? 'bg-amber-400/20 border-amber-400 ring-2 ring-amber-400/40 shadow-lg shadow-amber-400/10'
+                        : 'bg-slate-900/40 border-white/10 hover:border-white/20 hover:bg-slate-900/60'
+                    }`}
+                  >
+                    <img
+                      src={p.avatarUrl}
+                      alt={p.name}
+                      className="w-16 h-16 rounded-2xl object-cover border border-white/20 shrink-0"
+                    />
+                    <div className="overflow-hidden">
+                      <div className="flex items-center gap-1.5 mb-0.5">
+                        <h4 className="font-bold text-xs text-white truncate">{p.name}</h4>
+                        {isSelected && <Check size={12} className="text-amber-400 shrink-0" />}
+                      </div>
+                      <p className="text-[11px] text-amber-300 font-semibold truncate">{p.role}</p>
+                      <p className="text-[10px] text-slate-400 truncate">{p.genre}</p>
+                      <span className="inline-block mt-1 text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">
+                        {p.voiceType}
+                      </span>
                     </div>
                   </div>
                 );
@@ -520,6 +689,16 @@ export default function StepOne({ onNext, project }) {
           Lock In Vibe & Drop The Beat →
         </button>
       </div>
+
+      {/* FREEBEAT 1-CLICK AUTO DIRECTOR MODAL */}
+      <FreebeatAutoDirectorModal
+        isOpen={isAutoModalOpen}
+        onClose={() => setIsAutoModalOpen(false)}
+        onAutoGenerateComplete={(autoProject) => {
+          onNext(autoProject);
+        }}
+        project={project}
+      />
     </div>
   );
 }

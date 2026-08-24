@@ -149,8 +149,11 @@ export class StoryDirector {
         });
       }
     } else {
-      // Fallback: 20 procedural scenes if no lyrics
-      const numScenes = 20;
+      // Fallback: procedural scenes if no lyrics, cut density driven by pacing preset
+      const beatsPerCut = songInfo.pacingBeatsPerCut || 4;
+      const beatDuration = 60 / bpm;
+      const targetSceneLen = beatsPerCut * beatDuration;
+      const numScenes = Math.max(4, Math.min(60, Math.round(duration / targetSceneLen)));
       const sceneDuration = duration / numScenes;
       for (let i = 0; i < numScenes; i++) {
         const actIdx = Math.min(3, Math.floor((i / numScenes) * 4));

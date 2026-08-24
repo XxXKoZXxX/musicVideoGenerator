@@ -24,6 +24,7 @@ import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { VideoFetchService } from '../services/VideoFetchService';
 import { AI_VIDEO_MODELS, AI_STORYLINE_GENERATORS } from '../data/aiModels';
 import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
+import SongStructureTimeline from './common/SongStructureTimeline';
 import HiggsfieldDoPControls from './HiggsfieldDoPControls';
 import '../styles/Step.css';
 
@@ -34,6 +35,7 @@ export default function StepThree({ onNext, onBack, project }) {
   const [rendererEngine, setRendererEngine] = useState(project.rendererEngine || 'ai-neural');
   const [selectedVideoModel, setSelectedVideoModel] = useState(project.selectedVideoModel || AI_VIDEO_MODELS[0].id);
   const [selectedStoryGenerator, setSelectedStoryGenerator] = useState(project.selectedStoryGenerator || AI_STORYLINE_GENERATORS[0].id);
+  const [freebeatMode, setFreebeatMode] = useState(project.freebeatMode || 'singing');
   const [genre, setGenre] = useState('Cyberpunk / Electro');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
@@ -296,6 +298,7 @@ export default function StepThree({ onNext, onBack, project }) {
       screenplay,
       directorMode,
       rendererEngine,
+      freebeatMode,
       selectedTemplate,
       selectedVideoModel,
       selectedStoryGenerator,
@@ -322,6 +325,62 @@ export default function StepThree({ onNext, onBack, project }) {
       </div>
 
       <div className="step-content">
+        {/* FREEBEAT AI MODE SELECTOR (SINGING VS STORYTELLING) */}
+        <div className="glass-panel p-4 mb-5 rounded-2xl border border-cyan-500/30 bg-slate-900/70">
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-cyan-400" />
+              <h4 className="text-xs font-bold text-white uppercase tracking-wider">
+                Freebeat AI Video Generation Mode
+              </h4>
+            </div>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-cyan-500/20 text-cyan-300 font-bold border border-cyan-500/30 uppercase">
+              {freebeatMode === 'singing' ? '🎤 Singing Performance Mode' : '🎬 Storytelling Mode'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <button
+              type="button"
+              onClick={() => setFreebeatMode('singing')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                freebeatMode === 'singing'
+                  ? 'bg-cyan-500/20 border-cyan-400 ring-2 ring-cyan-400/40 text-white'
+                  : 'bg-slate-950/50 border-white/10 text-slate-400 hover:border-white/20'
+              }`}
+            >
+              <div className="font-bold text-xs text-cyan-300 mb-1">🎤 Singing Mode (Lip-Sync Focus)</div>
+              <p className="text-[11px] text-slate-300">
+                Focuses primarily on the lead artist performing with 60 FPS synchronized visemes, expressive head movements, and stage spotlights.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setFreebeatMode('storytelling')}
+              className={`p-3 rounded-xl border text-left transition-all ${
+                freebeatMode === 'storytelling'
+                  ? 'bg-amber-500/20 border-amber-400 ring-2 ring-amber-400/40 text-white'
+                  : 'bg-slate-950/50 border-white/10 text-slate-400 hover:border-white/20'
+              }`}
+            >
+              <div className="font-bold text-xs text-amber-300 mb-1">🎬 Storytelling Mode (Narrative Focus)</div>
+              <p className="text-[11px] text-slate-300">
+                Builds a multi-scene narrative world with cinematic establishing shots, chase sequences, and dramatic arc progressions synced to beat drops.
+              </p>
+            </button>
+          </div>
+
+          {/* Compact Song Structure Preview */}
+          {project.songStructure && (
+            <SongStructureTimeline
+              structure={project.songStructure}
+              duration={project.duration || 32}
+              isCompact={true}
+            />
+          )}
+        </div>
+
         {/* Quick Renderer Engine Banner */}
         <div className="renderer-summary-banner" style={{ borderColor: currentRendererObj.color }}>
           <div className="banner-left">

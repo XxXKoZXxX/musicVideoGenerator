@@ -166,10 +166,28 @@ class AudioEngine {
 
   getAudioContext() {
     if (!this.audioContext) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      this.audioContext = new AudioCtx();
+      const AudioCtx = typeof window !== 'undefined' ? (window.AudioContext || window.webkitAudioContext) : null;
+      if (AudioCtx) {
+        this.audioContext = new AudioCtx();
+      } else {
+        this.audioContext = {
+          sampleRate: 44100,
+          state: 'running',
+          resume: () => Promise.resolve(),
+          createBuffer: (channels, length, sampleRate) => {
+            const data = [new Float32Array(length), new Float32Array(length)];
+            return {
+              numberOfChannels: channels,
+              length,
+              sampleRate,
+              duration: length / sampleRate,
+              getChannelData: (ch) => data[ch] || data[0],
+            };
+          },
+        };
+      }
     }
-    if (this.audioContext.state === 'suspended') {
+    if (this.audioContext.state === 'suspended' && this.audioContext.resume) {
       this.audioContext.resume();
     }
     return this.audioContext;
@@ -403,17 +421,24 @@ class AudioEngine {
     }
 
     const blob = new Blob([out.buffer], { type: 'audio/wav' });
-    return URL.createObjectURL(blob);
+    return typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function'
+      ? URL.createObjectURL(blob)
+      : 'blob:synthesized-preview-audio';
   }
 
   // Load and decode any user audio file (Blob, File, or URL)
   async loadUserAudio(source) {
     const ctx = this.getAudioContext();
     let arrayBuffer;
+    let blobUrl = null;
 
     if (source instanceof File || source instanceof Blob) {
+      if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+        blobUrl = URL.createObjectURL(source);
+      }
       arrayBuffer = await source.arrayBuffer();
     } else if (typeof source === 'string') {
+      blobUrl = source;
       const response = await fetch(source);
       arrayBuffer = await response.arrayBuffer();
     } else {
@@ -424,15 +449,17 @@ class AudioEngine {
     this.audioBuffer = decodedBuffer;
     this.waveformPeaks = this.extractPeaks(decodedBuffer, 200);
     this.isSynthesized = false;
+    this.trackBlobUrl = blobUrl;
 
     // Estimate BPM
     const bpm = this.estimateBPM(decodedBuffer);
 
     return {
       audioBuffer: decodedBuffer,
-      duration: decodedBuffer.duration,
-      bpm,
+      duration: Math.round(decodedBuffer.duration * 10) / 10,
+      bpm: bpm || 128,
       peaks: this.waveformPeaks,
+      blobUrl,
     };
   }
 

@@ -44,14 +44,16 @@
     "start:musicvid": "cross-env REACT_APP_STANDALONE_MUSICVID=true react-scripts start",
     "build:musicvid": "cross-env REACT_APP_STANDALONE_MUSICVID=true react-scripts build && node package-standalone-musicvid.js",
     "electron:musicvid": "wait-on http://localhost:3220 && electron public/electron-musicvid.js --dev",
+    "standalone:desktop": "concurrently \"npm run start:musicvid\" \"npm run electron:musicvid\"",
+    "start:standalone": "concurrently \"npm run video-server\" \"npm run start:musicvid\" \"npm run electron:musicvid\"",
     "package:musicvid": "node package-standalone-musicvid.js",
     "mobile:sync": "npx @capacitor/cli sync",
     "mobile:android": "npx @capacitor/cli open android",
     "mobile:ios": "npx @capacitor/cli open ios"
   },
   "build": {
-    "appId": "com.astraea.studio",
-    "productName": "Astraea Cosmic Studio",
+    "appId": "com.astraea.musicvideostudio",
+    "productName": "Astraea Cinema & AI Music Video Studio",
     "files": [
       "build/**/*",
       "public/electron.js",
@@ -77,7 +79,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Astraea Cosmic Studio"
+      "shortcutName": "Astraea AI Music Video Studio"
     },
     "portable": {
       "artifactName": "Astraea-Studio-${version}.exe"

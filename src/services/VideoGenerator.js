@@ -4,7 +4,9 @@ import { StoryDirector, SINGER_PORTRAITS } from './StoryDirector';
 import { getRenderStyleById } from './RenderStyles';
 import { atmosphereEngine, ATMOSPHERE_MODES } from './AtmosphereEngine';
 import { characterCreationEngine } from './CharacterCreationEngine';
-
+import { SongStructureAnalyzer } from './SongStructureAnalyzer';
+import { aiDanceEngine } from './AIDanceEngine';
+import { aiSpecialEffectsEngine } from './AISpecialEffectsEngine';
 
 export { ATMOSPHERE_MODES };
 
@@ -61,22 +63,56 @@ export const COLOR_LUTS = {
   noir: { name: 'Classic Noir B&W', filter: 'grayscale(1) contrast(1.4)' },
 };
 
+// Global Memory Cache for Instant Canvas Drawing & Zero-Lag Playback
+const GLOBAL_IMAGE_CACHE = new Map();
+
+export function getCachedImage(source) {
+  if (!source) return null;
+  if (typeof source !== 'string') return source;
+
+  if (GLOBAL_IMAGE_CACHE.has(source)) {
+    return GLOBAL_IMAGE_CACHE.get(source);
+  }
+
+  if (typeof Image === 'undefined') return null;
+
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = source;
+  GLOBAL_IMAGE_CACHE.set(source, img);
+  return img;
+}
+
 export class VideoGenerator {
-  constructor(project, settings, progressCallback) {
+  constructor(arg1, arg2, arg3) {
+    let canvas = null;
+    let project = arg1;
+    let settings = arg2;
+    let progressCallback = arg3;
+
+    if (arg1 && typeof arg1.getContext === 'function') {
+      canvas = arg1;
+      project = arg2 || {};
+      settings = arg3 || {};
+      progressCallback = () => {};
+    }
+
+    this.canvas = canvas;
     this.project = project || {};
-    const initialRenderStyle = getRenderStyleById(project.renderStyle || 'photoreal');
+    const initialRenderStyle = getRenderStyleById(this.project.renderStyle || 'photoreal');
 
     this.settings = {
-      rendererEngine: project.rendererEngine || 'ai-neural',
-      renderStyle: project.renderStyle || 'photoreal',
-      resolution: '1080p',
-      aspectRatio: '16:9',
+      rendererEngine: this.project.rendererEngine || 'ai-neural',
+      renderStyle: this.project.renderStyle || 'photoreal',
+      resolution: this.project.resolution || '1080p',
+      aspectRatio: this.project.aspectRatio || '16:9',
       fps: 30,
-      quality: 'high',
+      quality: this.project.exportQuality || 'high',
       format: 'mp4',
       speed: 1.0,
       transition: 'zoom',
       transitionDuration: 0.8,
+      motionIntensity: this.project.motionIntensity || 100,
       visualizerStyle: initialRenderStyle.visualizerStyle || 'radial',
       visualizerColor: initialRenderStyle.visualizerColor || '#06b6d4',
       visualizerIntensity: 100,
@@ -90,9 +126,9 @@ export class VideoGenerator {
       enableSpeedLines: true,
       enableAnamorphicFlares: true,
       enableHoloHud: true,
-      enableTvBroadcastGraphic: project.enableTvBroadcastGraphic ?? true,
+      enableTvBroadcastGraphic: this.project.enableTvBroadcastGraphic ?? true,
       enableStageSpotlights: true,
-      atmosphereMode: project.atmosphereMode || 'rain',
+      atmosphereMode: this.project.atmosphereMode || 'rain',
       enableMotionBlur: true,
       brightness: 100,
       contrast: 100,
@@ -103,6 +139,10 @@ export class VideoGenerator {
     };
     this.progressCallback = progressCallback || (() => {});
     this.cancelled = false;
+    this.loadedImages = [];
+
+    // Preload singer portrait and scene assets immediately
+    this.preloadAllAssets();
 
     // Particle pool for bass explosions
     this.particles = [];
@@ -112,6 +152,81 @@ export class VideoGenerator {
     this.screenplay =
       this.project.screenplay ||
       StoryDirector.generateScreenplay(this.project, this.project.images || []);
+  }
+
+  preloadAllAssets() {
+    const singerUrl =
+      this.project.characterLockPersona?.avatarUrl ||
+      this.project.customFaceAnchor ||
+      this.project.singerImageUrl ||
+      this.project.singerImage ||
+      SINGER_PORTRAITS[0].url;
+    this.singerImage = getCachedImage(singerUrl);
+
+    const styleScenes = getRenderStyleById(this.settings.renderStyle).defaultScenes || [];
+    const allSources = [
+      ...(this.project.images || []),
+      ...(this.project.screenplay?.scenes?.map(s => s.imageUrl) || []),
+      ...styleScenes,
+    ];
+
+    allSources.forEach(src => {
+      if (typeof src === 'string') getCachedImage(src);
+    });
+  }
+
+  // Real-time canvas frame rendering for interactive DAW viewport
+  renderFrame(elapsed = 0, audioMetrics = {}) {
+    if (!this.canvas) {
+      if (typeof document !== 'undefined') {
+        this.canvas = document.createElement('canvas');
+      } else {
+        return;
+      }
+    }
+    const ctx = this.canvas.getContext('2d');
+    if (!ctx) return;
+    const width = this.canvas.width || 1280;
+    const height = this.canvas.height || 720;
+    const duration = this.project.duration || 32;
+
+    // Resolve singer portrait
+    if (!this.singerImage || (typeof this.singerImage === 'string')) {
+      const singerUrl =
+        this.project.characterLockPersona?.avatarUrl ||
+        this.project.customFaceAnchor ||
+        this.project.singerImageUrl ||
+        this.project.singerImage ||
+        SINGER_PORTRAITS[0].url;
+      this.singerImage = getCachedImage(singerUrl);
+    }
+
+    // Resolve scene images
+    const rawImages = (this.loadedImages && this.loadedImages.length > 0)
+      ? this.loadedImages
+      : ((this.project.images && this.project.images.length > 0)
+          ? this.project.images
+          : (getRenderStyleById(this.settings.renderStyle).defaultScenes || []));
+
+    const resolvedImages = rawImages.map(src => getCachedImage(src)).filter(Boolean);
+    const imagesToDraw = resolvedImages.length > 0 ? resolvedImages : (this.singerImage ? [this.singerImage] : []);
+    const secondsPerImage = imagesToDraw.length > 0 ? duration / imagesToDraw.length : duration;
+
+    try {
+      this.renderCompositedFrame(
+        ctx,
+        imagesToDraw,
+        this.project.lyrics || '',
+        elapsed,
+        duration,
+        secondsPerImage,
+        audioMetrics,
+        width,
+        height
+      );
+    } catch (e) {
+      // Gracefully handle un-decoded image objects in test / mock environments
+    }
   }
 
   initParticles(count = 300) {
@@ -279,6 +394,22 @@ export class VideoGenerator {
     );
 
     return this.recordVideo(images, audio, lyrics);
+  }
+
+  // Convenience wrapper used by the Studio DAW export button: takes an
+  // explicit duration plus (progress: 0-1) and (blobUrl) callbacks instead
+  // of generate()'s constructor-bound progressCallback and result object.
+  async exportVideo(duration, onProgress, onComplete) {
+    if (duration) {
+      this.project = { ...this.project, duration };
+    }
+    this.progressCallback = (percent) => {
+      if (onProgress) onProgress(percent / 100);
+    };
+
+    const result = await this.generate();
+    if (onComplete) onComplete(result.url);
+    return result;
   }
 
   recordVideo(images, audio, lyrics) {
@@ -584,7 +715,36 @@ export class VideoGenerator {
     const activeMedia = images[index];
     const isVideo = activeMedia instanceof HTMLVideoElement;
 
-    if (directorCut.isSingerShot && (this.project.leadActor?.isProceduralActor || this.singerImage) && !isVideo) {
+    if (this.project.freebeatMode === 'dance') {
+      // 1A. BEAT-SYNCED DANCE PERFORMANCE MODE (BETA)
+      this.paintDynamicScene(
+        ctx,
+        images[index],
+        withinImage,
+        1,
+        zoomPulse,
+        blend,
+        width,
+        height,
+        false,
+        'slow-cinematic-pan'
+      );
+
+      const dancePose = aiDanceEngine.constructor.calculateDancePose(
+        elapsed,
+        this.project.bpm || 128,
+        this.project.danceStyle || 'hip-hop',
+        audioMetrics
+      );
+
+      aiDanceEngine.constructor.renderDanceFrame(
+        ctx,
+        width,
+        height,
+        this.singerImage,
+        dancePose
+      );
+    } else if (directorCut.isSingerShot && (this.project.leadActor?.isProceduralActor || this.singerImage) && !isVideo) {
       if (this.project.leadActor?.isProceduralActor) {
         // PROCEDURAL CUSTOM 3D/2D AVATAR SINGER RIGGING
         const visemeData = lipSyncEngine.extractViseme(audioMetrics, {
@@ -649,8 +809,19 @@ export class VideoGenerator {
     }
     ctx.restore();
 
-    // 2. Specialized Style Shaders (Anime Speed Lines, Anamorphic Flares, Hologram HUD, Lo-Fi Paper)
+    // 2. Specialized Style Shaders & AI Special Effects Presets
     this.paintStyleShaders(ctx, renderStyleObj, audioMetrics, elapsed, isKick, width, height);
+
+    if (this.project.pikaFx || this.settings.pikaFx) {
+      aiSpecialEffectsEngine.constructor.applySpecialEffect(
+        ctx,
+        this.project.pikaFx || this.settings.pikaFx,
+        elapsed,
+        audioMetrics,
+        width,
+        height
+      );
+    }
 
     // 3. Audio-Reactive Visualizers Overlay
     this.paintVisualizer(ctx, audioMetrics, elapsed, width, height);
@@ -746,8 +917,37 @@ export class VideoGenerator {
       ctx.restore();
     }
 
+    // Music-Aware Song Structure HUD (Freebeat.ai Style Active Section Indicator)
+    if (this.project.songStructure?.sections) {
+      const activeSec = SongStructureAnalyzer.getSectionAtTime(this.project.songStructure, elapsed);
+      if (activeSec) {
+        ctx.save();
+        ctx.globalAlpha = 0.88;
+        ctx.fillStyle = activeSec.isDrop ? 'rgba(225, 29, 72, 0.85)' : 'rgba(15, 23, 42, 0.75)';
+        ctx.strokeStyle = activeSec.isDrop ? '#f43f5e' : '#38bdf8';
+        ctx.lineWidth = 1;
 
-    // SHADER A: Japanese Anime Radial Action Speed Lines (on beat drops / kick)
+        const hudText = activeSec.isDrop
+          ? `🔥 ${activeSec.type.toUpperCase()} · ${this.project.bpm || 128} BPM`
+          : `♪ ${activeSec.type.toUpperCase()} · ${this.project.bpm || 128} BPM`;
+        
+        ctx.font = '700 11px "Outfit", sans-serif';
+        const textMetrics = ctx.measureText(hudText);
+        const hudW = textMetrics.width + 24;
+        const hudH = 24;
+
+        ctx.beginPath();
+        ctx.roundRect(20, 20, hudW, hudH, 6);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'left';
+        ctx.fillText(hudText, 32, 36);
+        ctx.restore();
+      }
+    }
+
     if (
       (styleId === 'anime' || renderStyleObj.hasSpeedLines) &&
       this.settings.enableSpeedLines !== false &&
@@ -1010,8 +1210,13 @@ export class VideoGenerator {
 
 
     // Cover Fit Image/Video calculation
-    const mediaWidth = image.videoWidth || image.naturalWidth || image.width || width;
-    const mediaHeight = image.videoHeight || image.naturalHeight || image.height || height;
+    let mediaItem = image;
+    if (typeof mediaItem === 'string') {
+      mediaItem = getCachedImage(mediaItem);
+    }
+
+    const mediaWidth = mediaItem?.videoWidth || mediaItem?.naturalWidth || mediaItem?.width || width;
+    const mediaHeight = mediaItem?.videoHeight || mediaItem?.naturalHeight || mediaItem?.height || height;
     const frameRatio = width / height;
     const imageRatio = (mediaWidth && mediaHeight) ? (mediaWidth / mediaHeight) : frameRatio;
     let drawWidth = width;
@@ -1034,43 +1239,104 @@ export class VideoGenerator {
     ctx.translate(-centerX, -centerY);
 
     // If media is a video element, trigger play to update frames
-    if (image instanceof HTMLVideoElement && image.duration) {
-      if (image.paused) {
-        image.play().catch(() => {});
+    if (mediaItem instanceof HTMLVideoElement && mediaItem.duration) {
+      if (mediaItem.paused) {
+        mediaItem.play().catch(() => {});
       }
     }
 
     // 1. Draw Main Dynamic Motion Scene (Video or Image)
-    try {
-      ctx.drawImage(
-        image,
-        centerX - drawWidth / 2,
-        centerY - drawHeight / 2,
-        drawWidth,
-        drawHeight
-      );
+    let drawnSuccessfully = false;
 
-      // 2. Simulated Depth Parallax Foreground Glow/Rays layer for realistic Video Depth
-      if (motionMode === '3d-parallax' && alpha > 0.5) {
-        ctx.save();
-        ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = alpha * 0.12 * motionIntensity;
-
-        // Subtle enlarged depth blur overlay
-        const depthScale = 1.06;
+    if (mediaItem && (mediaItem.naturalWidth || mediaItem.width || mediaItem.videoWidth)) {
+      try {
         ctx.drawImage(
-          image,
-          centerX - (drawWidth * depthScale) / 2,
-          centerY - (drawHeight * depthScale) / 2,
-          drawWidth * depthScale,
-          drawHeight * depthScale
+          mediaItem,
+          centerX - drawWidth / 2,
+          centerY - drawHeight / 2,
+          drawWidth,
+          drawHeight
         );
-        ctx.restore();
+        drawnSuccessfully = true;
+
+        // 2. Simulated Depth Parallax Foreground Glow/Rays layer for realistic Video Depth
+        if (motionMode === '3d-parallax' && alpha > 0.5) {
+          ctx.save();
+          ctx.globalCompositeOperation = 'screen';
+          ctx.globalAlpha = alpha * 0.12 * motionIntensity;
+
+          // Subtle enlarged depth blur overlay
+          const depthScale = 1.06;
+          ctx.drawImage(
+            mediaItem,
+            centerX - (drawWidth * depthScale) / 2,
+            centerY - (drawHeight * depthScale) / 2,
+            drawWidth * depthScale,
+            drawHeight * depthScale
+          );
+          ctx.restore();
+        }
+      } catch (drawErr) {
+        drawnSuccessfully = false;
       }
-    } catch (drawErr) {
-      // Fallback background in case of image frame decode error
-      ctx.fillStyle = '#1e1b4b';
+    }
+
+    if (!drawnSuccessfully) {
+      // High-Definition Procedural Cinematic Story Scene
+      const cx = width / 2;
+
+      // Deep atmospheric environment gradient
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, height);
+      skyGrad.addColorStop(0, '#030712');
+      skyGrad.addColorStop(0.5, '#0c1a30');
+      skyGrad.addColorStop(1, '#1e1b4b');
+      ctx.fillStyle = skyGrad;
       ctx.fillRect(0, 0, width, height);
+
+      // 3D Perspective Cyber Floor Grid
+      ctx.save();
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.25)';
+      ctx.lineWidth = 1.5;
+      const horizonY = height * 0.58;
+
+      // Horizontal grid lines
+      for (let y = horizonY; y < height; y += (y - horizonY + 12) * 0.4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+
+      // Vanishing perspective rays
+      for (let x = -width * 0.5; x <= width * 1.5; x += width * 0.1) {
+        ctx.beginPath();
+        ctx.moveTo(cx, horizonY);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Atmospheric Horizon Neon Glow
+      const glowGrad = ctx.createRadialGradient(cx, horizonY, 10, cx, horizonY, width * 0.45);
+      glowGrad.addColorStop(0, 'rgba(236, 72, 153, 0.45)');
+      glowGrad.addColorStop(0.5, 'rgba(6, 182, 212, 0.2)');
+      glowGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fillRect(0, horizonY - 120, width, 240);
+
+      // Futuristic Scene Architecture Silhouette
+      ctx.fillStyle = '#050a14';
+      ctx.beginPath();
+      ctx.moveTo(cx - 220, horizonY);
+      ctx.lineTo(cx - 180, horizonY - 140);
+      ctx.lineTo(cx - 120, horizonY - 140);
+      ctx.lineTo(cx - 80, horizonY);
+      ctx.lineTo(cx + 80, horizonY);
+      ctx.lineTo(cx + 120, horizonY - 190);
+      ctx.lineTo(cx + 180, horizonY - 190);
+      ctx.lineTo(cx + 220, horizonY);
+      ctx.closePath();
+      ctx.fill();
     }
 
     ctx.restore();

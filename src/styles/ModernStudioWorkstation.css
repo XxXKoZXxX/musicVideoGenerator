@@ -1,0 +1,712 @@
+/* ModernStudioWorkstation.css - Industry-leading AI Video DAW Studio Styling */
+
+.modern-studio-container {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 64px);
+  background: #070a13;
+  color: #f1f5f9;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* TOP TOOLBAR */
+.studio-top-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: rgba(13, 18, 32, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  z-index: 20;
+  gap: 12px;
+}
+
+.toolbar-left, .toolbar-center, .toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.project-title-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 6px 12px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.2s;
+  min-width: 180px;
+}
+.project-title-input:focus {
+  border-color: #38bdf8;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.aspect-ratio-selector, .resolution-selector {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 2px;
+}
+
+.ratio-btn {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ratio-btn:hover {
+  color: #fff;
+}
+.ratio-btn.active {
+  background: var(--cyan, #38bdf8);
+  color: #030712;
+  box-shadow: 0 0 10px var(--gold-glow, rgba(56, 189, 248, 0.4));
+}
+
+/* MAIN MIDDLE WORKSPACE */
+.studio-main-workspace {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+/* LEFT INSPECTOR TOOLBAR */
+.studio-inspector {
+  width: 380px;
+  min-width: 320px;
+  max-width: 440px;
+  background: rgba(11, 16, 29, 0.98);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.inspector-nav-tabs {
+  display: flex;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px;
+  gap: 4px;
+}
+
+.inspector-tab-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 4px;
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.inspector-tab-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.04);
+}
+.inspector-tab-btn.active {
+  color: var(--cyan, #38bdf8);
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid var(--panel-border, rgba(56, 189, 248, 0.3));
+}
+
+.inspector-tab-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+/* CENTER VIEWPORT / PLAYER */
+.studio-center-viewport {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at center, #10172a 0%, #050811 100%);
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.viewport-canvas-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  max-width: 95%;
+  max-height: 90%;
+  background: #000;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.viewport-canvas-wrapper.ratio-16-9 {
+  aspect-ratio: 16 / 9;
+  width: min(880px, 90%);
+}
+.viewport-canvas-wrapper.ratio-9-16 {
+  aspect-ratio: 9 / 16;
+  height: min(480px, 85%);
+  width: auto;
+}
+.viewport-canvas-wrapper.ratio-1-1 {
+  aspect-ratio: 1 / 1;
+  height: min(460px, 85%);
+  width: auto;
+}
+.viewport-canvas-wrapper.ratio-4-5 {
+  aspect-ratio: 4 / 5;
+  height: min(480px, 85%);
+  width: auto;
+}
+.viewport-canvas-wrapper.ratio-21-9 {
+  aspect-ratio: 21 / 9;
+  width: min(960px, 92%);
+}
+
+.studio-main-canvas {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.viewport-overlay-hud {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.hud-pill {
+  background: rgba(0, 0, 0, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  backdrop-filter: blur(8px);
+}
+
+/* TRANSPORT CONTROLS OVERLAY */
+.viewport-floating-transport {
+  position: absolute;
+  bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(13, 18, 34, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 40px;
+  padding: 6px 18px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 15;
+}
+
+.transport-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  border-radius: 50%;
+  transition: all 0.15s;
+}
+.transport-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+.transport-btn.play-master {
+  background: var(--cyan, #38bdf8);
+  color: #030712;
+  width: 40px;
+  height: 40px;
+  box-shadow: 0 0 16px var(--gold-glow, rgba(56, 189, 248, 0.5));
+}
+.transport-btn.play-master:hover {
+  transform: scale(1.08);
+}
+
+.timecode-display {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #cbd5e1;
+  letter-spacing: 0.5px;
+}
+
+/* BOTTOM MULTI-TRACK DAW TIMELINE */
+.studio-bottom-timeline {
+  height: 240px;
+  min-height: 180px;
+  max-height: 340px;
+  background: #090d18;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 20;
+}
+
+.timeline-header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 16px;
+  background: rgba(15, 23, 42, 0.9);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 11px;
+}
+
+.timeline-tracks-container {
+  flex: 1;
+  display: flex;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
+}
+
+.timeline-track-headers {
+  width: 140px;
+  min-width: 140px;
+  background: rgba(11, 17, 31, 0.95);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+
+.track-header-row {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  font-size: 11px;
+  font-weight: 700;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+}
+
+.timeline-lanes {
+  flex: 1;
+  position: relative;
+  min-width: 800px;
+}
+
+.track-lane-row {
+  height: 38px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.timeline-scrub-playhead {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--cyan, #38bdf8);
+  z-index: 25;
+  pointer-events: none;
+  box-shadow: 0 0 8px var(--cyan, #38bdf8);
+}
+.timeline-scrub-playhead::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -5px;
+  width: 12px;
+  height: 12px;
+  background: var(--cyan, #38bdf8);
+  border-radius: 2px;
+  transform: rotate(45deg);
+}
+
+/* Positioned via inline left/width (percent-of-duration) from MultiTrackTimeline.js —
+   position:absolute was previously supplied by a dead Tailwind class, so these blocks
+   rendered inline in flex flow instead of on the timeline. */
+.scene-clip-block {
+  position: absolute;
+  top: 4px;
+  height: 30px;
+  border-radius: 6px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+.scene-clip-controls {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 0 3px;
+  background: linear-gradient(90deg, transparent, rgba(15, 23, 42, 0.92) 30%);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.scene-clip-block:hover .scene-clip-controls {
+  opacity: 1;
+}
+.scene-move-btn,
+.scene-remove-btn {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.9);
+  color: #cbd5e1;
+  font-size: 9px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+.scene-move-btn:hover {
+  color: #fff;
+  background: rgba(56, 189, 248, 0.3);
+  border-color: var(--cyan, #38bdf8);
+}
+.scene-move-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.scene-remove-btn:hover {
+  color: #fff;
+  background: rgba(244, 63, 94, 0.4);
+  border-color: #f43f5e;
+}
+
+/* Track 2-5 content blocks — same position:absolute dead-Tailwind-class fix,
+   plus real height/color/border rules for what were purely Tailwind-styled divs. */
+.timeline-block {
+  position: absolute;
+  top: 6px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.timeline-block.size-md {
+  height: 24px;
+  padding: 0 8px;
+  gap: 4px;
+}
+.timeline-block.size-sm {
+  height: 20px;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 9px;
+}
+.actor-track-block {
+  background: rgba(245, 158, 11, 0.2);
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fde68a;
+}
+.fx-track-block {
+  background: rgba(225, 29, 72, 0.3);
+  border: 1px solid #f43f5e;
+  color: #fda4af;
+}
+.lyrics-track-block {
+  background: rgba(147, 51, 234, 0.2);
+  border: 1px solid rgba(147, 51, 234, 0.4);
+  color: #e9d5ff;
+  font-weight: 500;
+}
+.section-track-block {
+  justify-content: space-between;
+}
+
+/* EXPORT / PROGRESS MODAL */
+.studio-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.studio-modal-box {
+  background: #0f172a;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 24px;
+  padding: 28px;
+  max-width: 620px;
+  width: 100%;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(56, 189, 248, 0.2);
+}
+
+/* TOOLBAR ACTION BUTTONS — real CSS replacing dead (unconfigured-Tailwind) utility classes */
+.toolbar-quick-btn {
+  padding: 6px 12px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.toolbar-quick-btn.hot-features {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.2), rgba(245, 158, 11, 0.2));
+  border-color: rgba(244, 63, 94, 0.4);
+  color: #fda4af;
+}
+.toolbar-quick-btn.hot-features:hover {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.3), rgba(245, 158, 11, 0.3));
+}
+.toolbar-quick-btn.auto-director {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(234, 179, 8, 0.2));
+  border-color: rgba(245, 158, 11, 0.4);
+  color: #fbbf24;
+}
+.toolbar-quick-btn.auto-director:hover {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(234, 179, 8, 0.3));
+}
+
+.export-master-btn {
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  background: linear-gradient(135deg, #22d3ee, #2563eb);
+  color: #030712;
+  font-weight: 800;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(34, 211, 238, 0.35);
+  transition: all 0.15s;
+}
+.export-master-btn:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.export-master-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.hud-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: hud-pulse 1.4s ease-in-out infinite;
+}
+@keyframes hud-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.export-progress-track {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: #1e293b;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+}
+.export-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22d3ee, #d946ef);
+  transition: width 0.15s;
+}
+
+/* PROJECT SAVE / LOAD DROPDOWN */
+.projects-menu-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.toolbar-quick-btn.projects-toggle {
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.3);
+  color: #cbd5e1;
+}
+.toolbar-quick-btn.projects-toggle:hover {
+  background: rgba(148, 163, 184, 0.2);
+}
+.toolbar-quick-btn.save-project-btn {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #6ee7b7;
+}
+.toolbar-quick-btn.save-project-btn:hover {
+  background: rgba(16, 185, 129, 0.25);
+}
+
+.projects-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+}
+
+.projects-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 260px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+  z-index: 61;
+  padding: 6px;
+}
+.projects-dropdown-empty {
+  padding: 14px 10px;
+  font-size: 12px;
+  color: #64748b;
+  text-align: center;
+}
+.projects-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.projects-dropdown-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+.projects-dropdown-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow: hidden;
+}
+.projects-dropdown-item-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.projects-dropdown-item-time {
+  font-size: 10px;
+  color: #64748b;
+}
+.projects-dropdown-delete {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.projects-dropdown-delete:hover {
+  background: rgba(244, 63, 94, 0.2);
+  color: #fda4af;
+}
+
+.export-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: rgba(56, 189, 248, 0.2);
+  border: 1px solid rgba(56, 189, 248, 0.6);
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: hud-pulse 1.2s ease-in-out infinite;
+}
+
+.export-modal-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+}
+.export-modal-sub {
+  font-size: 12px;
+  color: #94a3b8;
+}
+.export-modal-pct {
+  font-family: 'SF Mono', Monaco, Consolas, monospace;
+  color: #67e8f9;
+  font-weight: 800;
+  font-size: 13px;
+}

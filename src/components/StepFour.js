@@ -31,6 +31,7 @@ import { RENDER_STYLES, getRenderStyleById } from '../services/RenderStyles';
 import { ATMOSPHERE_MODES } from '../services/AtmosphereEngine';
 import { AI_VIDEO_MODELS } from '../data/aiModels';
 import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
+import SongStructureTimeline from './common/SongStructureTimeline';
 import HiggsfieldDoPControls from './HiggsfieldDoPControls';
 import '../styles/Step.css';
 
@@ -426,6 +427,24 @@ export default function StepFour({ onBack, project }) {
                 {formatTime(currentTime)} / {formatTime(duration)}
               </div>
             </div>
+
+            {/* Freebeat Song Structure & Beat Drops Timeline */}
+            {project.songStructure && (
+              <div className="mt-3">
+                <SongStructureTimeline
+                  structure={project.songStructure}
+                  currentTime={currentTime}
+                  duration={duration}
+                  onSeek={(seekTime) => {
+                    if (liveAudioRef.current) {
+                      liveAudioRef.current.currentTime = seekTime;
+                      setCurrentTime(seekTime);
+                      drawPreviewFrame(seekTime);
+                    }
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Export Action Card */}

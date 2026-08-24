@@ -5,18 +5,18 @@ import App from './App';
 import StandaloneMusicVideoApp from './StandaloneMusicVideoApp';
 import * as serviceWorkerRegistration from './serviceWorkerRegistration';
 
-// Check if running in standalone Music Video & Vocal Studio mode
+// Default to standalone AI Music Video & Vocal Cloner App
+// To access the Astrology Cosmic suite, pass ?app=cosmic or set localStorage app_mode='cosmic'
 const urlParams = new URLSearchParams(window.location.search);
-const isMusicVidStandalone =
-  urlParams.get('app') === 'musicvid' ||
-  urlParams.get('app') === 'standalone' ||
-  process.env.REACT_APP_STANDALONE_MUSICVID === 'true' ||
-  localStorage.getItem('app_mode') === 'musicvid';
+const isCosmicMode =
+  urlParams.get('app') === 'cosmic' ||
+  urlParams.get('app') === 'astrology' ||
+  localStorage.getItem('app_mode') === 'cosmic';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-    {isMusicVidStandalone ? <StandaloneMusicVideoApp /> : <App />}
+    {isCosmicMode ? <App /> : <StandaloneMusicVideoApp />}
   </React.StrictMode>
 );
 

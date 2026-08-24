@@ -1,11 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Share2, Copy, Check, Smartphone, Globe, 
-  Send, Sparkles, Heart, MessageCircle, ShieldCheck, Wifi 
+  Send, Sparkles, ShieldCheck, Wifi
 } from 'lucide-react';
 import { generateQRCodeSVG } from '../../utils/qrGenerator';
 
-export default function ShareModal({ isOpen, onClose, activeProfile }) {
+const DEFAULT_APP_NAME = 'Astraea Cosmic Studio';
+const DEFAULT_INVITE_TEMPLATES = {
+  general: {
+    label: '🌟 General',
+    title: '🌟 General Test Invitation',
+    text: (url) => `✨ Hey! I'm testing Astraea — an interactive Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire & Tarot app. Try it out here:\n👉 ${url}`,
+  },
+  synastry: {
+    label: '💖 Love Match',
+    title: '💖 Compatibility & Match Test',
+    text: (url) => `🔮 Hey! Enter your birthday into Astraea to test our Twin Flame & Cosmic Compatibility side-by-side:\n👉 ${url}`,
+  },
+  secretLanguage: {
+    label: '📜 Birthday',
+    title: '📜 366 Day Archetype & Fortune',
+    text: (url) => `✨ Check out what your exact birthdate means in the Secret Language of Birthdays on Astraea:\n👉 ${url}`,
+  },
+};
+
+export default function ShareModal({
+  isOpen,
+  onClose,
+  activeProfile,
+  appName = DEFAULT_APP_NAME,
+  inviteTemplates: customInviteTemplates,
+}) {
+  const inviteTemplateDefs = customInviteTemplates || DEFAULT_INVITE_TEMPLATES;
   const [copiedLink, setCopiedLink] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [selectedInviteTemplate, setSelectedInviteTemplate] = useState('general');
@@ -75,22 +101,9 @@ export default function ShareModal({ isOpen, onClose, activeProfile }) {
     bgColor: '#060814',
   });
 
-  const inviteTemplates = {
-    general: {
-      title: '🌟 General Test Invitation',
-      text: `✨ Hey! I'm testing Astraea — an interactive Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire & Tarot app. Try it out here:\n👉 ${activeShareUrl}`
-    },
-    synastry: {
-      title: '💖 Compatibility & Match Test',
-      text: `🔮 Hey! Enter your birthday into Astraea to test our Twin Flame & Cosmic Compatibility side-by-side:\n👉 ${activeShareUrl}`
-    },
-    secretLanguage: {
-      title: '📜 366 Day Archetype & Fortune',
-      text: `✨ Check out what your exact birthdate means in the Secret Language of Birthdays on Astraea:\n👉 ${activeShareUrl}`
-    }
-  };
-
-  const currentMessageText = inviteTemplates[selectedInviteTemplate]?.text || inviteTemplates.general.text;
+  const currentMessageText =
+    inviteTemplateDefs[selectedInviteTemplate]?.text(activeShareUrl) ||
+    inviteTemplateDefs.general.text(activeShareUrl);
 
   const handleCopyLink = () => {
     if (navigator.clipboard) {
@@ -112,7 +125,7 @@ export default function ShareModal({ isOpen, onClose, activeProfile }) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: `Astraea Cosmic Studio — Test & Explore`,
+          title: `${appName} — Test & Explore`,
           text: currentMessageText,
           url: activeShareUrl
         });
@@ -137,7 +150,7 @@ export default function ShareModal({ isOpen, onClose, activeProfile }) {
               <Share2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-serif text-lg font-bold text-white">Share App with Testers</h3>
+              <h3 className="font-serif text-lg font-bold text-white">Share {appName} with Testers</h3>
               <p className="text-xs text-slate-300">Invite friends & testers on iPhone, Android or PC</p>
             </div>
           </div>
@@ -229,21 +242,16 @@ export default function ShareModal({ isOpen, onClose, activeProfile }) {
             Custom Message Templates
           </span>
           <div className="grid grid-cols-3 gap-2">
-            {[
-              { id: 'general', label: '🌟 General', icon: <Sparkles className="w-3.5 h-3.5" /> },
-              { id: 'synastry', label: '💖 Love Match', icon: <Heart className="w-3.5 h-3.5" /> },
-              { id: 'secretLanguage', label: '📜 Birthday', icon: <MessageCircle className="w-3.5 h-3.5" /> }
-            ].map(t => (
+            {Object.entries(inviteTemplateDefs).map(([id, t]) => (
               <button
-                key={t.id}
-                onClick={() => setSelectedInviteTemplate(t.id)}
+                key={id}
+                onClick={() => setSelectedInviteTemplate(id)}
                 className={`py-2 px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-all border ${
-                  selectedInviteTemplate === t.id 
-                    ? 'bg-amber-400/20 border-amber-400 text-amber-300' 
+                  selectedInviteTemplate === id
+                    ? 'bg-amber-400/20 border-amber-400 text-amber-300'
                     : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
                 }`}
               >
-                {t.icon}
                 <span>{t.label}</span>
               </button>
             ))}
