@@ -71,13 +71,24 @@ export function getCachedImage(source) {
   if (typeof source !== 'string') return source;
 
   if (GLOBAL_IMAGE_CACHE.has(source)) {
-    return GLOBAL_IMAGE_CACHE.get(source);
+    const cached = GLOBAL_IMAGE_CACHE.get(source);
+    if (cached) return cached;
   }
 
   if (typeof Image === 'undefined') return null;
 
   const img = new Image();
   img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    GLOBAL_IMAGE_CACHE.set(source, img);
+  };
+  img.onerror = () => {
+    const fallbackImg = new Image();
+    fallbackImg.onload = () => {
+      GLOBAL_IMAGE_CACHE.set(source, fallbackImg);
+    };
+    fallbackImg.src = source;
+  };
   img.src = source;
   GLOBAL_IMAGE_CACHE.set(source, img);
   return img;
@@ -300,7 +311,23 @@ export class VideoGenerator {
   }
 
   async loadMedia(source) {
-    const src = typeof source === 'string' ? source : (source?.url || '');
+    let src = typeof source === 'string' ? source : (source?.url || '');
+
+    // Convert local file paths to Data URLs in Electron desktop mode
+    if (typeof src === 'string' && (src.includes(':\\') || (src.startsWith('/') && !src.startsWith('//')))) {
+      const electronRead = window.electron?.readFileAsDataUrl || window.electron?.readFileDataUrl;
+      if (electronRead) {
+        try {
+          const res = await electronRead(src);
+          if (res?.dataUrl) {
+            src = res.dataUrl;
+          }
+        } catch (e) {
+          console.warn('Electron read file error:', e);
+        }
+      }
+    }
+
     const isVideo = src.includes('.mp4') || src.includes('.webm') || src.includes('.mov') || src.startsWith('data:video') || (source && source.type && source.type.startsWith('video/'));
 
     if (isVideo) {
@@ -316,6 +343,7 @@ export class VideoGenerator {
         const onReady = () => {
           video.onloadeddata = null;
           video.oncanplay = null;
+          GLOBAL_IMAGE_CACHE.set(source, video);
           resolve(video);
         };
 
@@ -334,10 +362,28 @@ export class VideoGenerator {
 
   loadImage(source) {
     return new Promise((resolve, reject) => {
+      if (GLOBAL_IMAGE_CACHE.has(source)) {
+        const cached = GLOBAL_IMAGE_CACHE.get(source);
+        if (cached && (cached.naturalWidth || cached.width)) {
+          return resolve(cached);
+        }
+      }
+
       const img = new Image();
       img.crossOrigin = 'anonymous';
-      img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error(`Failed to load image: ${source}`));
+      img.onload = () => {
+        GLOBAL_IMAGE_CACHE.set(source, img);
+        resolve(img);
+      };
+      img.onerror = () => {
+        const fallbackImg = new Image();
+        fallbackImg.onload = () => {
+          GLOBAL_IMAGE_CACHE.set(source, fallbackImg);
+          resolve(fallbackImg);
+        };
+        fallbackImg.onerror = () => reject(new Error(`Failed to load image: ${source}`));
+        fallbackImg.src = source;
+      };
       img.src = source;
     });
   }

@@ -77,7 +77,23 @@ export default function StepOne({ onNext, project }) {
     if (window.electron?.selectImages) {
       const imagePaths = await window.electron.selectImages();
       if (imagePaths?.length) {
-        setImages((prev) => [...prev, ...imagePaths]);
+        const electronRead = window.electron.readFileAsDataUrl || window.electron.readFileDataUrl;
+        const resolvedUrls = [];
+        for (const filePath of imagePaths) {
+          if (electronRead) {
+            try {
+              const res = await electronRead(filePath);
+              if (res?.dataUrl) {
+                resolvedUrls.push(res.dataUrl);
+                continue;
+              }
+            } catch (err) {
+              console.warn('Electron read file error:', err);
+            }
+          }
+          resolvedUrls.push(filePath);
+        }
+        setImages((prev) => [...prev, ...resolvedUrls]);
       }
     }
   };

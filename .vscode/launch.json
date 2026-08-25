@@ -5,26 +5,44 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "node",
+            "request": "launch",
+            "name": "Run electron",
+            "runtimeExecutable": "electron",
+            "cwd": "${workspaceFolder}",
+            "args": []
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Run electron",
+            "runtimeExecutable": "electron",
+            "cwd": "${workspaceFolder}",
+            "args": []
+        },
+        {
             "name": "Python Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
             "module": "app.main",
             "console": "integratedTerminal",
-            "args": ["-Xfrozen_modules=off"]
+            "args": [
+                "-Xfrozen_modules=off"
+            ]
         },
         {
             "name": "Attach to Flask app in Docker",
             "type": "debugpy",
             "request": "attach",
             "connect": {
-                "host": "localhost",  // or the Docker host IP
-                "port": 5612          // must match the port debugpy is listening on
+                "host": "localhost", // or the Docker host IP
+                "port": 5612 // must match the port debugpy is listening on
             },
             "pathMappings": [
                 {
-                    "localRoot": "${workspaceFolder}",  // Path to your code on the host machine
+                    "localRoot": "${workspaceFolder}", // Path to your code on the host machine
                     "remoteRoot": "/app"
-                                    // Path to your code in the Docker container
+                    // Path to your code in the Docker container
                 }
             ]
         }

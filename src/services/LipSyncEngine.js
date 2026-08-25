@@ -1,5 +1,21 @@
 // LipSyncEngine.js - Real-Time Audio-Reactive Viseme Lip-Syncing & Facial Performance Engine
 
+const LIP_SYNC_IMAGE_CACHE = new Map();
+
+function getSingerImageElement(source) {
+  if (!source) return null;
+  if (typeof source !== 'string') return source;
+  if (LIP_SYNC_IMAGE_CACHE.has(source)) {
+    return LIP_SYNC_IMAGE_CACHE.get(source);
+  }
+  if (typeof Image === 'undefined') return null;
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.src = source;
+  LIP_SYNC_IMAGE_CACHE.set(source, img);
+  return img;
+}
+
 export class LipSyncEngine {
   constructor() {
     this.lastBlinkTime = 0;
@@ -116,12 +132,7 @@ export class LipSyncEngine {
     height,
     options = {}
   ) {
-    let imageToDraw = image;
-    if (typeof image === 'string' && typeof document !== 'undefined') {
-      const cached = document.createElement('img');
-      cached.src = image;
-      imageToDraw = cached;
-    }
+    const imageToDraw = getSingerImageElement(image);
 
     const {
       faceCenter = { x: 0.5, y: 0.44 },
