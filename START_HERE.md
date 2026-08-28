@@ -15,7 +15,7 @@ cd C:\Users\User\musicvid-studio
 npm start
 ```
 
-**Opens at**: <http://localhost:3000>
+**Opens at**: [def]
 
 ---
 
@@ -375,7 +375,7 @@ C:\Users\User\musicvid-studio\
 
 ### To Test
 
-1. Open <http://localhost:3000>
+1. Open [def]
 2. Add 3-5 images (click button)
 3. Add audio (or skip in demo)
 4. Browse templates (15 available!)
