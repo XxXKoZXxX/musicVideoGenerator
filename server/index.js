@@ -71,8 +71,8 @@ app.get('/', (req, res) => {
   res.json({
     status: 'online',
     service: 'Astraea Video & Claude Opus AI Agent Server',
-    version: '1.2.0',
-    endpoints: ['/api/generators', '/api/generate', '/api/claude', '/api/opus-agent', '/api/opus-agent/chat', '/health'],
+    version: '1.3.0',
+    endpoints: ['/api/generators', '/api/generate', '/api/ai-video/generate', '/api/ai-video/generate-scenes', '/api/ai-video/status/:id', '/api/claude', '/api/opus-agent', '/api/opus-agent/chat', '/health'],
   });
 });
 

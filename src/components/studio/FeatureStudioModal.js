@@ -360,11 +360,48 @@ export default function FeatureStudioModal({
               <div className="bg-gradient-to-r from-cyan-950/40 to-slate-900/60 p-4 rounded-2xl border border-cyan-500/30">
                 <h4 className="text-sm font-bold text-cyan-300 mb-1 flex items-center gap-2">
                   <Video className="w-4 h-4 text-cyan-400" />
-                  <span>AI Video (Hot)</span>
+                  <span>🎬 AI Video Generation (Powered by fal.ai)</span>
                 </h4>
                 <p className="text-xs text-slate-300">
-                  Generate videos from text prompts or reference images instantly.
+                  Generate real AI video clips from text prompts using Kling, Luma, Runway, and more. Set your <code style={{ color: '#06b6d4' }}>FAL_KEY</code> in <code>.env</code> for live generation.
                 </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  AI Video Model:
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+                  {[
+                    { id: 'kling_ai', name: 'Kling 3.0', icon: '🌊' },
+                    { id: 'luma_dream', name: 'Luma Ray', icon: '🎬' },
+                    { id: 'runway_gen3', name: 'Runway 4.5', icon: '⚡' },
+                    { id: 'minimax', name: 'MiniMax H3', icon: '🔮' },
+                    { id: 'stable_video', name: 'Stable Video', icon: '🎥' },
+                    { id: 'sora_ai', name: 'Sora 2', icon: '🌌' },
+                  ].map(m => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => setVideoPrompt(prev => prev)} // model choice stored via data attr
+                      data-model={m.id}
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 10,
+                        padding: '8px 6px',
+                        color: '#e2e8f0',
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        textAlign: 'center',
+                      }}
+                    >
+                      <span style={{ fontSize: 16 }}>{m.icon}</span><br />
+                      {m.name}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div>
@@ -405,24 +442,36 @@ export default function FeatureStudioModal({
                 </label>
               </div>
 
-              <div className="pt-2 flex justify-end">
+              <div className="pt-2 flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => {
+                  onClick={async () => {
                     setIsGeneratingVideo(true);
-                    setTimeout(() => {
-                      setIsGeneratingVideo(false);
+                    try {
+                      const { generateVideoFromPrompt } = await import('../../services/AIVideoGenerationService');
+                      const result = await generateVideoFromPrompt(videoPrompt, 'kling_ai');
+                      if (result.videoUrl) {
+                        onAddScene({ imageUrl: result.videoUrl, title: videoPrompt.slice(0, 30) });
+                      }
+                    } catch (err) {
+                      console.error('[AI Video] Generation failed:', err);
                       onAddScene({
                         imageUrl: videoImageRef || 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
                         title: videoPrompt.slice(0, 30),
                       });
-                      onClose();
-                    }, 800);
+                    }
+                    setIsGeneratingVideo(false);
+                    onClose();
                   }}
-                  className="px-6 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-600 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-cyan-500/25"
+                  disabled={isGeneratingVideo}
+                  className="px-6 py-2.5 text-slate-950 font-extrabold text-xs rounded-xl flex items-center gap-2 shadow-lg"
+                  style={{
+                    background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)',
+                    boxShadow: '0 4px 24px rgba(6, 182, 212, 0.3)',
+                  }}
                 >
                   <Video className="w-4 h-4" />
-                  <span>{isGeneratingVideo ? 'Generating AI Video Footage...' : 'Generate AI Video Clip'}</span>
+                  <span>{isGeneratingVideo ? '🎬 Generating AI Video...' : '🎬 Generate AI Video Clip'}</span>
                 </button>
               </div>
             </div>
