@@ -11,11 +11,14 @@ import {
   Save,
   FolderOpen,
   Trash2,
+  Bot,
+  Crown,
 } from 'lucide-react';
 import StudioInspectorPanel from './StudioInspectorPanel';
 import MultiTrackTimeline from './MultiTrackTimeline';
 import FreebeatAutoDirectorModal from '../common/FreebeatAutoDirectorModal';
 import FeatureStudioModal from './FeatureStudioModal';
+import OpusAgentAssistantDrawer from '../common/OpusAgentAssistantDrawer';
 import { VideoGenerator } from '../../services/VideoGenerator';
 import { audioEngine } from '../../services/AudioEngine';
 import { SongStructureAnalyzer } from '../../services/SongStructureAnalyzer';
@@ -23,8 +26,6 @@ import { ProjectStorage, formatRelativeSaveTime } from '../../services/ProjectSt
 import '../../styles/ModernStudioWorkstation.css';
 
 // Aspect ratio -> sensible per-platform export defaults (resolution/quality).
-// VideoGenerator previously ignored project.resolution/aspectRatio/exportQuality
-// entirely at export time (always rendered 1080p/16:9/high) — fixed alongside this.
 const PLATFORM_EXPORT_PRESETS = {
   '16:9': { resolution: '1080p', exportQuality: 'high', label: 'YouTube / Cinema' },
   '9:16': { resolution: '1080p', exportQuality: 'high', label: 'TikTok / Reels / Shorts' },
@@ -42,7 +43,7 @@ export default function ModernStudioWorkstation({
     renderStyle: 'photoreal',
     rendererEngine: 'ai-neural',
     selectedVideoModel: 'higgsfield_dop',
-    selectedStoryGenerator: 'gemini_flash',
+    selectedStoryGenerator: 'claude_opus',
     motionMode: 'higgsfield-orbit-360',
     lensProfile: 'anamorphic-239',
     lightingRig: 'volumetric-fog',
@@ -70,6 +71,7 @@ export default function ModernStudioWorkstation({
   const [isExporting, setIsExporting] = useState(false);
   const [exportProgress, setExportProgress] = useState(0);
   const [isAutoDirectorOpen, setIsAutoDirectorOpen] = useState(false);
+  const [isOpusAgentOpen, setIsOpusAgentOpen] = useState(false);
   const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
   const [featureModalTab, setFeatureModalTab] = useState('music_video');
   const [isProjectsMenuOpen, setIsProjectsMenuOpen] = useState(false);
@@ -349,6 +351,15 @@ export default function ModernStudioWorkstation({
         <div className="toolbar-center">
           <button
             type="button"
+            className="toolbar-quick-btn opus-agent-btn bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-950 font-black shadow-lg shadow-amber-500/20"
+            onClick={() => setIsOpusAgentOpen(true)}
+          >
+            <Crown className="w-3.5 h-3.5 fill-slate-950" />
+            <span>🤖 Claude 3 Opus Director</span>
+          </button>
+
+          <button
+            type="button"
             className="toolbar-quick-btn hot-features"
             onClick={() => {
               setFeatureModalTab('music_video');
@@ -533,6 +544,27 @@ export default function ModernStudioWorkstation({
             setIsPlaying(true);
           }}
           project={project}
+        />
+      )}
+
+      {isOpusAgentOpen && (
+        <OpusAgentAssistantDrawer
+          isOpen={isOpusAgentOpen}
+          onClose={() => setIsOpusAgentOpen(false)}
+          project={project}
+          onUpdateProject={(updates) => setProject((prev) => ({ ...prev, ...updates }))}
+          onApplyScenes={(scenes) => {
+            setProject((prev) => ({
+              ...prev,
+              images: scenes.map((s) => s.imageUrl || s),
+              screenplay: {
+                title: 'Claude 3 Opus Production Bible',
+                duration: prev.duration || 32,
+                bpm: prev.bpm || 128,
+                scenes,
+              },
+            }));
+          }}
         />
       )}
 

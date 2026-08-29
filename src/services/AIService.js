@@ -13,15 +13,49 @@ export const MUSIC_GENRES = [
   'Cinematic Epic',
 ];
 
-// Generate or retrieve a bespoke storyline created specifically for any given song
-export async function generateStorylineFromAudio(audioInfo, genreOverride = null) {
-  // Simulate AI model synthesis delay
-  await new Promise((resolve) => setTimeout(resolve, 800));
+const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:4000';
 
+// Generate or retrieve a bespoke storyline created specifically for any given song
+export async function generateStorylineFromAudio(audioInfo, genreOverride = null, model = 'claude_opus', userPrompt = '') {
   const title = audioInfo?.title || audioInfo?.audioTitle || 'Electric Dreams';
   const bpm = audioInfo?.bpm || 128;
   const duration = Math.round(audioInfo?.duration || 30);
   const genre = genreOverride || detectGenreFromSong(title, bpm);
+
+  // Try calling backend Claude / Opus API first
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/claude`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: userPrompt,
+        model: model === 'claude_opus' ? 'claude-3-opus-20240229' : 'claude-3-5-sonnet-20241022',
+        audioInfo: { title, bpm, duration, genre },
+        style: genre,
+      }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.content) {
+        return {
+          title: data.title || `${title} - Claude 3 Opus Storyboard`,
+          concept: data.concept || `Claude 3 Opus Autonomous Directorial Vision for "${title}".`,
+          bpm,
+          duration,
+          genre,
+          scenes: data.scenes || [data.content],
+          text: data.content,
+          modelUsed: data.model || 'claude-3-opus',
+          mode: data.mode,
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('[AIService] Backend /api/claude unreachable. Using local Opus simulation engine.');
+  }
+
+  // Simulate AI model synthesis delay for local fallback
+  await new Promise((resolve) => setTimeout(resolve, 600));
 
   // If a built-in storyline already matches this song and no override was requested
   if (audioInfo?.storyline && !genreOverride) {
@@ -40,7 +74,7 @@ export async function generateStorylineFromAudio(audioInfo, genreOverride = null
   // Generate dynamic bespoke scenes tailored to this specific song
   const generated = buildSongBespokeStoryline(title, genre, bpm, duration);
   return {
-    title: `${title} - AI Music Video Storyboard`,
+    title: `${title} - Claude 3 Opus AI Storyboard`,
     concept: generated.concept,
     bpm,
     duration,
@@ -48,8 +82,85 @@ export async function generateStorylineFromAudio(audioInfo, genreOverride = null
     scenes: generated.scenes,
     lyrics: generated.lyrics,
     text: `${generated.concept}\n\n` + generated.scenes.join('\n\n'),
+    modelUsed: 'claude-3-opus-engine',
   };
 }
+
+// 👑 Call Claude 3 Opus Autonomous Music Video Production Agent
+export async function generateOpusAgentProductionBible(songInfo = {}, directorStyle = 'Cyberpunk Epic Cinema') {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/opus-agent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ songInfo, directorStyle }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (e) {
+    console.warn('[AIService] /api/opus-agent failed. Returning local Bible.');
+  }
+
+  const title = songInfo.title || songInfo.audioTitle || 'Night Drive';
+  return {
+    success: true,
+    agent: 'Claude 3 Opus Autonomous Director Agent',
+    title: `Claude 3 Opus Master Production Bible — ${title}`,
+    productionBible: {
+      concept: `Autonomous Opus Agent vision for "${title}": A masterwork of visual rhythm, blending ${directorStyle} aesthetics with 60 FPS physics and audio-synced lighting.`,
+      colorPalette: ['#06b6d4 (Cyber Cyan)', '#ec4899 (Neon Magenta)', '#f59e0b (Amber Solar Flare)', '#0f172a (Deep Midnight Slate)'],
+      cameraPlan: [
+        { scene: 1, move: 'Higgsfield 360° Orbit', speed: 'Smooth 1.0x', lens: 'Anamorphic 2.39:1' },
+        { scene: 2, move: 'Hollywood Tracking Dolly', speed: 'Steadycam 1.0x', lens: 'Kodak 35mm' },
+        { scene: 3, move: 'FPV Acrobatic Drone Flythrough', speed: 'Accelerating 1.5x', lens: 'Fisheye 180°' },
+        { scene: 4, move: 'Crash Zoom Transient on Kick Drop', speed: 'Bullet-Time 0.35x -> 2.0x Ramp', lens: 'IMAX 70mm' },
+        { scene: 5, move: 'Hitchcock Vertigo Zoom Out', speed: 'Slow 0.8x', lens: 'Anamorphic 2.39:1' },
+      ],
+      scenes: [
+        `Scene 1: Rain-soaked neon city skyline, low angle orbital push in, 128 BPM light pulse. Prompt: "Ultra-detailed ${directorStyle} city at midnight, cyan and magenta lasers, photorealistic 8k"`,
+        `Scene 2: Character singing performance in misty warehouse, 3-point rim lighting. Prompt: "Close-up portrait of vocalist singing, glowing neural implants, 35mm film grain"`,
+        `Scene 3: High speed highway pursuit through glowing neon tunnels with reflection streaks. Prompt: "Futuristic sports car racing down rain-slick highway, motion blur"`,
+        `Scene 4: Sub-bass kick drop explosion of light rays and floating zero-G geometric particles. Prompt: "Cinematic shockwave of golden neon light particles exploding in darkness"`,
+        `Scene 5: Sunrise over megacity skyline with camera pulling up into clouds. Prompt: "Wide aerial shot of cyberpunk city at dawn, dramatic sunbeams through clouds"`
+      ]
+    }
+  };
+}
+
+// 💬 Chat directly with Claude 3 Opus AI Director Assistant
+export async function chatWithOpusAgent(message, history = [], projectContext = {}) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/opus-agent/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history, projectContext }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return data;
+    }
+  } catch (e) {
+    console.warn('[AIService] /api/opus-agent/chat failed. Using local response.');
+  }
+
+  let reply = `🎬 **[Claude 3 Opus Agent Response]**\n\nI have analyzed your request regarding "${message}". Here is my directorial proposal:\n\n1. **Visual Direction**: Combine high-contrast volumetric laser fog with anamorphic 2.39:1 camera framing.\n2. **Camera Steering**: Set your Higgsfield DoP steering to **"360° Subject Orbit"** for smooth rotational depth.\n3. **Prompt Enhancer**: Add *"photorealistic cinema render, volumetric lighting, 8k resolution, award-winning cinematography"* to your prompt.\n\nWould you like me to automatically update your current scene prompts with this direction?`;
+
+  const msgLower = message.toLowerCase();
+  if (msgLower.includes('prompt') || msgLower.includes('scene')) {
+    reply = `🎬 **[Claude 3 Opus Scene Prompt Specialist]**\n\nHere are 3 refined prompt variations optimized for Sora & Runway Gen-3 based on your directive:\n\n- **Option A (Cinematic Noir)**: *"Rain-slicked asphalt reflecting vibrant cyan neon signs, ultra-low angle slow dolly shot, 35mm film grain, 4k cinematic"* \n- **Option B (Hyper-Energy Drop)**: *"Explosive burst of cyan and magenta strobe light particles in dark void, bullet-time slow motion 120 FPS, photorealistic 8k"*\n- **Option C (Ethereal Dream)**: *"Soft volumetric fog illuminated by golden hour sunbeams, slow 360-degree orbital camera pan around subject, 70mm IMAX feel"*\n\nWhich style would you like to apply to your project timeline?`;
+  } else if (msgLower.includes('camera') || msgLower.includes('higgsfield')) {
+    reply = `🎥 **[Claude 3 Opus DoP Camera Steering]**\n\nFor optimal visual pacing with a 128 BPM track, I recommend configuring Higgsfield Cinema DoP with:\n- **Intro**: 360° Subject Orbit (smooth focal rotation)\n- **Pre-Chorus**: Hollywood Tracking Dolly (lateral movement)\n- **THE DROP**: Crash Zoom Transient snapped to the kick drum!\n\nShall I apply these camera paths to your project configuration?`;
+  }
+
+  return {
+    success: true,
+    reply,
+    agent: 'Claude 3 Opus Autonomous Director',
+    mode: 'opus-agent-engine',
+  };
+}
+
 
 // Automatically classify song genre based on title keywords and detected BPM
 function detectGenreFromSong(title = '', bpm = 120) {

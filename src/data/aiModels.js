@@ -247,6 +247,16 @@ export const HIGGSFIELD_VELOCITY_PRESETS = [
 
 export const AI_STORYLINE_GENERATORS = [
   {
+    id: 'claude_opus',
+    name: 'Claude 3 Opus Autonomous Director & Agent',
+    badge: 'FLAGSHIP AUTONOMOUS AGENT',
+    provider: 'Anthropic Claude',
+    tagline: 'Autonomous AI Director Agent that orchestrates full music video production bibles, Higgsfield DoP steering, character arcs, and AI scene prompts.',
+    features: ['Autonomous AI Director Agent', 'Higgsfield DoP Camera Steering', 'Multi-Act Production Bible', 'Sora & Runway Prompt Synthesis'],
+    icon: '👑',
+    featured: true,
+  },
+  {
     id: 'gemini_flash',
     name: 'Google Gemini 1.5 Flash',
     badge: 'LYRIC-TO-SCENE MATCH',
@@ -292,3 +302,36 @@ export const AI_STORYLINE_GENERATORS = [
     icon: '💥',
   },
 ];
+
+// Claude 3 Opus Directorial Styles & Modes
+export const OPUS_DIRECTOR_PRESETS = [
+  {
+    id: 'opus-cyber-epic',
+    name: 'Opus Cyberpunk Masterclass',
+    style: 'Cyberpunk Epic Cinema',
+    palette: 'Cyan, Neon Magenta, Deep Midnight Slate',
+    description: 'High-octane futuristic metropolis with volumetric laser fog and 360° orbital camera movement.',
+  },
+  {
+    id: 'opus-surreal-dream',
+    name: 'Opus Surreal Metaphor',
+    style: 'Ethereal & Poetic Dreamscape',
+    palette: 'Lavender, Solar Flare Gold, Soft Emerald',
+    description: 'Poetic visual metaphors, zero-G light particles, and slow vertigo dolly sweeps.',
+  },
+  {
+    id: 'opus-hollywood-noir',
+    name: 'Opus 35mm Film Noir',
+    style: 'High-Contrast Neo-Noir',
+    palette: 'B&W Monochrome, Crimson Flare, Amber Highlights',
+    description: 'Dramatic 3-point rim lighting, shadow silhouettes, and 35mm film grain textures.',
+  },
+  {
+    id: 'opus-hyper-drop',
+    name: 'Opus Sub-Bass 808 Blitz',
+    style: 'High-Velocity Audio Reactive',
+    palette: 'Strobe Electric Cyan, Ultraviolet, Gold Flash',
+    description: 'Explosive crash-zoom transitions snapped directly to sub-bass kick drops and audio peaks.',
+  },
+];
+

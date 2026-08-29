@@ -17,6 +17,7 @@ import {
   Upload,
   CheckCircle,
   Play,
+  Crown,
 } from 'lucide-react';
 import { DANCE_STYLES } from '../../services/AIDanceEngine';
 import { SPECIAL_EFFECTS_PRESETS } from '../../services/AISpecialEffectsEngine';
@@ -145,6 +146,7 @@ export default function FeatureStudioModal({
               <Flame className="w-3.5 h-3.5 fill-rose-500 text-rose-500" /> HOT:
             </span>
             {[
+              { id: 'opus_agent', label: 'Claude 3 Opus Agent', icon: Crown },
               { id: 'music_video', label: 'Music Video', icon: Film },
               { id: 'ai_video', label: 'AI Video', icon: Video },
               { id: 'special_effects', label: 'AI FX Presets', icon: Sparkles },
