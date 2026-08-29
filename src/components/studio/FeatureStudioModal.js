@@ -223,6 +223,64 @@ export default function FeatureStudioModal({
         <div className="flex-1 p-6 overflow-y-auto max-h-[68vh]">
           
           {/* ======================================================== */}
+          {/* 0. CLAUDE 3 OPUS AGENT (FLAGSHIP HOT) */}
+          {/* ======================================================== */}
+          {activeTab === 'opus_agent' && (
+            <div className="space-y-5">
+              <div className="bg-gradient-to-r from-amber-950/50 via-slate-900 to-slate-950 p-5 rounded-2xl border border-amber-500/40 shadow-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-400/50 text-amber-300">
+                    <Crown className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-amber-300">
+                      Claude 3 Opus Autonomous AI Director Agent
+                    </h4>
+                    <p className="text-xs text-slate-300">
+                      Anthropic's flagship model orchestrates complete music video production bibles, Higgsfield DoP camera angles, and Sora/Runway Gen-3 prompts.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-amber-400">👑 Flagship Agent</span>
+                  <p className="text-xs text-slate-300">
+                    Autonomous audio analysis, lyrics visual matching, and multi-act scene script production.
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-cyan-400">🎥 Higgsfield DoP Steering</span>
+                  <p className="text-xs text-slate-300">
+                    Auto-configures 360° orbits, Hitchcock vertigo dollies, and crash zooms to 808 kick drops.
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-rose-400">⚡ AI Scene Prompts</span>
+                  <p className="text-xs text-slate-300">
+                    Generates 8K raytraced prompts customized for Sora, Runway Gen-3, Kling 1.5 & Pika 2.0.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onUpdateProject({ selectedStoryGenerator: 'claude_opus' });
+                    onClose();
+                  }}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-amber-500/25"
+                >
+                  <Crown className="w-4 h-4 fill-slate-950" />
+                  <span>Activate Claude 3 Opus Master Director</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
           {/* 1. MUSIC VIDEO (HOT) */}
           {/* ======================================================== */}
           {activeTab === 'music_video' && (
