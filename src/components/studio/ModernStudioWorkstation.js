@@ -20,6 +20,7 @@ import FreebeatAutoDirectorModal from '../common/FreebeatAutoDirectorModal';
 import FeatureStudioModal from './FeatureStudioModal';
 import OpusAgentAssistantDrawer from '../common/OpusAgentAssistantDrawer';
 import { VideoGenerator } from '../../services/VideoGenerator';
+import { generateAllSceneVideos, pollAllScenesUntilDone, AI_VIDEO_GEN_MODELS } from '../../services/AIVideoGenerationService';
 import { audioEngine } from '../../services/AudioEngine';
 import { SongStructureAnalyzer } from '../../services/SongStructureAnalyzer';
 import { ProjectStorage, formatRelativeSaveTime } from '../../services/ProjectStorage';
@@ -74,6 +75,9 @@ export default function ModernStudioWorkstation({
   const [isOpusAgentOpen, setIsOpusAgentOpen] = useState(false);
   const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
   const [featureModalTab, setFeatureModalTab] = useState('music_video');
+  const [isGeneratingAIVideo, setIsGeneratingAIVideo] = useState(false);
+  const [aiVideoProgress, setAiVideoProgress] = useState({ completed: 0, total: 0, status: '' });
+  const [aiVideoModel, setAiVideoModel] = useState('kling_ai');
   const [isProjectsMenuOpen, setIsProjectsMenuOpen] = useState(false);
   const [savedProjects, setSavedProjects] = useState(() => ProjectStorage.list());
   const [saveStatus, setSaveStatus] = useState(null);
@@ -236,6 +240,61 @@ export default function ModernStudioWorkstation({
     }
   };
 
+  const handleGenerateAIVideo = async () => {
+    setIsPlaying(false);
+    setIsGeneratingAIVideo(true);
+    setAiVideoProgress({ completed: 0, total: 0, status: 'Preparing scenes...' });
+
+    // Build scene prompts from screenplay or project images
+    const scenes = project.screenplay?.scenes?.length > 0
+      ? project.screenplay.scenes.map(s => s.directive || s.title || 'Cinematic 4K visual scene')
+      : project.images.map((_, idx) => `Scene ${idx + 1}: Cinematic 4K music video shot, volumetric lighting, photorealistic, 60 FPS`);
+
+    setAiVideoProgress({ completed: 0, total: scenes.length, status: 'Submitting to AI...' });
+
+    try {
+      const result = await generateAllSceneVideos(scenes, aiVideoModel, {
+        aspectRatio: project.aspectRatio || '16:9',
+        duration: '5',
+      });
+
+      if (result.mode === 'fallback') {
+        // Immediate fallback — load sample videos
+        const newImages = result.results.map(r => r.videoUrl);
+        setProject(prev => ({
+          ...prev,
+          images: newImages,
+          generatedVideoClips: result.results,
+        }));
+        setAiVideoProgress({ completed: scenes.length, total: scenes.length, status: 'Complete (sample videos)' });
+      } else if (result.mode === 'generating') {
+        // Real generation — poll for results
+        setAiVideoProgress({ completed: 0, total: scenes.length, status: 'Generating...' });
+        const finalResults = await pollAllScenesUntilDone(
+          result.requestIds,
+          (completed, total) => {
+            setAiVideoProgress({ completed, total, status: `Generating scene ${completed}/${total}...` });
+          }
+        );
+
+        const newImages = finalResults.map(r =>
+          r?.videoUrl || project.images[r?.sceneIndex] || project.images[0]
+        );
+        setProject(prev => ({
+          ...prev,
+          images: newImages,
+          generatedVideoClips: finalResults,
+        }));
+        setAiVideoProgress({ completed: scenes.length, total: scenes.length, status: 'All scenes complete!' });
+      }
+    } catch (err) {
+      console.error('[AI Video Generation Error]:', err);
+      setAiVideoProgress(prev => ({ ...prev, status: `Error: ${err.message}` }));
+    }
+
+    setTimeout(() => setIsGeneratingAIVideo(false), 2000);
+  };
+
   const handleSaveProject = () => {
     ProjectStorage.save(project.artistName, project);
     setSavedProjects(ProjectStorage.list());
@@ -381,6 +440,16 @@ export default function ModernStudioWorkstation({
         </div>
 
         <div className="toolbar-right">
+          <button
+            type="button"
+            className="toolbar-quick-btn"
+            onClick={handleGenerateAIVideo}
+            disabled={isGeneratingAIVideo}
+            style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', color: '#fff', fontWeight: 800, border: 'none' }}
+          >
+            <Film className="w-3.5 h-3.5" />
+            <span>🎬 Generate AI Video</span>
+          </button>
           <button
             type="button"
             className="export-master-btn"
@@ -586,6 +655,42 @@ export default function ModernStudioWorkstation({
               />
             </div>
             <div className="export-modal-pct" style={{ marginTop: 10 }}>{exportProgress}% Complete</div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Video Generation Progress Modal */}
+      {isGeneratingAIVideo && (
+        <div className="studio-modal-backdrop">
+          <div className="studio-modal-box" style={{ textAlign: 'center' }}>
+            <div className="export-modal-icon">
+              <Film className="w-6 h-6" style={{ color: '#8b5cf6' }} />
+            </div>
+            <h3 className="export-modal-title" style={{ marginTop: 16 }}>
+              🎬 Generating AI Video Clips
+            </h3>
+            <p className="export-modal-sub" style={{ marginTop: 6, marginBottom: 8, color: '#94a3b8' }}>
+              {aiVideoProgress.status}
+            </p>
+            <p className="export-modal-sub" style={{ marginBottom: 16, fontSize: '11px', color: '#64748b' }}>
+              Model: {AI_VIDEO_GEN_MODELS.find(m => m.id === aiVideoModel)?.name || aiVideoModel}
+            </p>
+            <div className="export-progress-track">
+              <div
+                className="export-progress-fill"
+                style={{
+                  width: aiVideoProgress.total > 0
+                    ? `${Math.round((aiVideoProgress.completed / aiVideoProgress.total) * 100)}%`
+                    : '15%',
+                  background: 'linear-gradient(90deg, #06b6d4, #8b5cf6)',
+                }}
+              />
+            </div>
+            <div className="export-modal-pct" style={{ marginTop: 10 }}>
+              {aiVideoProgress.total > 0
+                ? `${aiVideoProgress.completed} / ${aiVideoProgress.total} scenes`
+                : 'Initializing...'}
+            </div>
           </div>
         </div>
       )}

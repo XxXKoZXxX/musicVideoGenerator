@@ -109,6 +109,283 @@ app.post('/api/generate', async (req, res) => {
   }, 800);
 });
 
+// ============================================================
+// AI VIDEO GENERATION via fal.ai Unified Gateway
+// ============================================================
+
+// fal.ai model endpoint map
+const FAL_MODEL_ENDPOINTS = {
+  'kling_ai':       'fal-ai/kling-video/v2/master/text-to-video',
+  'luma_dream':     'fal-ai/luma-dream-machine',
+  'runway_gen3':    'fal-ai/runway-gen3/turbo/image-to-video',
+  'minimax':        'fal-ai/minimax-video/video-01-live/text-to-video',
+  'stable_video':   'fal-ai/stable-video',
+  'sora_ai':        'fal-ai/runway-gen3/turbo/image-to-video', // maps to best available
+  'higgsfield_dop': 'fal-ai/kling-video/v2/master/text-to-video',
+  'pika_20':        'fal-ai/minimax-video/video-01-live/text-to-video',
+  'kaiber_ai':      'fal-ai/luma-dream-machine',
+  'domo_ai':        'fal-ai/minimax-video/video-01-live/text-to-video',
+};
+
+// In-memory job tracker for async generation
+const activeJobs = new Map();
+
+function getFalKey(userKey) {
+  return userKey || process.env.FAL_KEY || '';
+}
+
+// Helper: call fal.ai queue API
+async function falSubmitGeneration(falKey, modelEndpoint, prompt, options = {}) {
+  const url = `https://queue.fal.run/${modelEndpoint}`;
+  const body = {
+    prompt,
+    aspect_ratio: options.aspectRatio || '16:9',
+    duration: options.duration || '5',
+    ...(options.negativePrompt ? { negative_prompt: options.negativePrompt } : {}),
+  };
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Key ${falKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`fal.ai submit failed (${response.status}): ${errText}`);
+  }
+
+  return response.json(); // { request_id, status_url, response_url, ... }
+}
+
+// Helper: poll fal.ai status
+async function falPollStatus(falKey, statusUrl) {
+  const response = await fetch(statusUrl, {
+    headers: { 'Authorization': `Key ${falKey}` },
+  });
+  if (!response.ok) {
+    throw new Error(`fal.ai status poll failed: ${response.status}`);
+  }
+  return response.json(); // { status: 'IN_QUEUE' | 'IN_PROGRESS' | 'COMPLETED', ... }
+}
+
+// Helper: get fal.ai result
+async function falGetResult(falKey, responseUrl) {
+  const response = await fetch(responseUrl, {
+    headers: { 'Authorization': `Key ${falKey}` },
+  });
+  if (!response.ok) {
+    throw new Error(`fal.ai result fetch failed: ${response.status}`);
+  }
+  return response.json(); // { video: { url, ... }, ... }
+}
+
+// Generate a single AI video clip from a text prompt
+app.post('/api/ai-video/generate', async (req, res) => {
+  const { prompt, model, apiKey, options } = req.body;
+  const falKey = getFalKey(apiKey);
+
+  if (!prompt) {
+    return res.status(400).json({ success: false, error: 'Missing prompt' });
+  }
+
+  console.log(`[AI-Video] Generate request | model: ${model || 'kling_ai'} | prompt: "${prompt.substring(0, 80)}..."`);
+
+  // If no API key, return sample video fallback
+  if (!falKey) {
+    console.log('[AI-Video] No FAL_KEY set — returning sample video fallback');
+    const sampleKey = model && SAMPLE_VIDEOS[model.replace('_ai', '').replace('_gen3', '')] ? model.replace('_ai', '').replace('_gen3', '') : 'default';
+    const sample = SAMPLE_VIDEOS[sampleKey] || SAMPLE_VIDEOS.default;
+    return setTimeout(() => {
+      res.json({
+        success: true,
+        mode: 'fallback',
+        videoUrl: sample.url,
+        thumbnailUrl: sample.thumbnail,
+        duration: 5,
+        model: model || 'kling_ai',
+        message: 'Using sample video (no FAL_KEY configured). Add FAL_KEY to .env for real AI generation.',
+      });
+    }, 1200);
+  }
+
+  // Real fal.ai generation
+  const endpoint = FAL_MODEL_ENDPOINTS[model] || FAL_MODEL_ENDPOINTS['kling_ai'];
+  try {
+    const submission = await falSubmitGeneration(falKey, endpoint, prompt, options || {});
+    const requestId = submission.request_id;
+
+    // Store job for polling
+    activeJobs.set(requestId, {
+      status: 'IN_QUEUE',
+      model,
+      prompt,
+      statusUrl: submission.status_url || `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
+      responseUrl: submission.response_url || `https://queue.fal.run/${endpoint}/requests/${requestId}`,
+      createdAt: Date.now(),
+    });
+
+    // Begin background polling
+    pollJobUntilDone(falKey, requestId);
+
+    res.json({
+      success: true,
+      mode: 'generating',
+      requestId,
+      model,
+      message: `Video generation submitted to fal.ai (${endpoint})`,
+    });
+  } catch (err) {
+    console.error('[AI-Video] fal.ai submission error:', err.message);
+    // Fallback to sample on error
+    const sample = SAMPLE_VIDEOS.default;
+    res.json({
+      success: true,
+      mode: 'fallback',
+      videoUrl: sample.url,
+      thumbnailUrl: sample.thumbnail,
+      duration: 5,
+      model: model || 'kling_ai',
+      error: err.message,
+      message: 'fal.ai API error — falling back to sample video.',
+    });
+  }
+});
+
+// Poll fal.ai job in background until complete
+async function pollJobUntilDone(falKey, requestId) {
+  const job = activeJobs.get(requestId);
+  if (!job) return;
+
+  const maxAttempts = 120; // 120 × 3s = 6 minutes max
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+
+    try {
+      const status = await falPollStatus(falKey, job.statusUrl);
+      job.status = status.status || 'IN_PROGRESS';
+
+      if (status.status === 'COMPLETED') {
+        // Fetch final result
+        const result = await falGetResult(falKey, job.responseUrl);
+        job.status = 'COMPLETED';
+        job.videoUrl = result.video?.url || result.output?.video?.url || '';
+        job.thumbnailUrl = result.video?.thumbnail_url || '';
+        job.duration = result.video?.duration || 5;
+        console.log(`[AI-Video] Job ${requestId} COMPLETED: ${job.videoUrl}`);
+        return;
+      }
+
+      if (status.status === 'FAILED') {
+        job.status = 'FAILED';
+        job.error = status.error || 'Generation failed';
+        console.error(`[AI-Video] Job ${requestId} FAILED:`, job.error);
+        return;
+      }
+    } catch (err) {
+      console.warn(`[AI-Video] Poll error for ${requestId}:`, err.message);
+    }
+  }
+
+  job.status = 'TIMEOUT';
+  job.error = 'Generation timed out after 6 minutes';
+}
+
+// Check status of a generation job
+app.get('/api/ai-video/status/:requestId', (req, res) => {
+  const { requestId } = req.params;
+  const job = activeJobs.get(requestId);
+
+  if (!job) {
+    return res.status(404).json({ success: false, error: 'Job not found' });
+  }
+
+  res.json({
+    success: true,
+    requestId,
+    status: job.status,
+    videoUrl: job.videoUrl || null,
+    thumbnailUrl: job.thumbnailUrl || null,
+    duration: job.duration || null,
+    error: job.error || null,
+    model: job.model,
+  });
+});
+
+// Batch: generate AI video for multiple scene prompts
+app.post('/api/ai-video/generate-scenes', async (req, res) => {
+  const { scenes, model, apiKey, options } = req.body;
+  const falKey = getFalKey(apiKey);
+
+  if (!scenes || !Array.isArray(scenes) || scenes.length === 0) {
+    return res.status(400).json({ success: false, error: 'Missing scenes array' });
+  }
+
+  console.log(`[AI-Video] Batch generation | ${scenes.length} scenes | model: ${model || 'kling_ai'}`);
+
+  // Fallback mode
+  if (!falKey) {
+    console.log('[AI-Video] No FAL_KEY — returning sample videos for all scenes');
+    const sampleKeys = Object.keys(SAMPLE_VIDEOS).filter(k => k !== 'default');
+    const results = scenes.map((scene, idx) => {
+      const sk = sampleKeys[idx % sampleKeys.length];
+      const sample = SAMPLE_VIDEOS[sk];
+      return {
+        sceneIndex: idx,
+        prompt: typeof scene === 'string' ? scene : scene.prompt,
+        mode: 'fallback',
+        videoUrl: sample.url,
+        thumbnailUrl: sample.thumbnail,
+        duration: 5,
+      };
+    });
+
+    return setTimeout(() => {
+      res.json({ success: true, mode: 'fallback', results, message: 'Sample videos (no FAL_KEY).' });
+    }, 800);
+  }
+
+  // Real batch generation
+  const endpoint = FAL_MODEL_ENDPOINTS[model] || FAL_MODEL_ENDPOINTS['kling_ai'];
+  const requestIds = [];
+
+  for (let idx = 0; idx < scenes.length; idx++) {
+    const scenePrompt = typeof scenes[idx] === 'string' ? scenes[idx] : scenes[idx].prompt;
+    try {
+      const submission = await falSubmitGeneration(falKey, endpoint, scenePrompt, options || {});
+      const requestId = submission.request_id;
+
+      activeJobs.set(requestId, {
+        status: 'IN_QUEUE',
+        model,
+        prompt: scenePrompt,
+        sceneIndex: idx,
+        statusUrl: submission.status_url || `https://queue.fal.run/${endpoint}/requests/${requestId}/status`,
+        responseUrl: submission.response_url || `https://queue.fal.run/${endpoint}/requests/${requestId}`,
+        createdAt: Date.now(),
+      });
+
+      pollJobUntilDone(falKey, requestId);
+      requestIds.push({ sceneIndex: idx, requestId });
+    } catch (err) {
+      console.error(`[AI-Video] Scene ${idx} submission error:`, err.message);
+      requestIds.push({ sceneIndex: idx, requestId: null, error: err.message });
+    }
+  }
+
+  res.json({
+    success: true,
+    mode: 'generating',
+    requestIds,
+    totalScenes: scenes.length,
+    model,
+    message: `${requestIds.filter(r => r.requestId).length}/${scenes.length} scenes submitted to fal.ai`,
+  });
+});
+
 // Helper to get Anthropic instance
 function getAnthropicClient(userKey) {
   const apiKey = userKey || process.env.ANTHROPIC_API_KEY;
