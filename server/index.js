@@ -467,6 +467,7 @@ app.post('/api/opus-agent', async (req, res) => {
   const title = songInfo?.title || songInfo?.audioTitle || 'Night Drive';
   const bpm = songInfo?.bpm || 128;
   const style = directorStyle || 'Cyberpunk Epic Cinema';
+  const loreText = characterLore ? `\nCharacter / Subject Lore: ${characterLore}` : '';
 
   console.log(`[OpusAgent] Orchestrating full autonomous video plan for "${title}"`);
 
@@ -477,7 +478,7 @@ app.post('/api/opus-agent', async (req, res) => {
         max_tokens: 2000,
         messages: [{
           role: 'user',
-          content: `You are Claude 3 Opus Autonomous Music Video Director Agent. Create a complete production bible for the song "${title}" (${bpm} BPM, genre/style: ${style}). Include:\n1. Overall Aesthetic Directive & Color Palette\n2. Higgsfield DoP Camera Movement Plan (Orbit, Vertigo, Drone, Crash Zoom)\n3. 6 Detailed Scene Prompts for AI Video Generators (Sora / Runway Gen-3)\n4. Character Performance & Lip-Sync Cues\n5. Beat Drop & Visual FX Sync Schedule.`
+          content: `You are Claude 3 Opus Autonomous Music Video Director Agent. Create a complete production bible for the song "${title}" (${bpm} BPM, genre/style: ${style}).${loreText}\nInclude:\n1. Overall Aesthetic Directive & Color Palette\n2. Higgsfield DoP Camera Movement Plan (Orbit, Vertigo, Drone, Crash Zoom)\n3. 6 Detailed Scene Prompts for AI Video Generators (Sora / Runway Gen-3)\n4. Character Performance & Lip-Sync Cues\n5. Beat Drop & Visual FX Sync Schedule.`
         }]
       });
 
@@ -536,10 +537,11 @@ app.post('/api/opus-agent/chat', async (req, res) => {
       }));
       messages.push({ role: 'user', content: message });
 
+      const contextStr = projectContext ? ` Current project: ${JSON.stringify(projectContext)}.` : '';
       const response = await anthropic.messages.create({
         model: 'claude-3-opus-20240229',
         max_tokens: 1000,
-        system: `You are Claude 3 Opus, the world-class Autonomous AI Music Video Director Assistant for MusicVid Studio. Help the creator refine scene prompts, select Higgsfield DoP camera moves, adjust color palettes, write lyric visuals, and optimize video generation settings. Be enthusiastic, creative, authoritative, and concise.`,
+        system: `You are Claude 3 Opus, the world-class Autonomous AI Music Video Director Assistant for MusicVid Studio. Help the creator refine scene prompts, select Higgsfield DoP camera moves, adjust color palettes, write lyric visuals, and optimize video generation settings. Be enthusiastic, creative, authoritative, and concise.${contextStr}`,
         messages
       });
 

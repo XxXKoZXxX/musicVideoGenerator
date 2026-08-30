@@ -11,7 +11,6 @@ import {
   Save,
   FolderOpen,
   Trash2,
-  Bot,
   Crown,
 } from 'lucide-react';
 import StudioInspectorPanel from './StudioInspectorPanel';
@@ -440,6 +439,28 @@ export default function ModernStudioWorkstation({
         </div>
 
         <div className="toolbar-right">
+          <select
+            value={aiVideoModel}
+            onChange={(e) => setAiVideoModel(e.target.value)}
+            title="Select AI Video Model"
+            style={{
+              background: '#0f172a',
+              border: '1px solid rgba(6, 182, 212, 0.4)',
+              color: '#38bdf8',
+              borderRadius: 8,
+              padding: '4px 8px',
+              fontSize: '11px',
+              fontWeight: 700,
+              cursor: 'pointer',
+              outline: 'none',
+            }}
+          >
+            {AI_VIDEO_GEN_MODELS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.icon} {m.name}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             className="toolbar-quick-btn"
