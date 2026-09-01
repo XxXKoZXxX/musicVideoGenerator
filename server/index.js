@@ -1,13 +1,26 @@
 require('dotenv').config();
+const fs = require('fs');
+const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const Anthropic = require('@anthropic-ai/sdk');
+const {
+  createRenderJob,
+  getJobStatus,
+  listCompletedRenders,
+  deleteRenderJob,
+  RENDERS_DIR,
+} = require('./renderEngine');
 
 const app = express();
 const PORT = process.env.VIDEO_PORT || 4000;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '60mb' }));
+app.use(express.urlencoded({ limit: '60mb', extended: true }));
+
+// Serve locally generated video masters
+app.use('/renders', express.static(RENDERS_DIR));
 
 // List of supported video generators (renderer back‑ends)
 const GENERATORS = [
@@ -70,9 +83,23 @@ const SAMPLE_VIDEOS = {
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    service: 'Astraea Video & Claude Opus AI Agent Server',
-    version: '1.3.0',
-    endpoints: ['/api/generators', '/api/generate', '/api/ai-video/generate', '/api/ai-video/generate-scenes', '/api/ai-video/status/:id', '/api/claude', '/api/opus-agent', '/api/opus-agent/chat', '/health'],
+    service: 'Astraea Video, Local Render Engine & Claude Opus AI Agent Server',
+    version: '2.0.0',
+    endpoints: [
+      '/api/generators',
+      '/api/generate',
+      '/api/server-render/create',
+      '/api/server-render/status/:jobId',
+      '/api/server-render/list',
+      '/api/server-render/download/:filename',
+      '/api/ai-video/generate',
+      '/api/ai-video/generate-scenes',
+      '/api/ai-video/status/:id',
+      '/api/claude',
+      '/api/opus-agent',
+      '/api/opus-agent/chat',
+      '/health',
+    ],
   });
 });
 
@@ -386,6 +413,86 @@ app.post('/api/ai-video/generate-scenes', async (req, res) => {
   });
 });
 
+// ============================================================
+// DEDICATED LOCAL SERVER VIDEO RENDERING ENGINE
+// ============================================================
+
+// Start a new local video rendering job on the server
+app.post('/api/server-render/create', async (req, res) => {
+  try {
+    const { project, options } = req.body;
+    if (!project) {
+      return res.status(400).json({ success: false, error: 'Project data is required.' });
+    }
+
+    console.log(`[ServerRender] Received render request for project: "${project.audioTitle || project.artistName || 'Untitled'}"`);
+    const job = createRenderJob(project, options || {});
+
+    res.json({
+      success: true,
+      jobId: job.id,
+      status: job.status,
+      stage: job.stage,
+      videoUrl: job.videoUrl,
+      downloadUrl: job.downloadUrl,
+      message: 'Video rendering job initiated on local server.',
+    });
+  } catch (err) {
+    console.error('[ServerRender] Failed to initiate render job:', err);
+    res.status(500).json({ success: false, error: err.message || 'Render initiation failed' });
+  }
+});
+
+// Check the progress and status of an active render job
+app.get('/api/server-render/status/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const status = getJobStatus(jobId);
+
+  if (!status) {
+    return res.status(404).json({ success: false, error: 'Render job not found.' });
+  }
+
+  res.json({
+    success: true,
+    job: status,
+  });
+});
+
+// List all completed video renders available on the server
+app.get('/api/server-render/list', (req, res) => {
+  try {
+    const renders = listCompletedRenders();
+    res.json({
+      success: true,
+      count: renders.length,
+      renders,
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Direct download endpoint for a rendered video file
+app.get('/api/server-render/download/:filename', (req, res) => {
+  const { filename } = req.params;
+  // Security sanitization to avoid path traversal
+  const safeFilename = path.basename(filename);
+  const filePath = path.join(RENDERS_DIR, safeFilename);
+
+  if (!fs.existsSync(filePath)) {
+    return res.status(404).json({ success: false, error: 'File not found.' });
+  }
+
+  res.download(filePath, safeFilename);
+});
+
+// Delete a rendered video from the server
+app.delete('/api/server-render/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const deleted = deleteRenderJob(jobId);
+  res.json({ success: deleted, message: deleted ? 'Job deleted' : 'Job not found' });
+});
+
 // Helper to get Anthropic instance
 function getAnthropicClient(userKey) {
   const apiKey = userKey || process.env.ANTHROPIC_API_KEY;
@@ -576,7 +683,10 @@ app.post('/api/opus-agent/chat', async (req, res) => {
   }, 500);
 });
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Video generation & Claude 3 Opus Agent server listening on http://localhost:${PORT}`);
-});
-
+if (require.main === module) {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 Video generation & Claude 3 Opus Agent server listening on http://localhost:${PORT}`);
+  });
+} else {
+  module.exports = app;
+}

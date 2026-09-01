@@ -7,5 +7,6 @@
   },
   "gitlens.launchpad.indicator.useColors": true,
   "serverpulse.ai.enabled": true,
-  "serverpulse.ai.optInShown": true
+  "serverpulse.ai.optInShown": true,
+  "php.suggest.basic": false
 }

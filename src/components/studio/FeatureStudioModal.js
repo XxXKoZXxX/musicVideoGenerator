@@ -18,6 +18,7 @@ import {
   CheckCircle,
   Play,
   Crown,
+  Zap,
 } from 'lucide-react';
 import { DANCE_STYLES } from '../../services/AIDanceEngine';
 import { SPECIAL_EFFECTS_PRESETS } from '../../services/AISpecialEffectsEngine';
@@ -199,6 +200,7 @@ export default function FeatureStudioModal({
               <Gift className="w-3.5 h-3.5 text-cyan-400" /> FREE:
             </span>
             {[
+              { id: 'server_engine', label: '🖥️ Server Render Engine', icon: Zap },
               { id: 'lyrics', label: 'Synced Lyrics', icon: Type },
               { id: 'stock_media', label: '100k+ Stock Media', icon: Search },
             ].map(tab => (
@@ -969,6 +971,78 @@ export default function FeatureStudioModal({
                     </div>
                   ))
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* ======================================================== */}
+          {/* 10. LOCAL SERVER VIDEO GENERATION ENGINE (NEW) */}
+          {/* ======================================================== */}
+          {activeTab === 'server_engine' && (
+            <div className="space-y-5">
+              <div className="bg-gradient-to-r from-emerald-950/40 via-slate-900 to-slate-950 p-5 rounded-2xl border border-emerald-500/30">
+                <h4 className="text-sm font-bold text-emerald-300 mb-1 flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-emerald-400" />
+                  <span>Dedicated Local Backend Video Server (Express + FFmpeg)</span>
+                </h4>
+                <p className="text-xs text-slate-300">
+                  Generate, composite, and export pristine MP4/WebM video files directly on your local backend (<code className="text-emerald-400">http://localhost:4000/api/server-render</code>).
+                </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 space-y-3">
+                  <div className="text-xs font-bold text-slate-200">Server Render Settings</div>
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Master Resolution:</label>
+                    <select
+                      value={project?.resolution || '1080p'}
+                      onChange={(e) => onUpdateProject({ resolution: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white outline-none focus:border-emerald-400"
+                    >
+                      <option value="1080p">1080p Full HD (1920x1080 / 1080x1920)</option>
+                      <option value="4K">4K Cinema Master (3840x2160 / 2160x3840)</option>
+                      <option value="720p">720p Fast Preview (1280x720)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Aspect Ratio Format:</label>
+                    <select
+                      value={project?.aspectRatio || '16:9'}
+                      onChange={(e) => onUpdateProject({ aspectRatio: e.target.value })}
+                      className="w-full bg-slate-950 border border-white/10 rounded-lg p-2 text-xs text-white outline-none focus:border-emerald-400"
+                    >
+                      <option value="16:9">16:9 Widescreen (YouTube / Cinema)</option>
+                      <option value="9:16">9:16 Vertical (TikTok / Reels / Shorts)</option>
+                      <option value="1:1">1:1 Square (Spotify Canvas / Instagram)</option>
+                      <option value="21:9">21:9 Ultrawide Scope</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900/60 p-4 rounded-xl border border-white/5 space-y-2">
+                  <div className="text-xs font-bold text-slate-200">Server Engine Features</div>
+                  <ul className="text-[11px] text-slate-400 space-y-1.5 list-disc pl-4">
+                    <li>Multi-scene zoompan & Ken Burns 6-axis camera physics</li>
+                    <li>Audio beat alignment & automatic audio muxing (AAC 192k)</li>
+                    <li>Faststart MP4 web container streaming</li>
+                    <li>Automatic persistent storage in <code className="text-emerald-400">server/renders/</code></li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                  }}
+                  className="px-6 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-emerald-500/25"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Save Engine Settings</span>
+                </button>
               </div>
             </div>
           )}

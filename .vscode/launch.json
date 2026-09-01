@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}"
+            ],
+            "name": "Launch Extension",
+            "outFiles": [
+                "${workspaceFolder}/out/**/*.js"
+            ],
+            "preLaunchTask": "npm",
+            "request": "launch",
+            "type": "extensionHost"
+        },
+        {
             "name": "Electron Main",
             "program": "${workspaceFolder}/main.js",
             "request": "launch",
@@ -63,6 +75,17 @@
                     // Path to your code in the Docker container
                 }
             ]
+        },
+        {
+            "name": "Run Script: start",
+            "type": "node",
+            "request": "launch",
+            "runtimeExecutable": "npm",
+            "args": [
+                "run",
+                "start"
+            ],
+            "cwd": "${workspaceFolder}"
         }
     ]
 }

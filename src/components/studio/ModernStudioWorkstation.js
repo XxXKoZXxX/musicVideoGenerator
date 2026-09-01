@@ -20,6 +20,7 @@ import FeatureStudioModal from './FeatureStudioModal';
 import OpusAgentAssistantDrawer from '../common/OpusAgentAssistantDrawer';
 import { VideoGenerator } from '../../services/VideoGenerator';
 import { generateAllSceneVideos, pollAllScenesUntilDone, AI_VIDEO_GEN_MODELS } from '../../services/AIVideoGenerationService';
+import { renderVideoOnServer, triggerBrowserDownload } from '../../services/LocalServerRenderService';
 import { audioEngine } from '../../services/AudioEngine';
 import { SongStructureAnalyzer } from '../../services/SongStructureAnalyzer';
 import { ProjectStorage, formatRelativeSaveTime } from '../../services/ProjectStorage';
@@ -77,6 +78,15 @@ export default function ModernStudioWorkstation({
   const [isGeneratingAIVideo, setIsGeneratingAIVideo] = useState(false);
   const [aiVideoProgress, setAiVideoProgress] = useState({ completed: 0, total: 0, status: '' });
   const [aiVideoModel, setAiVideoModel] = useState('kling_ai');
+  const [isServerRendering, setIsServerRendering] = useState(false);
+  const [serverRenderProgress, setServerRenderProgress] = useState({
+    progress: 0,
+    stage: 'Initializing',
+    status: 'QUEUED',
+    videoUrl: null,
+    downloadUrl: null,
+    error: null,
+  });
   const [isProjectsMenuOpen, setIsProjectsMenuOpen] = useState(false);
   const [savedProjects, setSavedProjects] = useState(() => ProjectStorage.list());
   const [saveStatus, setSaveStatus] = useState(null);
@@ -236,6 +246,46 @@ export default function ModernStudioWorkstation({
     } catch (err) {
       console.error(err);
       setIsExporting(false);
+    }
+  };
+
+  const handleServerRender = async () => {
+    setIsPlaying(false);
+    setIsServerRendering(true);
+    setServerRenderProgress({
+      progress: 5,
+      stage: 'Contacting local render engine...',
+      status: 'QUEUED',
+      videoUrl: null,
+      downloadUrl: null,
+      error: null,
+    });
+
+    try {
+      const result = await renderVideoOnServer(
+        project,
+        {
+          resolution: project.resolution || '1080p',
+          fps: 30,
+        },
+        (progressUpdate) => {
+          setServerRenderProgress((prev) => ({
+            ...prev,
+            ...progressUpdate,
+          }));
+        }
+      );
+
+      if (result.downloadUrl) {
+        triggerBrowserDownload(result.downloadUrl, `${project.artistName.replace(/\s+/g, '_')}_Server_Master.mp4`);
+      }
+    } catch (err) {
+      console.error('[ServerRender] Render error:', err);
+      setServerRenderProgress((prev) => ({
+        ...prev,
+        status: 'FAILED',
+        error: err.message || 'Server rendering failed.',
+      }));
     }
   };
 
@@ -470,6 +520,17 @@ export default function ModernStudioWorkstation({
           >
             <Film className="w-3.5 h-3.5" />
             <span>🎬 Generate AI Video</span>
+          </button>
+          <button
+            type="button"
+            className="toolbar-quick-btn"
+            onClick={handleServerRender}
+            disabled={isServerRendering}
+            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontWeight: 800, border: 'none' }}
+            title="Generate & composite full video on your local Express/FFmpeg backend"
+          >
+            <Zap className="w-3.5 h-3.5 text-white" />
+            <span>🖥️ Server Render</span>
           </button>
           <button
             type="button"
@@ -711,6 +772,95 @@ export default function ModernStudioWorkstation({
               {aiVideoProgress.total > 0
                 ? `${aiVideoProgress.completed} / ${aiVideoProgress.total} scenes`
                 : 'Initializing...'}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Local Backend Server Video Rendering Progress Modal */}
+      {isServerRendering && (
+        <div className="studio-modal-backdrop">
+          <div className="studio-modal-box" style={{ textAlign: 'center', maxWidth: 480 }}>
+            <div
+              className="export-modal-icon"
+              style={{
+                background: serverRenderProgress.status === 'FAILED'
+                  ? 'rgba(239, 68, 68, 0.2)'
+                  : 'rgba(16, 185, 129, 0.2)',
+                borderColor: serverRenderProgress.status === 'FAILED'
+                  ? 'rgba(239, 68, 68, 0.4)'
+                  : 'rgba(16, 185, 129, 0.4)',
+              }}
+            >
+              <Zap
+                className="w-6 h-6"
+                style={{
+                  color: serverRenderProgress.status === 'FAILED' ? '#ef4444' : '#10b981',
+                }}
+              />
+            </div>
+            <h3 className="export-modal-title" style={{ marginTop: 16 }}>
+              {serverRenderProgress.status === 'COMPLETED'
+                ? '✅ Server Video Render Complete!'
+                : serverRenderProgress.status === 'FAILED'
+                ? '⚠️ Render Encountered An Issue'
+                : '🖥️ Local Server Video Rendering...'}
+            </h3>
+            <p className="export-modal-sub" style={{ marginTop: 6, marginBottom: 12, color: '#94a3b8' }}>
+              {serverRenderProgress.error || serverRenderProgress.stage}
+            </p>
+
+            {serverRenderProgress.status !== 'FAILED' && (
+              <div className="export-progress-track" style={{ marginBottom: 12 }}>
+                <div
+                  className="export-progress-fill"
+                  style={{
+                    width: `${serverRenderProgress.progress}%`,
+                    background: 'linear-gradient(90deg, #10b981, #06b6d4)',
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="export-modal-pct" style={{ marginBottom: 16 }}>
+              {serverRenderProgress.progress}% Complete
+            </div>
+
+            {serverRenderProgress.videoUrl && (
+              <div style={{ marginTop: 16, marginBottom: 16 }}>
+                <video
+                  src={serverRenderProgress.videoUrl}
+                  controls
+                  autoPlay
+                  style={{
+                    width: '100%',
+                    maxHeight: 200,
+                    borderRadius: 12,
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                  }}
+                />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 10, marginTop: 12 }}>
+              {serverRenderProgress.downloadUrl && (
+                <a
+                  href={serverRenderProgress.downloadUrl}
+                  download
+                  className="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+                  style={{ textDecoration: 'none' }}
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Master File</span>
+                </a>
+              )}
+              <button
+                type="button"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-xs rounded-xl border border-white/10"
+                onClick={() => setIsServerRendering(false)}
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
