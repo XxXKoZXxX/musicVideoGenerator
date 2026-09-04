@@ -8,5 +8,17 @@
   "gitlens.launchpad.indicator.useColors": true,
   "serverpulse.ai.enabled": true,
   "serverpulse.ai.optInShown": true,
-  "php.suggest.basic": false
+  "php.suggest.basic": false,
+  "devManager.project.packageManager": "npm",
+  "devManager.project.servers": [
+    {
+      "id": "worker",
+      "label": "Worker",
+      "command": "npm run dev",
+      "path": "apps/web",
+      "port": 0,
+      "startWithAll": true
+    }
+  ],
+  "devManager.project.composePath": ""
 }
