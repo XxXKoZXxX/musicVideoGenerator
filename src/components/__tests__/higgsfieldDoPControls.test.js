@@ -1,7 +1,6 @@
 // higgsfieldDoPControls.test.js - Unit tests for HiggsfieldDoPControls component
-import React from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
 import HiggsfieldDoPControls from '../HiggsfieldDoPControls';
 
 describe('HiggsfieldDoPControls Component', () => {

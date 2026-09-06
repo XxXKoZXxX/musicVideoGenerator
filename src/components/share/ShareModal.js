@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Share2, Copy, Check, Smartphone, Globe, 
-  Send, Sparkles, ShieldCheck, Wifi
+  Send, Sparkles, ShieldCheck, Wifi, Bot, Video
 } from 'lucide-react';
 import { generateQRCodeSVG } from '../../utils/qrGenerator';
 
@@ -91,9 +91,14 @@ export default function ShareModal({
 
   if (!isOpen) return null;
 
+  const publicBaseUrl = networkInfo.publicUrl || networkInfo.wifiUrl || 'http://localhost:3210';
+  const openApiActionUrl = `${publicBaseUrl.replace(/\/+$/, '')}/openapi.json`;
+
   const activeShareUrl = urlType === 'wifi'
     ? networkInfo.wifiUrl
-    : (networkInfo.publicUrl || networkInfo.wifiUrl);
+    : urlType === 'chatgpt'
+      ? openApiActionUrl
+      : (networkInfo.publicUrl || networkInfo.wifiUrl);
 
   const qrCodeSvgDataUri = generateQRCodeSVG(activeShareUrl, {
     size: 240,

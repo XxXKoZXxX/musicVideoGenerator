@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
 import ModernStudioWorkstation from '../ModernStudioWorkstation';
 import MultiTrackTimeline from '../MultiTrackTimeline';
 import StudioInspectorPanel from '../StudioInspectorPanel';

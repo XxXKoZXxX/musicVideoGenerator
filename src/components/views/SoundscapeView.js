@@ -462,7 +462,7 @@ export default function SoundscapeView({ profile, onNavigate }) {
           const isCurrentActive = activeHz === f.hz;
           return (
             <div 
-              key={f.id}
+              key={f.hz}
               className={`freq-card glass-panel ${isCurrentActive ? 'active-freq' : ''}`}
               onClick={() => handleSelectHz(f.hz)}
             >

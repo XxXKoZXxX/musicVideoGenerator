@@ -5,11 +5,8 @@ import {
   Send,
   X,
   Camera,
-  Film,
   Flame,
   Palette,
-  Sliders,
-  CheckCircle,
   Wand2,
   RefreshCw,
 } from 'lucide-react';

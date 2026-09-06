@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
-import { act } from 'react-dom/test-utils';
 import FeatureStudioModal from '../FeatureStudioModal';
 import { AIDanceEngine, DANCE_STYLES } from '../../../services/AIDanceEngine';
 import { AISpecialEffectsEngine, SPECIAL_EFFECTS_PRESETS } from '../../../services/AISpecialEffectsEngine';

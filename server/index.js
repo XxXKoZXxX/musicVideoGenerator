@@ -24,17 +24,94 @@ app.use('/renders', express.static(RENDERS_DIR));
 
 // List of supported video generators (renderer back‑ends)
 const GENERATORS = [
-  { id: 'higgsfield-dop', name: 'Higgsfield Cinema DoP Studio', provider: 'Higgsfield AI' },
-  { id: 'ai-neural', name: 'AI Neural Motion Engine', provider: 'Runway / Neural' },
-  { id: 'runway', name: 'RunwayML Gen-3 Alpha', provider: 'Runway' },
-  { id: 'sora', name: 'OpenAI Sora Video', provider: 'OpenAI' },
-  { id: 'kling', name: 'Kling 1.5 HD AI', provider: 'Kuaishou' },
-  { id: 'luma', name: 'Luma Dream Machine', provider: 'Luma AI' },
-  { id: 'stable-diffusion', name: 'Stable Video Diffusion', provider: 'Stability AI' },
-  { id: 'deepbrain', name: 'DeepBrain Avatar AI', provider: 'DeepBrain' },
-  { id: 'webgl-gpu', name: 'WebGL GPU Shader Engine', provider: 'Hardware GPU' },
-  { id: 'canvas-2d', name: 'Canvas 2D Ultra Compositor', provider: 'Native Compositor' },
-  { id: 'master-4k', name: 'Cinema Master 4K Studio', provider: 'Master Pro' },
+  { 
+    id: 'sora', 
+    name: 'OpenAI Sora Video Engine', 
+    provider: 'OpenAI',
+    description: 'Photorealistic physical world simulation with cinematic 60 FPS lighting and multi-camera consistency.',
+    bestFor: 'Hyper-realistic humans, photorealistic narrative storytelling, complex lighting and physics',
+    features: ['Photorealistic 1080p/4K', 'Physical world simulation', 'Multi-camera scene consistency']
+  },
+  { 
+    id: 'higgsfield-dop', 
+    name: 'Higgsfield Cinema DoP Studio', 
+    provider: 'Higgsfield AI',
+    description: 'Autonomous Director of Photography engine with 6-axis camera control (360° Orbit, Hitchcock Vertigo, FPV Drone, Crash Zoom).',
+    bestFor: 'Dynamic camera movement, music video drops, energetic tracking shots',
+    features: ['6-Axis Camera Pathing', 'Anamorphic 2.39:1 framing', 'Beat-synced zooms']
+  },
+  { 
+    id: 'kling', 
+    name: 'Kling 1.5 HD AI', 
+    provider: 'Kuaishou',
+    description: 'State-of-the-art video model with high motion amplitude, fluid liquid/cloth simulation, and prompt adherence.',
+    bestFor: 'High motion scenes, dance sequences, action choreography',
+    features: ['High motion amplitude', 'Fluid dynamics', 'Prompt adherence']
+  },
+  { 
+    id: 'runway', 
+    name: 'RunwayML Gen-3 Alpha', 
+    provider: 'Runway',
+    description: 'Industry standard cinematic generative video with expressive character motion and Hollywood color palettes.',
+    bestFor: 'Cinematic music videos, sci-fi/fantasy landscapes, stylized character closeups',
+    features: ['Hollywood color science', 'Cinematic motion fidelity', 'Direct camera control']
+  },
+  { 
+    id: 'luma', 
+    name: 'Luma Dream Machine', 
+    provider: 'Luma AI',
+    description: 'Ultra-fast keyframe generation with smooth camera sweeps, realistic reflections, and volumetric mist.',
+    bestFor: 'Dreamy visualizer landscapes, sweeping aerial views, ambient synthwave loops',
+    features: ['Smooth camera pans', 'Realistic atmospheric fog', 'Fast rendering']
+  },
+  { 
+    id: 'ai-neural', 
+    name: 'AI Neural Motion Engine', 
+    provider: 'Runway / Neural',
+    description: 'Unified multi-neural synthesis blending Sora, Kling, and Runway latent spaces for maximum visual impact.',
+    bestFor: 'High-energy EDM, hip-hop, and pop music video drops',
+    features: ['Multi-model blending', 'Bass drop reactivity', 'Neon volumetric lighting']
+  },
+  { 
+    id: 'stable-diffusion', 
+    name: 'Stable Video Diffusion (SVD)', 
+    provider: 'Stability AI',
+    description: 'Open-source latent video diffusion engine with artistic stylization, anime/manga transforms, and surrealism.',
+    bestFor: 'Anime music videos (AMV), psychedelic visuals, surreal art pop',
+    features: ['Artistic stylization', 'Anime/Manga support', 'Surreal visual morphing']
+  },
+  { 
+    id: 'deepbrain', 
+    name: 'DeepBrain Avatar AI', 
+    provider: 'DeepBrain',
+    description: 'Ultra-realistic avatar performer engine with precise acoustic-to-viseme lip sync for vocal performances.',
+    bestFor: 'Singing artist close-ups, speech performance, realistic vocal sync',
+    features: ['Acoustic-to-viseme lip sync', 'Facial micro-expressions', 'Head tracking']
+  },
+  { 
+    id: 'webgl-gpu', 
+    name: 'WebGL GPU Shader Engine', 
+    provider: 'Hardware GPU',
+    description: 'Hardware-accelerated shader compositor with real-time audio FFT frequency reactiveness and particle fields.',
+    bestFor: 'Audio spectrum reactive visualizers, laser light shows, 3D geometric tunnel visuals',
+    features: ['60 FPS GPU hardware acceleration', 'Audio FFT reactivity', 'Infinite fractal shaders']
+  },
+  { 
+    id: 'canvas-2d', 
+    name: 'Canvas 2D Ultra Compositor', 
+    provider: 'Native Compositor',
+    description: 'Multi-layer composite engine rendering typography, karaoke lyrics sync, film grain, and anamorphic flare overlays.',
+    bestFor: 'Lyric videos, karaoke subtitling, retro VHS overlays',
+    features: ['Karaoke lyric sync', 'Typography animations', 'Vintage film grain']
+  },
+  { 
+    id: 'master-4k', 
+    name: 'Cinema Master 4K Studio', 
+    provider: 'Master Pro',
+    description: 'Full multi-track production render engine outputting 4K Ultra-HD MP4 master files directly to disk.',
+    bestFor: 'Final broadcast master export, full song video assembly, archival quality',
+    features: ['4K UHD output', 'Multi-track timeline compositing', 'Lossless audio muxing']
+  },
 ];
 
 const SAMPLE_VIDEOS = {
@@ -83,9 +160,15 @@ const SAMPLE_VIDEOS = {
 app.get('/', (req, res) => {
   res.json({
     status: 'online',
-    service: 'Astraea Video, Local Render Engine & Claude Opus AI Agent Server',
-    version: '2.0.0',
+    service: 'Astraea Video, Local Render Engine & Connected ChatGPT Generator Server',
+    version: '2.5.0',
     endpoints: [
+      '/openapi.json',
+      '/.well-known/ai-plugin.json',
+      '/api/chatgpt/generators',
+      '/api/chatgpt/generate-video',
+      '/api/chatgpt/render-lyrics',
+      '/api/chatgpt/status/:jobId',
       '/api/generators',
       '/api/generate',
       '/api/server-render/create',
@@ -98,6 +181,8 @@ app.get('/', (req, res) => {
       '/api/claude',
       '/api/opus-agent',
       '/api/opus-agent/chat',
+      '/v1/models',
+      '/v1/chat/completions',
       '/health',
     ],
   });
@@ -681,6 +766,21 @@ app.post('/api/opus-agent/chat', async (req, res) => {
       mode: 'opus-agent-engine'
     });
   }, 500);
+});
+
+// Register ChatGPT Custom GPT Actions, OpenAPI 3.1.0 & Generator endpoints
+const { registerChatGPTRoutes } = require('./chatgptActions');
+registerChatGPTRoutes(app, {
+  GENERATORS,
+  SAMPLE_VIDEOS,
+  activeJobs,
+  FAL_MODEL_ENDPOINTS,
+  falSubmitGeneration,
+  pollJobUntilDone,
+  getFalKey,
+  createRenderJob,
+  getJobStatus,
+  PORT,
 });
 
 if (require.main === module) {

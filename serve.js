@@ -45,9 +45,73 @@ const MIME_TYPES = {
   '.zip': 'application/zip'
 };
 
+const VIDEO_SERVER_PORT = process.env.VIDEO_PORT || 4000;
+
+function shouldProxyToVideoServer(reqPath) {
+  return (
+    reqPath.startsWith('/api/') ||
+    reqPath.startsWith('/renders/') ||
+    reqPath.startsWith('/v1/') ||
+    reqPath.startsWith('/.well-known/') ||
+    reqPath === '/openapi.json' ||
+    reqPath === '/openapi.yaml'
+  );
+}
+
+function proxyToVideoServer(req, res) {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': '*',
+    });
+    return res.end();
+  }
+
+  const options = {
+    hostname: '127.0.0.1',
+    port: VIDEO_SERVER_PORT,
+    path: req.url,
+    method: req.method,
+    headers: {
+      ...req.headers,
+      host: `127.0.0.1:${VIDEO_SERVER_PORT}`,
+      'x-forwarded-host': req.headers.host,
+      'x-forwarded-proto': req.headers['x-forwarded-proto'] || (currentTunnelUrl.startsWith('https') ? 'https' : 'http'),
+    }
+  };
+
+  const proxyReq = http.request(options, (proxyRes) => {
+    const headers = { ...proxyRes.headers, 'Access-Control-Allow-Origin': '*' };
+    res.writeHead(proxyRes.statusCode, headers);
+    proxyRes.pipe(res, { end: true });
+  });
+
+  proxyReq.on('error', (err) => {
+    console.error(`[Proxy] Error connecting to video server at :${VIDEO_SERVER_PORT}:`, err.message);
+    if (!res.headersSent) {
+      res.writeHead(502, {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*'
+      });
+      res.end(JSON.stringify({
+        error: 'Video generator backend server is offline. Please ensure npm run server (port 4000) is running.',
+        details: err.message
+      }));
+    }
+  });
+
+  req.pipe(proxyReq, { end: true });
+}
+
 const server = http.createServer((req, res) => {
   try {
     let reqPath = req.url.split('?')[0];
+
+    // Proxy video generator, API, OpenAPI and ChatGPT action endpoints to backend server
+    if (shouldProxyToVideoServer(reqPath)) {
+      return proxyToVideoServer(req, res);
+    }
 
     // API endpoint for real-time live network info
     if (reqPath === '/active_url.json') {
