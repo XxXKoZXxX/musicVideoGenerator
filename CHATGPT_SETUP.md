@@ -24,10 +24,7 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema and Bearer t
   ```
 
 - **Bearer API Key (Token)**:
-  Available in `chatgpt_token.txt` or in the Studio's Share Modal under **🤖 ChatGPT Action**.
-  ```text
-  ea8bf63677b7a125a6b7a0f9ad8e38e5
-  ```
+  Generated securely on your machine. Inspect your local `chatgpt_token.txt` file or open the Studio's Share Modal under **🤖 ChatGPT Action** to copy your secret key (keep it private and do not share in public chats).
 
 ---
 
@@ -78,10 +75,7 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema and Bearer t
    - `listFiles` (`GET /api/chatgpt/workspace/files`)
    - `readFile` (`POST /api/chatgpt/workspace/read-file`)
    - `writeFile` (`POST /api/chatgpt/workspace/write-file`)
-6. **Authentication**: Select **API Key** &rarr; Auth Type: **Bearer** &rarr; paste your token:
-   ```text
-   ea8bf63677b7a125a6b7a0f9ad8e38e5
-   ```
+6. **Authentication**: Select **API Key** &rarr; Auth Type: **Bearer** &rarr; paste the secret token from your local `chatgpt_token.txt` file (or Studio Share Modal).
 7. **Privacy Policy**: Enter your tunnel domain (e.g. `https://postcard-teaching-reaction-disabilities.trycloudflare.com`).
 
 ### Step 4: Save and Test
