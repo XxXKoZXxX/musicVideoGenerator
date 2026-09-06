@@ -174,7 +174,7 @@ export default function ShareModal({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Globe className="w-3.5 h-3.5" /> 🌐 Public Web Link
+            <Globe className="w-3.5 h-3.5" /> 🌐 Public Web
           </button>
           <button
             onClick={() => setUrlType('wifi')}
@@ -184,7 +184,17 @@ export default function ShareModal({
                 : 'text-slate-400 hover:text-white'
             }`}
           >
-            <Wifi className="w-3.5 h-3.5" /> 📶 Local Wi-Fi
+            <Wifi className="w-3.5 h-3.5" /> 📶 Wi-Fi
+          </button>
+          <button
+            onClick={() => setUrlType('chatgpt')}
+            className={`flex-1 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+              urlType === 'chatgpt'
+                ? 'bg-emerald-400 text-slate-950 font-bold shadow-md shadow-emerald-500/20'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Bot className="w-3.5 h-3.5" /> 🤖 ChatGPT Action
           </button>
         </div>
 
@@ -192,28 +202,60 @@ export default function ShareModal({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-amber-300 uppercase tracking-wider flex items-center gap-1.5">
-              {urlType === 'public' ? <><Globe className="w-3.5 h-3.5 text-cyan-400" /> Live Shareable Web Link</> : <><Wifi className="w-3.5 h-3.5 text-cyan-400" /> Local Wi-Fi Link</>}
+              {urlType === 'chatgpt' ? (
+                <><Bot className="w-3.5 h-3.5 text-emerald-400" /> ChatGPT Action Schema URL (OpenAPI 3.1)</>
+              ) : urlType === 'public' ? (
+                <><Globe className="w-3.5 h-3.5 text-cyan-400" /> Live Shareable Web Link</>
+              ) : (
+                <><Wifi className="w-3.5 h-3.5 text-cyan-400" /> Local Wi-Fi Link</>
+              )}
             </span>
             <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
-              <ShieldCheck className="w-3.5 h-3.5" /> {urlType === 'public' ? 'HTTPS Secure' : 'Home Network'}
+              <ShieldCheck className="w-3.5 h-3.5" /> {urlType === 'chatgpt' ? 'OpenAPI 3.1 Active' : urlType === 'public' ? 'HTTPS Secure' : 'Home Network'}
             </span>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-amber-400/30 rounded-2xl p-2">
+          <div className={`flex items-center gap-2 bg-slate-900/90 border ${urlType === 'chatgpt' ? 'border-emerald-500/40' : 'border-amber-400/30'} rounded-2xl p-2`}>
             <input 
               type="text" 
               readOnly 
               value={activeShareUrl} 
-              className="bg-transparent text-xs text-amber-300 font-mono font-bold w-full outline-none px-2 select-all truncate"
+              className={`bg-transparent text-xs ${urlType === 'chatgpt' ? 'text-emerald-300' : 'text-amber-300'} font-mono font-bold w-full outline-none px-2 select-all truncate`}
             />
             <button 
               onClick={handleCopyLink} 
-              className="btn-gold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 font-bold bg-amber-400 text-slate-950 flex-shrink-0 hover:bg-amber-300 transition-all"
+              className={`btn-gold text-xs py-2 px-3 rounded-xl flex items-center gap-1.5 font-bold ${
+                urlType === 'chatgpt' 
+                  ? 'bg-emerald-400 text-slate-950 hover:bg-emerald-300' 
+                  : 'bg-amber-400 text-slate-950 hover:bg-amber-300'
+              } flex-shrink-0 transition-all`}
             >
-              {copiedLink ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy Link</>}
+              {copiedLink ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> {urlType === 'chatgpt' ? 'Copy Schema URL' : 'Copy Link'}</>}
             </button>
           </div>
         </div>
+
+        {urlType === 'chatgpt' ? (
+          <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
+            <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold">
+              <Video className="w-4 h-4 text-emerald-400" />
+              <span>Connect ChatGPT Custom GPT to Video Generator</span>
+            </div>
+            <ol className="text-xs text-slate-300 space-y-2 list-decimal list-inside leading-relaxed">
+              <li>In ChatGPT, open <strong>Explore GPTs</strong> &rarr; click <strong>+ Create</strong> &rarr; go to <strong>Configure</strong>.</li>
+              <li>Scroll down to <strong>Actions</strong> &rarr; click <strong>Create new action</strong>.</li>
+              <li>Under <em>Schema</em>, click <strong>Import from URL</strong>, paste the OpenAPI Schema URL above, and click <strong>Import</strong>.</li>
+              <li>ChatGPT will automatically import endpoints: <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">generateMusicVideo</code>, <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">renderLyricVideo</code>, and <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">listGenerators</code>.</li>
+            </ol>
+            <div className="p-3 bg-slate-950/90 rounded-xl border border-emerald-500/30 text-[11px] space-y-1">
+              <span className="text-emerald-400 font-bold block">✨ Example prompt to your ChatGPT:</span>
+              <p className="italic text-slate-200">
+                "Use the connected generator to generate a 5-scene music video for my song 'Night Drive' using Sora or Kling with 360-degree orbital camera movements."
+              </p>
+            </div>
+          </div>
+        ) : (
+          <>
 
         {/* Native Web Share Button (Mobile/Safari/Chrome) */}
         {typeof navigator !== 'undefined' && navigator.share && (
@@ -285,6 +327,8 @@ export default function ShareModal({
             <strong>Tester Tip:</strong> Testers can add their own birthday in <em>"My Birth Details"</em> or create a new profile to explore their unique astrological chart, day archetype, and tarot cards.
           </div>
         </div>
+        </>
+        )}
       </div>
     </div>
   );
