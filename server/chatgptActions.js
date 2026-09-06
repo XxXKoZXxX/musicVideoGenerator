@@ -413,6 +413,7 @@ servers:
         provider: genMeta.provider,
         title,
         prompt: effectivePrompt,
+        lyrics: lyrics || undefined,
         style,
         aspectRatio,
         duration,
