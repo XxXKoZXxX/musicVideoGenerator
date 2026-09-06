@@ -20,6 +20,12 @@ if (!cachedExecToken) {
 }
 
 function getExecToken() {
+  try {
+    if (fs.existsSync(EXEC_TOKEN_PATH)) {
+      const diskToken = fs.readFileSync(EXEC_TOKEN_PATH, 'utf8').trim();
+      if (diskToken) return diskToken;
+    }
+  } catch (_) {}
   return cachedExecToken;
 }
 
@@ -791,8 +797,9 @@ servers:
     const authHeader = req.headers['authorization'] || '';
     const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
     const token = bearer || req.headers['x-api-key'] || req.headers['x-exec-token'] || req.query.token;
+    const currentToken = getExecToken();
 
-    if (token && token === cachedExecToken) {
+    if (token && token === currentToken) {
       return next();
     }
 
@@ -806,7 +813,7 @@ servers:
   app.get('/api/chatgpt/token', (req, res) => {
     res.json({
       success: true,
-      token: cachedExecToken,
+      token: getExecToken(),
       authType: 'Bearer',
       instructions: 'Paste this token into ChatGPT Custom GPT Action settings under Authentication -> API Key -> Bearer'
     });
