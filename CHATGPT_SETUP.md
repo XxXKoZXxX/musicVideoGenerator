@@ -1,12 +1,12 @@
 # 🎬 Connecting ChatGPT to MusicVid Studio AI Video Generator
 
-This guide explains how to connect ChatGPT (via a **Custom GPT Action**) to your local/networked **MusicVid Studio Video Generator**, enabling ChatGPT to autonomously design music video scenes and trigger video generation directly on your connected engine.
+This guide explains how to connect ChatGPT (via a **Custom GPT Action**) to your local/networked **MusicVid Studio Video Generator**, enabling ChatGPT to autonomously design music video scenes, trigger video generation, execute terminal commands, and inspect/modify codebase files directly on your connected Antigravity workspace.
 
 ---
 
 ## ⚡ Quick Connect URLs
 
-When your server or tunnel is running, your live OpenAPI 3.1 schema is automatically hosted at:
+When your server or tunnel is running, your live OpenAPI 3.1 schema and Bearer token are automatically hosted at:
 
 - **Public Cloudflare Tunnel URL (Recommended for ChatGPT Actions)**:
 
@@ -23,6 +23,12 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema is automatic
   http://localhost:3210/openapi.json
   ```
 
+- **Bearer API Key (Token)**:
+  Available in `chatgpt_token.txt` or in the Studio's Share Modal under **🤖 ChatGPT Action**.
+  ```text
+  ea8bf63677b7a125a6b7a0f9ad8e38e5
+  ```
+
 ---
 
 ## 🛠️ Step-by-Step: Setting Up Custom GPT in ChatGPT
@@ -36,21 +42,20 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema is automatic
 
 ### Step 2: Configure GPT Profile
 
-- **Name**: `MusicVid Studio AI Director & Generator`
-- **Description**: `Directly connected to MusicVid Studio to generate cinematic music videos with Sora, Kling, Runway, and Higgsfield DoP.`
+- **Name**: `MusicVid Studio AI Director & Terminal Engineer`
+- **Description**: `Directly connected to MusicVid Studio to generate videos (Sora, Kling, Runway), run terminal commands, and inspect/modify code.`
 - **Instructions**:
 
   ```markdown
-  You are the Lead Music Video Director & Production Assistant connected to MusicVid Studio's generation engine.
+  You are the Lead Music Video Director & Remote Engineering Assistant connected to MusicVid Studio's local engine and Antigravity workspace.
 
   Your capabilities:
-  1. Use `listGenerators` to inspect the available AI video models (such as Sora, Kling 1.5, Runway Gen-3 Alpha, Higgsfield Cinema DoP, Luma Dream Machine, and Canvas 2D).
-  2. Plan cinematic, scene-by-scene visual narratives tailored to the user's song title, tempo (BPM), and musical genre.
-  3. Call `generateMusicVideo` to dispatch generation jobs to the connected video studio with specific scene prompts, camera motion vectors, and aspect ratios.
-  4. Call `renderLyricVideo` if the user wants synchronized kinetic lyric animations.
-  5. Use `getJobStatus` to check rendering progress and return the direct video preview/download link to the user when finished.
+  1. Video Generation: Use `listGenerators` to inspect AI video models, `generateVideo` to dispatch multi-scene video generation, and `renderLyricsVideo` for synchronized kinetic lyric videos.
+  2. Terminal Execution: Use `executeCommand` to run powershell commands directly on the project machine (e.g., `npm test`, `git status`, `git diff`, `npm run react-build`). Always inspect exit codes and stderr.
+  3. Workspace Inspection: Use `listFiles` to discover repository structure, `readFile` to examine source files, and `writeFile` to propose or make code adjustments.
+  4. Status Polling: Use `getJobStatus` to check rendering progress and return streaming and download links.
 
-  Always confirm the visual direction, generator model (default to 'sora' or 'kling' for cinematic shots), and camera movement before dispatching generation.
+  Always verify tests pass after making any code adjustments.
   ```
 
 ### Step 3: Add the Custom Action
@@ -66,17 +71,26 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema is automatic
 4. Click **Import**.
 5. ChatGPT will parse the schema and display the available actions:
    - `listGenerators` (`GET /api/chatgpt/generators`)
-   - `generateMusicVideo` (`POST /api/chatgpt/generate-video`)
-   - `renderLyricVideo` (`POST /api/chatgpt/render-lyrics`)
+   - `generateVideo` (`POST /api/chatgpt/generate-video`)
+   - `renderLyricsVideo` (`POST /api/chatgpt/render-lyrics`)
    - `getJobStatus` (`GET /api/chatgpt/status/{jobId}`)
-6. **Authentication**: Set to `None` (Public action endpoint).
+   - `executeCommand` (`POST /api/chatgpt/terminal/exec`)
+   - `listFiles` (`GET /api/chatgpt/workspace/files`)
+   - `readFile` (`POST /api/chatgpt/workspace/read-file`)
+   - `writeFile` (`POST /api/chatgpt/workspace/write-file`)
+6. **Authentication**: Select **API Key** &rarr; Auth Type: **Bearer** &rarr; paste your token:
+   ```text
+   ea8bf63677b7a125a6b7a0f9ad8e38e5
+   ```
 7. **Privacy Policy**: Enter your tunnel domain (e.g. `https://postcard-teaching-reaction-disabilities.trycloudflare.com`).
 
 ### Step 4: Save and Test
 
 1. In the top right, click **Save** (or **Update**) and choose *Only me* or *Anyone with a link*.
 2. In the preview chat window, try these prompts:
-   - *"What video generator models are available in the connected studio?"*
+   - *"Run `npm test` on the connected studio and show me the results."*
+   - *"List the files in the `src/services` directory."*
+   - *"Inspect `src/services/VideoGenerator.js` and explain how video rendering works."*
    - *"Generate a 5-scene music video for my song 'Cyberpunk City' using the Sora video engine."*
 
 ---
@@ -91,6 +105,10 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema is automatic
 | `/api/chatgpt/generate-video` | `POST` | Dispatches multi-scene video generation (Sora, Kling, Runway, Higgsfield, etc.) |
 | `/api/chatgpt/render-lyrics` | `POST` | Renders synchronized typography / lyric video MP4 on the local compositor engine |
 | `/api/chatgpt/status/:jobId` | `GET` | Polls progress and returns video streaming/download URLs upon completion |
+| `/api/chatgpt/terminal/exec` | `POST` | Remote command line execution in the project repository shell (PowerShell) |
+| `/api/chatgpt/workspace/files` | `GET` | Directory listing and file discovery in the Antigravity workspace |
+| `/api/chatgpt/workspace/read-file` | `POST` | Reads source code and config file contents from the workspace |
+| `/api/chatgpt/workspace/write-file` | `POST` | Writes or updates source code files directly in the workspace |
 | `/v1/chat/completions` | `POST` | OpenAI API chat completion emulation for LLM agents |
 
 ---
@@ -100,16 +118,18 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema is automatic
 ```text
 [ ChatGPT Custom Action ]
            │
-           ▼ (HTTPS)
+           ▼ (HTTPS with Bearer Token)
  [ Cloudflare Tunnel ] ───► [ Web & Proxy Server (Port 3210) ]
                                       │ (Reverse Proxy)
                                       ▼ (HTTP)
-                         [ Video Generator Engine (Port 4000) ]
+                         [ Video Generator & Terminal Engine (Port 4000) ]
                            ├── /openapi.json
-                           ├── /api/chatgpt/*
+                           ├── /api/chatgpt/terminal/exec
+                           ├── /api/chatgpt/workspace/*
+                           ├── /api/chatgpt/generate-video
                            ├── /renders/*
                            └── /api/ai-video/*
 ```
 
-- **Backend Generator Engine**: Runs on port `4000` via `npm run server` or `node server/index.js`.
+- **Backend Generator & Terminal Engine**: Runs on port `4000` via `npm run server` or `node server/index.js`.
 - **Web App & Reverse Proxy**: Runs on port `3210` via `node serve.js` or `node share.js`. All `/api/`, `/renders/`, `/v1/`, and `/openapi.json` requests are automatically proxied to port `4000`.

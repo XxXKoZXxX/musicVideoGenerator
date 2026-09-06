@@ -3,3 +3,5 @@ dist
 cloudflared.exe
 *.log
 .env
+chatgpt_token.txt
+public_url.txt

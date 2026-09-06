@@ -33,6 +33,14 @@ try {
   }
 } catch (e) {}
 
+let currentExecToken = '';
+try {
+  const tokenPath = path.join(__dirname, 'chatgpt_token.txt');
+  if (fs.existsSync(tokenPath)) {
+    currentExecToken = fs.readFileSync(tokenPath, 'utf8').trim();
+  }
+} catch (e) {}
+
 const MIME_TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
@@ -131,6 +139,7 @@ const server = http.createServer((req, res) => {
         wifiUrl: LOCAL_WIFI_URL,
         localIp: LOCAL_IP,
         port: PORT,
+        execToken: currentExecToken,
         status: 'online'
       }));
     }

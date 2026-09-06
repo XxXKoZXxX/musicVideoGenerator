@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   X, Share2, Copy, Check, Smartphone, Globe, 
-  Send, Sparkles, ShieldCheck, Wifi, Bot, Video
+  Send, Sparkles, ShieldCheck, Wifi, Bot,
+  Terminal, Key, FileCode
 } from 'lucide-react';
 import { generateQRCodeSVG } from '../../utils/qrGenerator';
 
@@ -33,6 +34,7 @@ export default function ShareModal({
 }) {
   const inviteTemplateDefs = customInviteTemplates || DEFAULT_INVITE_TEMPLATES;
   const [copiedLink, setCopiedLink] = useState(false);
+  const [copiedToken, setCopiedToken] = useState(false);
   const [copiedMessage, setCopiedMessage] = useState(false);
   const [selectedInviteTemplate, setSelectedInviteTemplate] = useState('general');
   const [urlType, setUrlType] = useState('public');
@@ -41,6 +43,7 @@ export default function ShareModal({
     publicUrl: 'https://postcard-teaching-reaction-disabilities.trycloudflare.com',
     wifiUrl: 'http://192.168.86.21:3210',
     localhostUrl: 'http://localhost:3210',
+    execToken: 'ea8bf63677b7a125a6b7a0f9ad8e38e5',
   });
 
   // Fetch real-time active tunnel URL & local network IP
@@ -70,6 +73,20 @@ export default function ShareModal({
             ...prev,
             publicUrl: data.publicUrl || data.url || prev.publicUrl,
             wifiUrl: data.wifiUrl || prev.wifiUrl,
+            execToken: data.execToken || prev.execToken,
+          }));
+        }
+      })
+      .catch(() => {});
+
+    // Also fetch dedicated chatgpt token
+    fetch('/api/chatgpt/token')
+      .then(res => res.json())
+      .then(data => {
+        if (isMounted && data?.token) {
+          setNetworkInfo(prev => ({
+            ...prev,
+            execToken: data.token,
           }));
         }
       })
@@ -236,21 +253,67 @@ export default function ShareModal({
         </div>
 
         {urlType === 'chatgpt' ? (
-          <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 space-y-3">
-            <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold">
-              <Video className="w-4 h-4 text-emerald-400" />
-              <span>Connect ChatGPT Custom GPT to Video Generator</span>
+          <div className="bg-emerald-950/20 border border-emerald-500/30 rounded-2xl p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-300 text-xs font-bold">
+                <Terminal className="w-4 h-4 text-emerald-400" />
+                <span>Remote Terminal & Workspace Execution Enabled</span>
+              </div>
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded-full font-mono font-bold">
+                Live Powershell
+              </span>
             </div>
+
+            {/* Bearer Token Copy Box */}
+            <div className="space-y-1.5 bg-slate-950/80 p-3 rounded-xl border border-emerald-500/20">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                  <Key className="w-3.5 h-3.5 text-amber-400" /> Action Bearer API Key (Token)
+                </span>
+                <span className="text-[10px] text-slate-400">Required for remote exec</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <input 
+                  type="text" 
+                  readOnly 
+                  value={networkInfo.execToken || ''} 
+                  className="bg-slate-900 border border-slate-700 text-xs text-amber-300 font-mono font-bold w-full outline-none px-2 py-1.5 rounded-lg select-all truncate"
+                />
+                <button 
+                  onClick={() => {
+                    if (navigator.clipboard && networkInfo.execToken) {
+                      navigator.clipboard.writeText(networkInfo.execToken);
+                      setCopiedToken(true);
+                      setTimeout(() => setCopiedToken(false), 2500);
+                    }
+                  }}
+                  className="text-xs py-1.5 px-2.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold flex items-center gap-1 flex-shrink-0 transition-all"
+                >
+                  {copiedToken ? <><Check className="w-3.5 h-3.5" /> Copied!</> : <><Copy className="w-3.5 h-3.5" /> Copy Key</>}
+                </button>
+              </div>
+            </div>
+
             <ol className="text-xs text-slate-300 space-y-2 list-decimal list-inside leading-relaxed">
               <li>In ChatGPT, open <strong>Explore GPTs</strong> &rarr; click <strong>+ Create</strong> &rarr; go to <strong>Configure</strong>.</li>
-              <li>Scroll down to <strong>Actions</strong> &rarr; click <strong>Create new action</strong>.</li>
+              <li>Under <strong>Actions</strong> &rarr; click <strong>Create new action</strong>.</li>
               <li>Under <em>Schema</em>, click <strong>Import from URL</strong>, paste the OpenAPI Schema URL above, and click <strong>Import</strong>.</li>
-              <li>ChatGPT will automatically import endpoints: <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">generateMusicVideo</code>, <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">renderLyricVideo</code>, and <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">listGenerators</code>.</li>
+              <li>Under <em>Authentication</em>, select <strong>API Key</strong> &rarr; Auth Type: <strong>Bearer</strong> &rarr; paste the <strong>Action Bearer Key</strong> above.</li>
+              <li>ChatGPT can now run: <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">executeCommand</code>, <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">readFile</code>, <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">writeFile</code>, and <code className="text-emerald-400 text-[11px] bg-emerald-950/60 px-1 py-0.5 rounded">generateMusicVideo</code>!</li>
             </ol>
-            <div className="p-3 bg-slate-950/90 rounded-xl border border-emerald-500/30 text-[11px] space-y-1">
-              <span className="text-emerald-400 font-bold block">✨ Example prompt to your ChatGPT:</span>
+
+            <div className="p-3 bg-slate-950/90 rounded-xl border border-emerald-500/30 text-[11px] space-y-1.5">
+              <span className="text-emerald-400 font-bold block flex items-center gap-1">
+                <FileCode className="w-3.5 h-3.5" /> Example Prompts to give ChatGPT:
+              </span>
               <p className="italic text-slate-200">
-                "Use the connected generator to generate a 5-scene music video for my song 'Night Drive' using Sora or Kling with 360-degree orbital camera movements."
+                1. "Run <code className="text-amber-300 font-mono">npm test</code> on the connected studio and show me the test suite results."
+              </p>
+              <p className="italic text-slate-200">
+                2. "Inspect <code className="text-amber-300 font-mono">src/services/VideoGenerator.js</code> and explain how the canvas rendering loop works."
+              </p>
+              <p className="italic text-slate-200">
+                3. "Generate a 5-scene music video for my track 'Night Drive' using the Sora video generator."
               </p>
             </div>
           </div>

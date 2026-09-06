@@ -1,6 +1,27 @@
 // server/chatgptActions.js - Full ChatGPT Custom GPT Actions, OpenAPI 3.1.0 & Generator Integration
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
+const { exec } = require('child_process');
+
+const EXEC_TOKEN_PATH = path.join(__dirname, '..', 'chatgpt_token.txt');
+let cachedExecToken = process.env.CHATGPT_EXEC_TOKEN || '';
+try {
+  if (!cachedExecToken && fs.existsSync(EXEC_TOKEN_PATH)) {
+    cachedExecToken = fs.readFileSync(EXEC_TOKEN_PATH, 'utf8').trim();
+  }
+} catch (_) {}
+
+if (!cachedExecToken) {
+  cachedExecToken = crypto.randomBytes(16).toString('hex');
+  try {
+    fs.writeFileSync(EXEC_TOKEN_PATH, cachedExecToken, 'utf8');
+  } catch (_) {}
+}
+
+function getExecToken() {
+  return cachedExecToken;
+}
 
 // Helper to determine active live public URL (Cloudflare tunnel, current host, or localhost)
 function getLivePublicUrl(req, defaultPort = 4000) {
@@ -250,6 +271,191 @@ function getOpenApiSpec(serverBaseUrl) {
               }
             }
           }
+        }
+      },
+      '/api/chatgpt/terminal/exec': {
+        post: {
+          operationId: 'executeCommand',
+          summary: 'Execute terminal command on the Antigravity studio machine',
+          description: 'Executes a command (e.g. npm test, git status, git diff, dir) in the project workspace powershell/bash terminal and returns output.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['command'],
+                  properties: {
+                    command: {
+                      type: 'string',
+                      description: 'Shell command line string to execute'
+                    },
+                    cwd: {
+                      type: 'string',
+                      description: 'Subdirectory path relative to project root'
+                    },
+                    timeout: {
+                      type: 'integer',
+                      default: 60000,
+                      description: 'Execution timeout in milliseconds'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '200': {
+              description: 'Execution output',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      exitCode: { type: 'integer' },
+                      stdout: { type: 'string' },
+                      stderr: { type: 'string' },
+                      executionTimeMs: { type: 'number' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/chatgpt/workspace/files': {
+        get: {
+          operationId: 'listFiles',
+          summary: 'List files and directories in the Antigravity workspace',
+          description: 'Inspects project repository directory contents and source code structure.',
+          parameters: [
+            {
+              name: 'directory',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', default: '.' },
+              description: 'Directory path relative to project root'
+            }
+          ],
+          responses: {
+            '200': {
+              description: 'Directory listing',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      directory: { type: 'string' },
+                      files: { type: 'array', items: { type: 'string' } },
+                      directories: { type: 'array', items: { type: 'string' } }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/chatgpt/workspace/read-file': {
+        post: {
+          operationId: 'readFile',
+          summary: 'Read source code or config file from the project repository',
+          description: 'Reads text file content, source files, or configurations with optional line ranges.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['path'],
+                  properties: {
+                    path: {
+                      type: 'string',
+                      description: 'File path relative to project root (e.g. src/services/VideoGenerator.js)'
+                    },
+                    startLine: { type: 'integer', description: '1-indexed start line' },
+                    endLine: { type: 'integer', description: '1-indexed end line' }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '200': {
+              description: 'File contents',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      path: { type: 'string' },
+                      totalLines: { type: 'integer' },
+                      returnedLines: { type: 'integer' },
+                      content: { type: 'string' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/api/chatgpt/workspace/write-file': {
+        post: {
+          operationId: 'writeFile',
+          summary: 'Create or update a code file in the project repository',
+          description: 'Modifies or creates source code files directly in the Antigravity workspace.',
+          requestBody: {
+            required: true,
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  required: ['path', 'content'],
+                  properties: {
+                    path: {
+                      type: 'string',
+                      description: 'File path relative to project root'
+                    },
+                    content: {
+                      type: 'string',
+                      description: 'Full code or configuration to write'
+                    }
+                  }
+                }
+              }
+            }
+          },
+          responses: {
+            '200': {
+              description: 'Write result',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      success: { type: 'boolean' },
+                      path: { type: 'string' },
+                      bytesWritten: { type: 'integer' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    components: {
+      securitySchemes: {
+        BearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          description: 'API Key / Bearer token configured in Custom GPT settings.'
         }
       }
     }
@@ -579,10 +785,165 @@ servers:
       }
     });
   });
+
+  // Middleware to verify ChatGPT execution token
+  function verifyExecAuth(req, res, next) {
+    const authHeader = req.headers['authorization'] || '';
+    const bearer = authHeader.replace(/^Bearer\s+/i, '').trim();
+    const token = bearer || req.headers['x-api-key'] || req.headers['x-exec-token'] || req.query.token;
+
+    if (token && token === cachedExecToken) {
+      return next();
+    }
+
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized. Please configure your ChatGPT Action with the Bearer Token from Astraea Studio -> Share -> ChatGPT Action.'
+    });
+  }
+
+  // Retrieve current execution auth token info
+  app.get('/api/chatgpt/token', (req, res) => {
+    res.json({
+      success: true,
+      token: cachedExecToken,
+      authType: 'Bearer',
+      instructions: 'Paste this token into ChatGPT Custom GPT Action settings under Authentication -> API Key -> Bearer'
+    });
+  });
+
+  // 10. Remote Terminal Command Execution
+  app.post('/api/chatgpt/terminal/exec', verifyExecAuth, (req, res) => {
+    const { command, cwd, timeout = 60000 } = req.body || {};
+    if (!command) {
+      return res.status(400).json({ success: false, error: 'command is required' });
+    }
+
+    const projectRoot = path.resolve(__dirname, '..');
+    const targetCwd = cwd ? path.resolve(projectRoot, cwd) : projectRoot;
+
+    const startTime = Date.now();
+    console.log(`[ChatGPT Remote Exec] Running: "${command}" in ${targetCwd}`);
+
+    exec(command, {
+      cwd: targetCwd,
+      shell: process.platform === 'win32' ? 'powershell.exe' : '/bin/bash',
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: Math.min(timeout, 120000)
+    }, (err, stdout, stderr) => {
+      const duration = Date.now() - startTime;
+      res.json({
+        success: !err,
+        command,
+        exitCode: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
+        stdout: stdout || '',
+        stderr: stderr || (err ? err.message : ''),
+        executionTimeMs: duration
+      });
+    });
+  });
+
+  // 11. Workspace File List
+  app.get('/api/chatgpt/workspace/files', verifyExecAuth, (req, res) => {
+    const relDir = req.query.directory || '.';
+    const projectRoot = path.resolve(__dirname, '..');
+    const fullDir = path.resolve(projectRoot, relDir);
+
+    if (!fs.existsSync(fullDir)) {
+      return res.status(404).json({ success: false, error: 'Directory not found' });
+    }
+
+    try {
+      const entries = fs.readdirSync(fullDir, { withFileTypes: true });
+      const files = [];
+      const directories = [];
+
+      for (const entry of entries) {
+        if (entry.name.startsWith('.git') || entry.name === 'node_modules' || entry.name === 'dist') continue;
+        if (entry.isDirectory()) directories.push(entry.name);
+        else files.push(entry.name);
+      }
+
+      res.json({
+        success: true,
+        directory: relDir,
+        files,
+        directories
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 12. Workspace File Read
+  app.post('/api/chatgpt/workspace/read-file', verifyExecAuth, (req, res) => {
+    const { filePath, path: p, startLine, endLine } = req.body || {};
+    const targetRel = filePath || p;
+    if (!targetRel) {
+      return res.status(400).json({ success: false, error: 'path is required' });
+    }
+
+    const projectRoot = path.resolve(__dirname, '..');
+    const fullPath = path.resolve(projectRoot, targetRel);
+
+    if (!fs.existsSync(fullPath)) {
+      return res.status(404).json({ success: false, error: `File not found: ${targetRel}` });
+    }
+
+    try {
+      const content = fs.readFileSync(fullPath, 'utf8');
+      const lines = content.split('\n');
+      let outputLines = lines;
+
+      if (startLine || endLine) {
+        const s = Math.max((startLine || 1) - 1, 0);
+        const e = Math.min(endLine || lines.length, lines.length);
+        outputLines = lines.slice(s, e);
+      }
+
+      res.json({
+        success: true,
+        path: targetRel,
+        totalLines: lines.length,
+        returnedLines: outputLines.length,
+        content: outputLines.join('\n')
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
+
+  // 13. Workspace File Write
+  app.post('/api/chatgpt/workspace/write-file', verifyExecAuth, (req, res) => {
+    const { filePath, path: p, content } = req.body || {};
+    const targetRel = filePath || p;
+
+    if (!targetRel || content === undefined) {
+      return res.status(400).json({ success: false, error: 'path and content are required' });
+    }
+
+    const projectRoot = path.resolve(__dirname, '..');
+    const fullPath = path.resolve(projectRoot, targetRel);
+
+    try {
+      const dir = path.dirname(fullPath);
+      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+
+      fs.writeFileSync(fullPath, content, 'utf8');
+      res.json({
+        success: true,
+        path: targetRel,
+        bytesWritten: Buffer.byteLength(content, 'utf8')
+      });
+    } catch (e) {
+      res.status(500).json({ success: false, error: e.message });
+    }
+  });
 }
 
 module.exports = {
   getLivePublicUrl,
   getOpenApiSpec,
   registerChatGPTRoutes,
+  getExecToken,
 };
