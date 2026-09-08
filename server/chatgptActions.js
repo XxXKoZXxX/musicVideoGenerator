@@ -10,7 +10,12 @@ try {
   if (!cachedExecToken && fs.existsSync(EXEC_TOKEN_PATH)) {
     cachedExecToken = fs.readFileSync(EXEC_TOKEN_PATH, 'utf8').trim();
   }
-} catch (_) {}
+} catch (e) { /* ignore errors */ }
+
+// Default to READ_ONLY mode unless explicitly disabled
+if (process.env.CHATGPT_READONLY === undefined) {
+  process.env.CHATGPT_READONLY = 'true';
+}
 
 if (!cachedExecToken) {
   cachedExecToken = crypto.randomBytes(16).toString('hex');
@@ -819,6 +824,98 @@ servers:
     });
   });
 
+  // Audit logger helper
+  const AUDIT_LOG_PATH = path.join(__dirname, 'audit.log');
+  function auditLog(action, details = {}) {
+    try {
+      const entry = {
+        timestamp: new Date().toISOString(),
+        action,
+        ...details
+      };
+      fs.appendFileSync(AUDIT_LOG_PATH, JSON.stringify(entry) + '\n', 'utf8');
+    } catch (err) {
+      console.error('[Audit Log Error]', err.message);
+    }
+  }
+
+  // Path traversal safe resolver
+  function resolveSafePath(userPath) {
+    const projectRoot = path.resolve(__dirname, '..');
+    if (!userPath || userPath === '.') return projectRoot;
+
+    if (userPath.includes('\0')) {
+      throw new Error('Invalid path: null byte detected');
+    }
+
+    const resolved = path.resolve(projectRoot, userPath);
+    const rel = path.relative(projectRoot, resolved);
+
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      throw new Error(`Path traversal denied: target "${userPath}" is outside project root`);
+    }
+
+    return resolved;
+  }
+
+  // Check protected paths from modification
+  function isProtectedWritePath(resolvedPath) {
+  const projectRoot = path.resolve(__dirname, '..');
+  const rel = path.relative(projectRoot, resolvedPath).toLowerCase();
+
+  // Expanded protected files & directories
+  const protectedPatterns = [
+    /^\.git(\/|$)/,               // .git folder
+    /^chatgpt_token\.txt$/,
+    /^\.env$/,
+    /^\.env\..+$/,
+    /^credentials\.json$/,
+    /^service-account.*\.json$/,
+    /^.*\.(pem|key|p12|pfx|crt)$/,
+    /^\.npmrc$/,
+    /^\.yarnrc$/,
+    /^\.yarnrc\.yml$/,
+    /^\.pypirc$/,
+    /^\.aws(\/|$)/,
+    /^\.ssh(\/|$)/
+  ];
+  return protectedPatterns.some(p => p.test(rel));
+}
+
+  // Blocked destructive commands pattern
+  const BLOCKED_COMMAND_PATTERNS = [
+    /\bformat\b/i,
+    /\bdiskpart\b/i,
+    /\brmdir\s+(\/[a-z\s]+)*[a-z]:\\/i,
+    /\bdel\s+(\/[a-z\s]+)*[a-z]:\\/i,
+    /\brm\s+-rf\s+(\/|[a-z]:\\)/i,
+    /\bshutdown\b/i,
+    /\breboot\b/i,
+    /\bdrop\s+database\b/i,
+    /\bmkfs\b/i,
+    /\bdd\s+if=/i
+  ];
+
+  function isCommandBlocked(command) {
+    return BLOCKED_COMMAND_PATTERNS.some(pattern => pattern.test(command));
+  }
+
+  // Max output buffer in bytes (100 KB)
+  const MAX_OUTPUT_BYTES = 100 * 1024;
+  function truncateOutput(str) {
+    if (!str) return { text: '', truncated: false };
+    const buf = Buffer.from(str, 'utf8');
+    if (buf.length <= MAX_OUTPUT_BYTES) {
+      return { text: str, truncated: false };
+    }
+    const sliced = buf.subarray(0, MAX_OUTPUT_BYTES).toString('utf8');
+    return {
+      text: sliced + '\n\n... [OUTPUT TRUNCATED: Exceeded 100 KB safety limit] ...',
+      truncated: true,
+      originalBytes: buf.length
+    };
+  }
+
   // 10. Remote Terminal Command Execution
   app.post('/api/chatgpt/terminal/exec', verifyExecAuth, (req, res) => {
     const { command, cwd, timeout = 60000 } = req.body || {};
@@ -826,35 +923,123 @@ servers:
       return res.status(400).json({ success: false, error: 'command is required' });
     }
 
-    const projectRoot = path.resolve(__dirname, '..');
-    const targetCwd = cwd ? path.resolve(projectRoot, cwd) : projectRoot;
+    // Allowed read‑only commands (regexes for full command pattern)
+    const allowedReadOnly = [
+      /^git\s+(status|log|diff|branch|show|rev-parse|remote\s+-v)(\s+.*)?$/i,
+      /^(dir|ls)(\s+.*)?$/i,
+      /^(cat|type)(\s+.+)?$/i,
+      /^node\s+--version$/i,
+      /^npm\s+--version$/i
+    ];
 
+    if (process.env.CHATGPT_READONLY === 'true') {
+      // Disallow any shell operators or command chaining
+      const prohibitedOperators = /[&|;<>`$(){}]/;
+      if (prohibitedOperators.test(command)) {
+        return res.status(403).json({
+          success: false,
+          error: 'Read-only mode active: command contains prohibited operators.'
+        });
+      }
+      const isAllowed = allowedReadOnly.some(rx => rx.test(command.trim()));
+      if (!isAllowed) {
+        return res.status(403).json({
+          success: false,
+          error: 'Read-only mode active (CHATGPT_READONLY=true). Command not permitted.'
+        });
+      }
+    }
+
+    // Build/Test capability – only allowed when READ_ONLY is explicitly false
+    let isBuildTestAllowed = false;
+    if (process.env.CHATGPT_READONLY !== 'true' && process.env.CHATGPT_BUILD_TEST === 'true') {
+      const buildTestAllowlist = [/^npm\s+test$/i, /^npm\s+run\s+react-build$/i];
+      isBuildTestAllowed = buildTestAllowlist.some(rx => rx.test(command.trim()));
+      if (!isBuildTestAllowed) {
+        return res.status(403).json({
+          success: false,
+          error: 'Build/Test commands are not permitted unless CHATGPT_BUILD_TEST=true and READ_ONLY=false.'
+        });
+      }
+    }
+
+    if (isCommandBlocked(command)) {
+      auditLog('terminal_exec_blocked', { command, reason: 'destructive_command_pattern' });
+      return res.status(403).json({
+        success: false,
+        error: 'Command blocked: Potentially destructive system operation detected.'
+      });
+    }
+
+    let targetCwd;
+    try {
+      targetCwd = resolveSafePath(cwd);
+    } catch (err) {
+      return res.status(403).json({ success: false, error: err.message });
+    }
+
+    const safeTimeout = Math.min(Math.max(Number(timeout) || 60000, 1000), 120000);
     const startTime = Date.now();
-    console.log(`[ChatGPT Remote Exec] Running: "${command}" in ${targetCwd}`);
+    console.log(`[ChatGPT Remote Exec] Running: "${command}" in ${targetCwd} (timeout: ${safeTimeout}ms)`);
 
-    exec(command, {
-      cwd: targetCwd,
-      shell: process.platform === 'win32' ? 'powershell.exe' : '/bin/bash',
-      maxBuffer: 10 * 1024 * 1024,
-      timeout: Math.min(timeout, 120000)
-    }, (err, stdout, stderr) => {
+    // Choose safe execution strategy
+    const useExecFile = allowedReadOnly.some(rx => rx.test(command.trim())) || isBuildTestAllowed;
+    if (useExecFile) {
+      // Split command into executable + args safely (no shell parsing)
+      const parts = command.trim().match(/(?:[^\s\"]+|\"[^\"]*\")+/g) || [];
+      const execPath = parts.shift();
+      const execArgs = parts;
+      const { execFile } = require('child_process');
+      execFile(execPath, execArgs, {
+        cwd: targetCwd,
+        maxBuffer: 5 * 1024 * 1024,
+        timeout: safeTimeout
+      }, (err, stdout, stderr) => handleExecResult(err, stdout, stderr));
+    } else {
+      // Fallback to exec for any unexpected commands (should be blocked earlier)
+      const { exec } = require('child_process');
+      exec(command, {
+        cwd: targetCwd,
+        shell: process.platform === 'win32' ? 'powershell.exe' : '/bin/bash',
+        maxBuffer: 5 * 1024 * 1024,
+        timeout: safeTimeout
+      }, (err, stdout, stderr) => handleExecResult(err, stdout, stderr));
+    }
+
+    function handleExecResult(err, stdout, stderr) {
       const duration = Date.now() - startTime;
+      const truncOut = truncateOutput(stdout || '');
+      const truncErr = truncateOutput(stderr || (err ? err.message : ''));
+
+      auditLog('terminal_exec', {
+        command,
+        cwd: targetCwd,
+        exitCode: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
+        durationMs: duration
+        // No sensitive data logged
+      });
+
       res.json({
         success: !err,
         command,
         exitCode: err ? (typeof err.code === 'number' ? err.code : 1) : 0,
-        stdout: stdout || '',
-        stderr: stderr || (err ? err.message : ''),
+        stdout: truncOut.text,
+        stderr: truncErr.text,
+        truncated: truncOut.truncated || truncErr.truncated,
         executionTimeMs: duration
       });
-    });
+    }
   });
 
   // 11. Workspace File List
   app.get('/api/chatgpt/workspace/files', verifyExecAuth, (req, res) => {
     const relDir = req.query.directory || '.';
-    const projectRoot = path.resolve(__dirname, '..');
-    const fullDir = path.resolve(projectRoot, relDir);
+    let fullDir;
+    try {
+      fullDir = resolveSafePath(relDir);
+    } catch (err) {
+      return res.status(403).json({ success: false, error: err.message });
+    }
 
     if (!fs.existsSync(fullDir)) {
       return res.status(404).json({ success: false, error: 'Directory not found' });
@@ -870,6 +1055,8 @@ servers:
         if (entry.isDirectory()) directories.push(entry.name);
         else files.push(entry.name);
       }
+
+      auditLog('workspace_files', { directory: relDir, filesCount: files.length });
 
       res.json({
         success: true,
@@ -890,14 +1077,23 @@ servers:
       return res.status(400).json({ success: false, error: 'path is required' });
     }
 
-    const projectRoot = path.resolve(__dirname, '..');
-    const fullPath = path.resolve(projectRoot, targetRel);
+    let fullPath;
+    try {
+      fullPath = resolveSafePath(targetRel);
+    } catch (err) {
+      return res.status(403).json({ success: false, error: err.message });
+    }
 
     if (!fs.existsSync(fullPath)) {
       return res.status(404).json({ success: false, error: `File not found: ${targetRel}` });
     }
 
     try {
+      const stats = fs.statSync(fullPath);
+      if (stats.isDirectory()) {
+        return res.status(400).json({ success: false, error: `Target is a directory, not a file: ${targetRel}` });
+      }
+
       const content = fs.readFileSync(fullPath, 'utf8');
       const lines = content.split('\n');
       let outputLines = lines;
@@ -908,12 +1104,18 @@ servers:
         outputLines = lines.slice(s, e);
       }
 
+      const textOutput = outputLines.join('\n');
+      const truncResult = truncateOutput(textOutput);
+
+      auditLog('read_file', { path: targetRel, lines: outputLines.length });
+
       res.json({
         success: true,
         path: targetRel,
         totalLines: lines.length,
         returnedLines: outputLines.length,
-        content: outputLines.join('\n')
+        truncated: truncResult.truncated,
+        content: truncResult.text
       });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
@@ -922,6 +1124,13 @@ servers:
 
   // 13. Workspace File Write
   app.post('/api/chatgpt/workspace/write-file', verifyExecAuth, (req, res) => {
+    if (process.env.CHATGPT_READONLY === 'true') {
+      return res.status(403).json({
+        success: false,
+        error: 'Read-only mode active (CHATGPT_READONLY=true). File modifications are disabled.'
+      });
+    }
+
     const { filePath, path: p, content } = req.body || {};
     const targetRel = filePath || p;
 
@@ -929,18 +1138,34 @@ servers:
       return res.status(400).json({ success: false, error: 'path and content are required' });
     }
 
-    const projectRoot = path.resolve(__dirname, '..');
-    const fullPath = path.resolve(projectRoot, targetRel);
+    let fullPath;
+    try {
+      fullPath = resolveSafePath(targetRel);
+    } catch (err) {
+      return res.status(403).json({ success: false, error: err.message });
+    }
+
+    if (isProtectedWritePath(fullPath)) {
+      auditLog('write_file_blocked', { path: targetRel, reason: 'protected_file' });
+      return res.status(403).json({
+        success: false,
+        error: `Write denied: "${targetRel}" is a protected system/credential file.`
+      });
+    }
 
     try {
       const dir = path.dirname(fullPath);
       if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
 
       fs.writeFileSync(fullPath, content, 'utf8');
+      const bytes = Buffer.byteLength(content, 'utf8');
+
+      auditLog('write_file', { path: targetRel, bytesWritten: bytes });
+
       res.json({
         success: true,
         path: targetRel,
-        bytesWritten: Buffer.byteLength(content, 'utf8')
+        bytesWritten: bytes
       });
     } catch (e) {
       res.status(500).json({ success: false, error: e.message });
