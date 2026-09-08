@@ -255,12 +255,19 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
     // Prepare audio asset if provided
     let localAudioPath = null;
-    if (projectData.audioBlobUrl || projectData.audioUrl) {
-      job.stage = 'Downloading audio track';
-      const audioUrl = projectData.audioBlobUrl || projectData.audioUrl;
-      const audioDest = path.join(jobTempDir, 'audio_track.mp3');
+    const rawAudio = projectData.audioDataUrl || projectData.audioBlobUrl || projectData.audioUrl;
+    if (rawAudio) {
+      job.stage = 'Downloading and preparing audio track';
+      let audioExt = '.mp3';
+      if (typeof rawAudio === 'string') {
+        if (rawAudio.startsWith('data:audio/wav') || rawAudio.includes('.wav')) audioExt = '.wav';
+        else if (rawAudio.startsWith('data:audio/aac') || rawAudio.includes('.aac')) audioExt = '.aac';
+        else if (rawAudio.startsWith('data:audio/ogg') || rawAudio.includes('.ogg')) audioExt = '.ogg';
+        else if (rawAudio.startsWith('data:audio/mp4') || rawAudio.startsWith('data:audio/m4a') || rawAudio.includes('.m4a')) audioExt = '.m4a';
+      }
+      const audioDest = path.join(jobTempDir, `audio_track${audioExt}`);
       try {
-        localAudioPath = await downloadAsset(audioUrl, audioDest);
+        localAudioPath = await downloadAsset(rawAudio, audioDest);
       } catch (e) {
         console.warn('[ServerRenderEngine] Audio download skipped/failed:', e.message);
       }
@@ -272,8 +279,21 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
     const { width, height } = getResolutionDimensions(job.aspectRatio, job.resolution);
     const fps = job.fps || 30;
-    const totalDuration = projectData.duration || downloadedAssets.length * 4;
-    const secondsPerScene = totalDuration / downloadedAssets.length;
+
+    // Probe audio track length if present to sync video length to the actual music track
+    let audioDuration = null;
+    if (localAudioPath && fs.existsSync(localAudioPath)) {
+      try {
+        const out = execSync(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${localAudioPath}"`, { timeout: 4000 });
+        const parsed = parseFloat(out.toString().trim());
+        if (Number.isFinite(parsed) && parsed > 0) {
+          audioDuration = parsed;
+        }
+      } catch (_) {}
+    }
+
+    const totalDuration = Math.round(audioDuration || projectData.duration || (downloadedAssets.length * 4));
+    const secondsPerScene = Math.max(1, totalDuration / downloadedAssets.length);
 
     // Check if FFmpeg is available on the system
     const hasFFmpeg = isFFmpegAvailable ?? await checkFFmpeg();
@@ -301,7 +321,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
           if (asset.isVideo) {
             cmd
-              .inputOptions([`-t ${secondsPerScene}`])
+              .inputOptions(['-stream_loop -1', `-t ${secondsPerScene}`])
               .videoFilters([
                 `scale=${width}:${height}:force_original_aspect_ratio=increase`,
                 `crop=${width}:${height}`,
@@ -344,6 +364,9 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       const concatContent = segmentPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
       fs.writeFileSync(concatListPath, concatContent);
 
+      const safeTitle = (projectData.audioTitle || projectData.artistName || 'Astraea Music Video').replace(/[^\w\s-]/g, '').trim();
+      const safeArtist = (projectData.artistName || 'Astraea Cosmic Studio').replace(/[^\w\s-]/g, '').trim();
+
       await new Promise((resolve, reject) => {
         let command = ffmpeg()
           .input(concatListPath)
@@ -352,15 +375,18 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
         if (localAudioPath && fs.existsSync(localAudioPath)) {
           command = command
             .input(localAudioPath)
-            .outputOptions(['-c:a aac', '-b:a 192k', '-shortest']);
+            .outputOptions(['-c:a aac', '-b:a 256k', '-shortest']);
         }
 
         command
           .outputOptions([
-            '-c:v libx264',
-            '-pix_fmt yuv420p',
-            '-movflags +faststart',
-            `-t ${totalDuration}`
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-pix_fmt', 'yuv420p',
+            '-movflags', '+faststart',
+            '-metadata', `title=${safeTitle}`,
+            '-metadata', `artist=${safeArtist}`,
+            '-t', `${totalDuration}`
           ])
           .output(outputPath)
           .on('progress', (p) => {

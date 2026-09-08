@@ -36,13 +36,12 @@ const STUDIO_COLLECTIONS = [
     ]
   },
   {
-    category: '🎙️ Voice Podcast, Video & AI Oracle',
+    category: '🎙️ Voice Podcast, Oracle & Sacred Sound',
     icon: '🎙️',
     color: 'border-emerald-500/30 bg-emerald-500/5',
-    desc: 'Conversational audio readings, 60 FPS video animations & AI guidance.',
+    desc: 'Conversational audio readings, mystical AI oracle guidance & healing frequencies.',
     studios: [
       { id: 'podcast', title: 'Dual-Host Voice Podcast', desc: 'Atlas & Luna conversational audio reading with 432 Hz music.', icon: <Radio className="w-6 h-6 text-rose-400" />, tag: 'Podcast' },
-      { id: 'video', title: 'AI Music Video & Storyline Studio', desc: '4-Step Studio with Sora, Runway Gen-3, Kling, Storylines, Lip-Sync & 60 FPS Export.', icon: <Film className="w-6 h-6 text-emerald-400" />, tag: 'AI Studio' },
       { id: 'oracleChat', title: 'AI Oracle & Notebook', desc: 'Contextual AI Q&A & saved spiritual divination journal.', icon: <MessageSquare className="w-6 h-6 text-cyan-400" />, tag: 'AI Oracle' },
       { id: 'soundscape', title: 'Solfeggio Sound Sanctuary', desc: '20+ healing frequencies & sacred geometry visualizer.', icon: <Headphones className="w-6 h-6 text-cyan-400" />, tag: 'Frequencies' }
     ]

@@ -5,6 +5,86 @@ const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:
 
 
 /**
+ * Converts a browser blob: URL to a Base64 data URI so the backend server can read and persist it.
+ */
+export async function blobToDataUri(blobUrl) {
+  if (!blobUrl || typeof blobUrl !== 'string' || !blobUrl.startsWith('blob:')) {
+    return blobUrl;
+  }
+  try {
+    const response = await fetch(blobUrl);
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch (err) {
+    console.warn('[LocalServerRenderService] Failed to convert blob URL to data URI:', err);
+    return blobUrl;
+  }
+}
+
+/**
+ * Prepares project assets (audio track and custom images) for server-side ingestion by converting local blob: URLs to data URIs.
+ */
+export async function prepareProjectForServerRender(project) {
+  if (!project) return project;
+  const cloned = { ...project };
+
+  // Convert audio blob if present
+  if (cloned.audioBlobUrl && typeof cloned.audioBlobUrl === 'string' && cloned.audioBlobUrl.startsWith('blob:')) {
+    const audioDataUri = await blobToDataUri(cloned.audioBlobUrl);
+    cloned.audioBlobUrl = audioDataUri;
+    cloned.audioDataUrl = audioDataUri;
+  }
+
+  // Convert image blobs if present
+  if (Array.isArray(cloned.images) && cloned.images.length > 0) {
+    const convertedImages = await Promise.all(
+      cloned.images.map(async (img) => {
+        if (typeof img === 'string' && img.startsWith('blob:')) {
+          return await blobToDataUri(img);
+        }
+        return img;
+      })
+    );
+    cloned.images = convertedImages;
+  }
+
+  return cloned;
+}
+
+/**
+ * Quick health probe to verify if local video rendering server is running.
+ */
+export async function checkVideoServerHealth() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/health`);
+    if (!res.ok) return false;
+    const data = await res.json();
+    return data.status === 'ok';
+  } catch (_) {
+    return false;
+  }
+}
+
+/**
+ * Retrieves detailed server runtime status (uptime, memory, active rendering jobs).
+ */
+export async function getVideoServerStatus() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/server-status`);
+    if (!res.ok) return { online: false };
+    const data = await res.json();
+    return { online: true, ...data };
+  } catch (_) {
+    return { online: false };
+  }
+}
+
+/**
  * Initiates a server-side video rendering job.
  */
 export async function startServerRender(project, options = {}) {
@@ -53,7 +133,16 @@ export async function pollServerRenderStatus(jobId) {
  * @returns {Promise<Object>} Completed job details
  */
 export async function renderVideoOnServer(project, options = {}, onProgress = null) {
-  const initResult = await startServerRender(project, options);
+  if (onProgress) {
+    onProgress({
+      status: 'PREPARING_ASSETS',
+      stage: 'Preparing audio and visual assets for high-speed render...',
+      progress: 2,
+    });
+  }
+
+  const preparedProject = await prepareProjectForServerRender(project);
+  const initResult = await startServerRender(preparedProject, options);
   const jobId = initResult.jobId;
 
   if (onProgress) {

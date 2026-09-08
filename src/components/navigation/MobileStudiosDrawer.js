@@ -20,7 +20,6 @@ export const ALL_STUDIO_MODULES = [
   { id: 'tarotLibrary', title: '78-Card Library', desc: 'Complete Arcana meanings & symbolism', icon: <BookOpen className="w-5 h-5 text-cyan-400" />, category: 'Magic & Tarot', catId: 'grimoire', tag: 'Encyclopedia' },
 
   { id: 'podcast', title: 'Dual-Host Podcast', desc: 'Conversational audio reading with 432 Hz music', icon: <Radio className="w-5 h-5 text-rose-400" />, category: 'Media & AI', catId: 'media', tag: 'Voice' },
-  { id: 'video', title: 'AI Video Studio', desc: '4-Step Studio with Sora, Runway & 60 FPS Export', icon: <Film className="w-5 h-5 text-emerald-400" />, category: 'Media & AI', catId: 'media', tag: 'Video AI' },
   { id: 'oracleChat', title: 'AI Oracle & Journal', desc: 'Interactive esoteric Q&A assistant', icon: <MessageSquare className="w-5 h-5 text-cyan-400" />, category: 'Media & AI', catId: 'media', tag: 'AI Chat' },
   { id: 'soundscape', title: 'Sacred Frequencies', desc: 'Harmonic Solfeggio & cymatic visualizer', icon: <Headphones className="w-5 h-5 text-cyan-400" />, category: 'Media & AI', catId: 'media', tag: 'Sound' },
 

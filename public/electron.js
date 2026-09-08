@@ -19,6 +19,29 @@ const DEV_PORT = process.env.PORT || 3220;
 app.disableHardwareAcceleration();
 
 let mainWindow;
+let videoServerProcess = null;
+
+function ensureVideoServer() {
+  const http = require('http');
+  const req = http.get('http://localhost:4000/health', (res) => {
+    if (res.statusCode === 200) {
+      console.log('[Electron] Video render server is already active on port 4000.');
+    }
+  });
+
+  req.on('error', () => {
+    console.log('[Electron] Spawning background video server on port 4000...');
+    const { fork } = require('child_process');
+    const serverScript = path.join(__dirname, '../server/index.js');
+    if (fs.existsSync(serverScript)) {
+      videoServerProcess = fork(serverScript, [], {
+        env: { ...process.env, VIDEO_PORT: '4000' },
+        stdio: 'ignore',
+      });
+      videoServerProcess.unref();
+    }
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -109,8 +132,15 @@ function createMenu() {
 }
 
 app.whenReady().then(() => {
+  ensureVideoServer();
   createMenu();
   createWindow();
+});
+
+app.on('will-quit', () => {
+  if (videoServerProcess) {
+    try { videoServerProcess.kill(); } catch (_) {}
+  }
 });
 
 app.on('window-all-closed', () => {

@@ -30,7 +30,7 @@ import {
   generateCustomVideo,
   getVideoJobStatus,
 } from '../../services/AIVideoGenerationService';
-import { renderVideoOnServer, triggerBrowserDownload } from '../../services/LocalServerRenderService';
+import { renderVideoOnServer, triggerBrowserDownload, checkVideoServerHealth } from '../../services/LocalServerRenderService';
 import { audioEngine } from '../../services/AudioEngine';
 import { SongStructureAnalyzer } from '../../services/SongStructureAnalyzer';
 import { ProjectStorage, formatRelativeSaveTime } from '../../services/ProjectStorage';
@@ -104,6 +104,21 @@ export default function ModernStudioWorkstation({
   const [isVideoParamsModalOpen, setIsVideoParamsModalOpen] = useState(false);
   const [isCustomVideoLoading, setIsCustomVideoLoading] = useState(false);
   const [customVideoStatus, setCustomVideoStatus] = useState({ stage: '', progress: null, error: null });
+  const [isServerOnline, setIsServerOnline] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const probe = async () => {
+      const ok = await checkVideoServerHealth();
+      if (isMounted) setIsServerOnline(ok);
+    };
+    probe();
+    const interval = setInterval(probe, 8000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, []);
 
   // Cloud Sync Integration via Firebase Firestore
   const { syncStatus, lastSyncedAt, syncToCloud, isFirebaseConfigured } = useProjectSync(
@@ -678,11 +693,16 @@ export default function ModernStudioWorkstation({
             className="toolbar-quick-btn"
             onClick={handleServerRender}
             disabled={isServerRendering}
-            style={{ background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', fontWeight: 800, border: 'none' }}
-            title="Generate & composite full video on your local Express/FFmpeg backend"
+            style={{
+              background: isServerOnline ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #334155, #1e293b)',
+              color: '#fff',
+              fontWeight: 800,
+              border: isServerOnline ? '1px solid rgba(52, 211, 153, 0.4)' : '1px solid rgba(255, 255, 255, 0.1)',
+            }}
+            title={isServerOnline ? "Local Express & FFmpeg 8.1 master engine is connected and ready" : "Local render server on port 4000 (connecting...)"}
           >
-            <Zap className="w-3.5 h-3.5 text-white" />
-            <span>🖥️ Server Render</span>
+            <Zap className={`w-3.5 h-3.5 ${isServerOnline ? 'text-white' : 'text-slate-400'}`} />
+            <span>{isServerOnline ? '🟢 Server Render (FFmpeg)' : '🖥️ Server Render'}</span>
           </button>
           <button
             type="button"

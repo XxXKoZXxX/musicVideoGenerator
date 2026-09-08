@@ -198,12 +198,8 @@ app.get('/health', (req, res) => {
 app.get('/api/server-status', (req, res) => {
   const uptime = process.uptime(); // seconds
   const memory = process.memoryUsage(); // bytes { rss, heapTotal, heapUsed, external }
-  const activeJobsCount = typeof activeJobs !== 'undefined' ? (activeJobs instanceof Map ? activeJobs.size : Object.keys(activeJobs || {}).length) : 0;
+  const activeJobsCount = activeJobs.size;
   res.json({ uptime, memory, activeJobs: activeJobsCount });
-});
-
-app.get('/api/generators', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
 app.get('/api/generators', (req, res) => {
@@ -241,20 +237,17 @@ app.post('/api/generate', async (req, res) => {
 
 // fal.ai model endpoint map
 const FAL_MODEL_ENDPOINTS = {
-  'kling_ai':       'fal-ai/kling-video/v2/master/text-to-video',
+  'kling_ai':       'fal-ai/kling-video/v1.5/pro/text-to-video',
   'luma_dream':     'fal-ai/luma-dream-machine',
   'runway_gen3':    'fal-ai/runway-gen3/turbo/image-to-video',
-  'minimax':        'fal-ai/minimax-video/video-01-live/text-to-video',
+  'minimax':        'fal-ai/minimax/video-01/text-to-video',
   'stable_video':   'fal-ai/stable-video',
-  'sora_ai':        'fal-ai/runway-gen3/turbo/image-to-video', // maps to best available
-  'higgsfield_dop': 'fal-ai/kling-video/v2/master/text-to-video',
-  'pika_20':        'fal-ai/minimax-video/video-01-live/text-to-video',
+  'sora_ai':        'fal-ai/kling-video/v1.5/pro/text-to-video',
+  'higgsfield_dop': 'fal-ai/kling-video/v1.5/pro/text-to-video',
+  'pika_20':        'fal-ai/minimax/video-01/text-to-video',
   'kaiber_ai':      'fal-ai/luma-dream-machine',
-  'domo_ai':        'fal-ai/minimax-video/video-01-live/text-to-video',
+  'domo_ai':        'fal-ai/minimax/video-01/text-to-video',
 };
-
-// In-memory job tracker for async generation
-const activeJobs = new Map();
 
 function getFalKey(userKey) {
   return userKey || process.env.FAL_KEY || '';
@@ -262,12 +255,20 @@ function getFalKey(userKey) {
 
 // Helper: call fal.ai queue API
 async function falSubmitGeneration(falKey, modelEndpoint, prompt, options = {}) {
-  const url = `https://queue.fal.run/${modelEndpoint}`;
+  // If model is image-to-video but no image provided, route to text-to-video
+  let endpoint = modelEndpoint;
+  const hasImage = Boolean(options.imageUrl || options.image_url);
+  if (!hasImage && endpoint.includes('image-to-video')) {
+    endpoint = 'fal-ai/kling-video/v1.5/pro/text-to-video';
+  }
+
+  const url = `https://queue.fal.run/${endpoint}`;
   const body = {
     prompt,
     aspect_ratio: options.aspectRatio || '16:9',
-    duration: options.duration || '5',
+    duration: options.duration ? String(options.duration) : '5',
     ...(options.negativePrompt ? { negative_prompt: options.negativePrompt } : {}),
+    ...(hasImage ? { image_url: options.imageUrl || options.image_url } : {}),
   };
 
   const response = await fetch(url, {

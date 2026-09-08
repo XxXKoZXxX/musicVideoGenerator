@@ -19,7 +19,6 @@ export default function FloatingCosmicDock({ currentView, onNavigate }) {
     { id: 'tarot', label: 'Tarot Spreads', icon: <Eye className="w-5 h-5" /> },
     { id: 'divider3', label: '', isDivider: true },
     { id: 'podcast', label: 'Audio Podcast', icon: <Radio className="w-5 h-5" /> },
-    { id: 'video', label: 'Motion Video', icon: <Film className="w-5 h-5" /> },
     { id: 'oracleChat', label: 'AI Oracle', icon: <MessageSquare className="w-5 h-5" /> },
     { id: 'soundscape', label: 'Soundscapes', icon: <Headphones className="w-5 h-5" /> },
     { id: 'divider4', label: '', isDivider: true },
