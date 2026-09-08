@@ -15,6 +15,9 @@ const {
 const app = express();
 const PORT = process.env.VIDEO_PORT || 4000;
 
+// In-memory job tracker for async generation
+const activeJobs = new Map();
+
 app.use(cors());
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ limit: '60mb', extended: true }));
