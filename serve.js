@@ -62,7 +62,8 @@ function shouldProxyToVideoServer(reqPath) {
     reqPath.startsWith('/v1/') ||
     reqPath.startsWith('/.well-known/') ||
     reqPath === '/openapi.json' ||
-    reqPath === '/openapi.yaml'
+    reqPath === '/openapi.yaml' ||
+    reqPath === '/health'
   );
 }
 
