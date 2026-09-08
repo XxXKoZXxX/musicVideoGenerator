@@ -46,5 +46,6 @@ describe('VocalClonerEngine', () => {
         }
       );
     }).not.toThrow();
+    expect(visemeCaptured).not.toBeNull();
   });
 });

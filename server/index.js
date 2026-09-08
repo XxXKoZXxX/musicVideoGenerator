@@ -178,6 +178,8 @@ app.get('/', (req, res) => {
       '/api/ai-video/generate',
       '/api/ai-video/generate-scenes',
       '/api/ai-video/status/:id',
+      '/api/video/generate',
+      '/api/video/status/:jobId',
       '/api/claude',
       '/api/opus-agent',
       '/api/opus-agent/chat',
@@ -189,6 +191,18 @@ app.get('/', (req, res) => {
 });
 
 app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Server status endpoint – provides uptime, memory usage, and active job count
+app.get('/api/server-status', (req, res) => {
+  const uptime = process.uptime(); // seconds
+  const memory = process.memoryUsage(); // bytes { rss, heapTotal, heapUsed, external }
+  const activeJobsCount = typeof activeJobs !== 'undefined' ? (activeJobs instanceof Map ? activeJobs.size : Object.keys(activeJobs || {}).length) : 0;
+  res.json({ uptime, memory, activeJobs: activeJobsCount });
+});
+
+app.get('/api/generators', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -497,6 +511,131 @@ app.post('/api/ai-video/generate-scenes', async (req, res) => {
     message: `${requestIds.filter(r => r.requestId).length}/${scenes.length} scenes submitted to fal.ai`,
   });
 });
+
+// ============================================================
+// CUSTOM AI VIDEO GENERATION ENDPOINT & STATUS POLLING
+// ============================================================
+
+// POST /api/video/generate — Configurable AI video generation
+app.post('/api/video/generate', async (req, res) => {
+  const { prompt, model, aspectRatio, duration, negativePrompt, apiKey, options } = req.body;
+  const mergedOptions = {
+    ...(options || {}),
+    ...(aspectRatio ? { aspectRatio } : {}),
+    ...(duration ? { duration } : {}),
+    ...(negativePrompt ? { negativePrompt } : {}),
+  };
+
+  const falKey = getFalKey(apiKey);
+  if (!prompt) {
+    return res.status(400).json({ success: false, error: 'Missing prompt parameter.' });
+  }
+
+  const selectedModel = model || 'kling_ai';
+  console.log(`[Video-Endpoint] Custom generation request | model: ${selectedModel} | ratio: ${mergedOptions.aspectRatio || '16:9'} | duration: ${mergedOptions.duration || '5'}s | prompt: "${prompt.substring(0, 60)}..."`);
+
+  // Fallback if no FAL_KEY provided
+  if (!falKey) {
+    console.log('[Video-Endpoint] No FAL_KEY provided — responding with high-fidelity sample fallback');
+    const sampleKey = selectedModel && SAMPLE_VIDEOS[selectedModel.replace('_ai', '').replace('_gen3', '')]
+      ? selectedModel.replace('_ai', '').replace('_gen3', '')
+      : 'default';
+    const sample = SAMPLE_VIDEOS[sampleKey] || SAMPLE_VIDEOS.default;
+    return setTimeout(() => {
+      res.json({
+        success: true,
+        mode: 'fallback',
+        jobId: `job_${Date.now()}_sample`,
+        videoUrl: sample.url,
+        thumbnailUrl: sample.thumbnail,
+        duration: parseInt(mergedOptions.duration, 10) || 5,
+        aspectRatio: mergedOptions.aspectRatio || '16:9',
+        model: selectedModel,
+        message: 'Using simulated fallback video (no FAL_KEY configured). Add FAL_KEY to .env for real AI video generation.',
+      });
+    }, 1000);
+  }
+
+  const endpoint = FAL_MODEL_ENDPOINTS[selectedModel] || FAL_MODEL_ENDPOINTS['kling_ai'];
+  try {
+    const submission = await falSubmitGeneration(falKey, endpoint, prompt, mergedOptions);
+    const jobId = submission.request_id;
+
+    activeJobs.set(jobId, {
+      status: 'IN_QUEUE',
+      model: selectedModel,
+      prompt,
+      aspectRatio: mergedOptions.aspectRatio || '16:9',
+      duration: mergedOptions.duration || 5,
+      negativePrompt: mergedOptions.negativePrompt || null,
+      statusUrl: submission.status_url || `https://queue.fal.run/${endpoint}/requests/${jobId}/status`,
+      responseUrl: submission.response_url || `https://queue.fal.run/${endpoint}/requests/${jobId}`,
+      createdAt: Date.now(),
+    });
+
+    pollJobUntilDone(falKey, jobId);
+
+    res.json({
+      success: true,
+      mode: 'generating',
+      jobId,
+      model: selectedModel,
+      aspectRatio: mergedOptions.aspectRatio || '16:9',
+      duration: mergedOptions.duration || 5,
+      message: `Video generation task queued with fal.ai (${endpoint})`,
+    });
+  } catch (err) {
+    console.error('[Video-Endpoint] fal.ai submission error:', err.message);
+    const sample = SAMPLE_VIDEOS.default;
+    res.json({
+      success: true,
+      mode: 'fallback',
+      jobId: `job_${Date.now()}_err_fallback`,
+      videoUrl: sample.url,
+      thumbnailUrl: sample.thumbnail,
+      duration: parseInt(mergedOptions.duration, 10) || 5,
+      aspectRatio: mergedOptions.aspectRatio || '16:9',
+      model: selectedModel,
+      error: err.message,
+      message: 'fal.ai API error — falling back to sample video asset.',
+    });
+  }
+});
+
+// GET /api/video/status/:jobId — Check generation or render job status
+app.get('/api/video/status/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const job = activeJobs.get(jobId);
+
+  if (!job) {
+    // Check if it was a server render job
+    const serverJob = getJobStatus(jobId);
+    if (serverJob) {
+      return res.json({
+        success: true,
+        jobId,
+        status: serverJob.status,
+        videoUrl: serverJob.videoUrl || null,
+        progress: serverJob.progress,
+        error: serverJob.error || null,
+      });
+    }
+    return res.status(404).json({ success: false, error: `Job ${jobId} not found` });
+  }
+
+  res.json({
+    success: true,
+    jobId,
+    status: job.status,
+    videoUrl: job.videoUrl || null,
+    thumbnailUrl: job.thumbnailUrl || null,
+    duration: job.duration || null,
+    error: job.error || null,
+    model: job.model,
+  });
+});
+
+
 
 // ============================================================
 // DEDICATED LOCAL SERVER VIDEO RENDERING ENGINE

@@ -1,6 +1,8 @@
 // src/services/LocalServerRenderService.js - Client for dedicated local backend video rendering server
+import { saveProjectToCloud } from '../firebase.config';
 
 const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:4000';
+
 
 /**
  * Initiates a server-side video rendering job.
@@ -89,11 +91,28 @@ export async function renderVideoOnServer(project, options = {}, onProgress = nu
       }
 
       if (job.status === 'COMPLETED') {
-        return {
+        const completedResult = {
           ...job,
           videoUrl: fullVideoUrl,
           downloadUrl: fullDownloadUrl,
         };
+
+        // Persist project metadata and rendered video URL to cloud
+        try {
+          const syncId = project.id || project.artistName || `render_${jobId}`;
+          saveProjectToCloud(syncId, {
+            title: project.audioTitle || project.artistName || 'Astraea Video Render',
+            videoUrl: fullVideoUrl,
+            downloadUrl: fullDownloadUrl,
+            options,
+            status: 'COMPLETED',
+            renderedAt: new Date().toISOString(),
+          }).catch(() => {});
+        } catch (syncErr) {
+          console.warn('[LocalServerRenderService] Cloud metadata save notice:', syncErr.message);
+        }
+
+        return completedResult;
       }
 
       if (job.status === 'FAILED') {

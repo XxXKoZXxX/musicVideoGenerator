@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Music Video Studio Projects collection
+    match /musicvid_projects/{projectId} {
+      allow read, write: if true; // Configurable based on auth requirements
+    }
+  }
+}

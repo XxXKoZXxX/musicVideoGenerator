@@ -34,8 +34,13 @@ function checkFFmpeg() {
 /**
  * Downloads a remote URL or saves a data URI to a local file.
  */
-async function downloadAsset(urlOrData, destPath) {
+async function downloadAsset(urlOrData, destPath, redirectCount = 0) {
   if (!urlOrData) return null;
+
+  // Prevent infinite redirect loops
+  if (redirectCount > 5) {
+    throw new Error('Too many redirects while downloading asset');
+  }
 
   // Base64 Data URI
   if (urlOrData.startsWith('data:')) {
@@ -48,29 +53,59 @@ async function downloadAsset(urlOrData, destPath) {
   // HTTP/HTTPS URL
   if (urlOrData.startsWith('http://') || urlOrData.startsWith('https://')) {
     return new Promise((resolve, reject) => {
-      const client = urlOrData.startsWith('https:') ? https : http;
-      const fileStream = fs.createWriteStream(destPath);
+      const isHttps = urlOrData.startsWith('https:');
+      const client = isHttps ? https : http;
+      let fileStream = null;
+      let isResolved = false;
 
-      client.get(urlOrData, (res) => {
-        // Follow redirects
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          downloadAsset(res.headers.location, destPath).then(resolve).catch(reject);
-          return;
+      const finishWithError = (err) => {
+        if (isResolved) return;
+        isResolved = true;
+        if (fileStream) {
+          fileStream.destroy();
         }
-        if (res.statusCode !== 200) {
-          fileStream.close();
-          fs.unlink(destPath, () => {});
-          return reject(new Error(`Failed to download asset: HTTP ${res.statusCode}`));
-        }
-        res.pipe(fileStream);
-        fileStream.on('finish', () => {
-          fileStream.close(() => resolve(destPath));
-        });
-      }).on('error', (err) => {
-        fileStream.close();
         fs.unlink(destPath, () => {});
         reject(err);
+      };
+
+      const req = client.get(urlOrData, { timeout: 15000 }, (res) => {
+        // Follow all standard redirect status codes
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+          if (fileStream) {
+            fileStream.destroy();
+          }
+          fs.unlink(destPath, () => {});
+          try {
+            const redirectUrl = new URL(res.headers.location, urlOrData).toString();
+            downloadAsset(redirectUrl, destPath, redirectCount + 1).then(resolve).catch(reject);
+          } catch (e) {
+            finishWithError(new Error(`Invalid redirect URL: ${res.headers.location}`));
+          }
+          return;
+        }
+
+        if (res.statusCode !== 200) {
+          return finishWithError(new Error(`Failed to download asset: HTTP ${res.statusCode}`));
+        }
+
+        fileStream = fs.createWriteStream(destPath);
+        res.pipe(fileStream);
+
+        fileStream.on('finish', () => {
+          if (isResolved) return;
+          isResolved = true;
+          fileStream.close(() => resolve(destPath));
+        });
+
+        fileStream.on('error', (err) => finishWithError(err));
       });
+
+      req.on('timeout', () => {
+        req.destroy();
+        finishWithError(new Error(`Asset download timed out after 15 seconds: ${urlOrData}`));
+      });
+
+      req.on('error', (err) => finishWithError(err));
     });
   }
 
@@ -200,18 +235,21 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       ? projectData.images
       : ['https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80'];
 
-    const downloadedImages = [];
+    const downloadedAssets = [];
     for (let i = 0; i < rawImages.length; i++) {
-      const imgPath = path.join(jobTempDir, `scene_${i}.jpg`);
+      const rawAsset = rawImages[i];
+      const isVideoAsset = typeof rawAsset === 'string' && (rawAsset.includes('.mp4') || rawAsset.includes('.webm'));
+      const ext = isVideoAsset ? (rawAsset.includes('.webm') ? '.webm' : '.mp4') : '.jpg';
+      const assetPath = path.join(jobTempDir, `scene_${i}${ext}`);
       try {
-        const saved = await downloadAsset(rawImages[i], imgPath);
-        if (saved) downloadedImages.push(saved);
+        const saved = await downloadAsset(rawAsset, assetPath);
+        if (saved) downloadedAssets.push({ path: saved, isVideo: isVideoAsset });
       } catch (e) {
         console.warn(`[ServerRenderEngine] Failed downloading scene ${i}:`, e.message);
       }
     }
 
-    if (downloadedImages.length === 0) {
+    if (downloadedAssets.length === 0) {
       throw new Error('No valid image assets could be prepared for video rendering.');
     }
 
@@ -234,8 +272,8 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
     const { width, height } = getResolutionDimensions(job.aspectRatio, job.resolution);
     const fps = job.fps || 30;
-    const totalDuration = projectData.duration || downloadedImages.length * 4;
-    const secondsPerScene = totalDuration / downloadedImages.length;
+    const totalDuration = projectData.duration || downloadedAssets.length * 4;
+    const secondsPerScene = totalDuration / downloadedAssets.length;
 
     // Check if FFmpeg is available on the system
     const hasFFmpeg = isFFmpegAvailable ?? await checkFFmpeg();
@@ -252,20 +290,35 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       const segmentPaths = [];
       const motionPresets = ['zoom_in', 'pan_left', 'zoom_out', 'pan_right', 'kinetic_pulse'];
 
-      for (let i = 0; i < downloadedImages.length; i++) {
-        const sceneImg = downloadedImages[i];
+      for (let i = 0; i < downloadedAssets.length; i++) {
+        const asset = downloadedAssets[i];
         const segmentFile = path.join(jobTempDir, `segment_${i}.mp4`);
         const motionType = motionPresets[i % motionPresets.length];
         const motionFilter = getMotionFilter(motionType, secondsPerScene, fps, width, height);
 
         await new Promise((resolve, reject) => {
-          ffmpeg(sceneImg)
-            .inputOptions(['-loop 1', `-t ${secondsPerScene}`])
-            .videoFilters([
-              `scale=${width*2}:${height*2}`,
-              motionFilter,
-              'format=yuv420p'
-            ])
+          let cmd = ffmpeg(asset.path);
+
+          if (asset.isVideo) {
+            cmd
+              .inputOptions([`-t ${secondsPerScene}`])
+              .videoFilters([
+                `scale=${width}:${height}:force_original_aspect_ratio=increase`,
+                `crop=${width}:${height}`,
+                'format=yuv420p'
+              ]);
+          } else {
+            cmd
+              .inputOptions(['-loop 1', `-t ${secondsPerScene}`])
+              .videoFilters([
+                `scale=${width}:${height}:force_original_aspect_ratio=increase`,
+                `crop=${width}:${height}`,
+                motionFilter,
+                'format=yuv420p'
+              ]);
+          }
+
+          cmd
             .outputOptions([
               '-c:v libx264',
               '-preset ultrafast',
@@ -280,7 +333,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
         });
 
         segmentPaths.push(segmentFile);
-        job.progress = 50 + Math.round((i / downloadedImages.length) * 30);
+        job.progress = 50 + Math.round(((i + 1) / downloadedAssets.length) * 30);
       }
 
       // Concatenate segments & mux audio
@@ -339,7 +392,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
           duration: totalDuration,
           resolution: `${width}x${height}`,
           fps,
-          scenes: downloadedImages.length,
+          scenes: downloadedAssets.length,
           generatedAt: new Date().toISOString()
         };
         fs.writeFileSync(outputPath, JSON.stringify(descriptor, null, 2));

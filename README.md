@@ -86,4 +86,34 @@ Includes **8 luxury presets** (*Royal Gold, Celestial Cyan, Amethyst Mystic, Eme
 
 ---
 
+## 🎬 AI Video Generation & Cloud Sync API
+
+### AI Video Generation Endpoint
+
+- **`POST /api/video/generate`**: Generate AI video clips with configurable neural models (`kling_ai`, `luma_dream`, `runway_gen3`, `minimax`, `stable_video`), aspect ratio (`16:9`, `9:16`, `1:1`, `4:5`, `21:9`), duration (`5s`, `10s`, `15s`), and negative prompt filtering.
+- **`GET /api/video/status/:jobId`**: Asynchronously poll the status of video generation or server rendering jobs.
+
+```bash
+# Example Video Generation Request
+curl -X POST http://localhost:4000/api/video/generate \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "Cinematic cosmic nebula with laser aurora",
+    "model": "kling_ai",
+    "aspectRatio": "16:9",
+    "duration": "5",
+    "negativePrompt": "blurry, low quality"
+  }'
+```
+
+### Cloud Synchronization (Firebase Firestore)
+
+Persist projects, video assets, and user presets seamlessly to Cloud Firestore with automatic local cache fallback:
+
+- Configured via `REACT_APP_FIREBASE_*` environment variables in `.env`.
+- Real-time cloud sync status indicator in the top directorial toolbar.
+- Deploy security rules with `./scripts/deploy-firebase.sh`.
+
+---
+
 © 2026 Astraea Cosmic Studios. All rights reserved.

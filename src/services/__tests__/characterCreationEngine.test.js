@@ -1,7 +1,6 @@
 // characterCreationEngine.test.js - Unit tests for CharacterCreationEngine
 import {
   CharacterCreationEngine,
-  characterCreationEngine,
   CHARACTER_ARCHETYPES,
   CHARACTER_EYE_COLORS,
   CHARACTER_HAIR_STYLES,

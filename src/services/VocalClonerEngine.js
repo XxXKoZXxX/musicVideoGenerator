@@ -242,6 +242,15 @@ export class VocalClonerEngine {
     const preset = VOCAL_PRESETS.find((p) => p.id === presetId) || VOCAL_PRESETS[0];
     const ctx = this.initAudioContext();
 
+    if (onVisemeCallback) {
+      onVisemeCallback({
+        viseme: 'AA',
+        openness: 0.8,
+        widthScale: 1.1,
+        word: (lyricText || 'Astraea').split(' ')[0],
+      });
+    }
+
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(lyricText || 'Astraea cosmic harmonics');

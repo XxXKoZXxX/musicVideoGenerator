@@ -262,9 +262,27 @@ export class VideoGenerator {
   }
 
   getFrameSize() {
-    const height = RESOLUTION_PRESETS[this.settings.resolution]?.height || 1080;
-    const ratio = ASPECT_RATIOS[this.settings.aspectRatio]?.ratio || 16 / 9;
-    const width = Math.round((height * ratio) / 2) * 2;
+    const resKey = this.settings?.resolution || this.project?.resolution || '1080p';
+    const ratioKey = this.settings?.aspectRatio || this.project?.aspectRatio || '16:9';
+
+    const baseHeight = RESOLUTION_PRESETS[resKey]?.height || 1080;
+    const ratio = ASPECT_RATIOS[ratioKey]?.ratio || (16 / 9);
+
+    let width;
+    let height;
+
+    if (ratio >= 1) {
+      height = baseHeight;
+      width = Math.round(height * ratio);
+    } else {
+      width = Math.min(baseHeight, 1080);
+      height = Math.round(width / ratio);
+    }
+
+    // Video encoders require even dimensions
+    width = width % 2 === 0 ? width : width + 1;
+    height = height % 2 === 0 ? height : height + 1;
+
     return { width, height };
   }
 
@@ -458,6 +476,7 @@ export class VideoGenerator {
     return result;
   }
 
+
   recordVideo(images, audio, lyrics) {
     const { width, height } = this.getFrameSize();
     const fps = this.settings.fps || 30;
@@ -579,7 +598,13 @@ export class VideoGenerator {
       let frameHandle = null;
 
       const cleanup = () => {
-        if (frameHandle) cancelAnimationFrame(frameHandle);
+        if (frameHandle) {
+          cancelAnimationFrame(frameHandle);
+          clearTimeout(frameHandle);
+        }
+        if (typeof document !== 'undefined') {
+          document.removeEventListener('visibilitychange', onVisibilityChange);
+        }
         if (bufferSource) {
           try { bufferSource.stop(); } catch (e) {}
         }
@@ -589,6 +614,29 @@ export class VideoGenerator {
         }
         stream.getTracks().forEach((t) => t.stop());
       };
+
+      const scheduleNextFrame = () => {
+        if (this.cancelled) return;
+        if (typeof document !== 'undefined' && document.hidden) {
+          frameHandle = setTimeout(drawLoop, Math.max(16, Math.floor(1000 / fps)));
+        } else {
+          frameHandle = requestAnimationFrame(drawLoop);
+        }
+      };
+
+      const onVisibilityChange = () => {
+        if (recorder.state === 'recording') {
+          if (frameHandle) {
+            cancelAnimationFrame(frameHandle);
+            clearTimeout(frameHandle);
+          }
+          scheduleNextFrame();
+        }
+      };
+
+      if (typeof document !== 'undefined') {
+        document.addEventListener('visibilitychange', onVisibilityChange);
+      }
 
       recorder.onerror = (e) => {
         cleanup();
@@ -665,7 +713,7 @@ export class VideoGenerator {
           if (recorder.state === 'recording') recorder.stop();
           return;
         }
-        frameHandle = requestAnimationFrame(drawLoop);
+        scheduleNextFrame();
       };
 
       const startRecording = () => {
@@ -674,7 +722,7 @@ export class VideoGenerator {
           try { bufferSource.start(0); } catch (e) {}
         }
         recorder.start(1000);
-        frameHandle = requestAnimationFrame(drawLoop);
+        scheduleNextFrame();
       };
 
       if (audio && audio.element && !audio.audioBuffer) {

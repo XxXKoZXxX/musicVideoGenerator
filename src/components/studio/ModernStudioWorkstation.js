@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import {
   Play,
   Pause,
@@ -12,18 +12,29 @@ import {
   FolderOpen,
   Trash2,
   Crown,
+  Cloud,
+  X,
 } from 'lucide-react';
 import StudioInspectorPanel from './StudioInspectorPanel';
 import MultiTrackTimeline from './MultiTrackTimeline';
 import FreebeatAutoDirectorModal from '../common/FreebeatAutoDirectorModal';
 import FeatureStudioModal from './FeatureStudioModal';
 import OpusAgentAssistantDrawer from '../common/OpusAgentAssistantDrawer';
+import VideoParamsForm from '../ui/VideoParamsForm';
+import LoadingOverlay from '../ui/LoadingOverlay';
 import { VideoGenerator } from '../../services/VideoGenerator';
-import { generateAllSceneVideos, pollAllScenesUntilDone, AI_VIDEO_GEN_MODELS } from '../../services/AIVideoGenerationService';
+import {
+  generateAllSceneVideos,
+  pollAllScenesUntilDone,
+  AI_VIDEO_GEN_MODELS,
+  generateCustomVideo,
+  getVideoJobStatus,
+} from '../../services/AIVideoGenerationService';
 import { renderVideoOnServer, triggerBrowserDownload } from '../../services/LocalServerRenderService';
 import { audioEngine } from '../../services/AudioEngine';
 import { SongStructureAnalyzer } from '../../services/SongStructureAnalyzer';
 import { ProjectStorage, formatRelativeSaveTime } from '../../services/ProjectStorage';
+import { useProjectSync } from '../../hooks/useProjectSync';
 import '../../styles/ModernStudioWorkstation.css';
 
 // Aspect ratio -> sensible per-platform export defaults (resolution/quality).
@@ -90,6 +101,16 @@ export default function ModernStudioWorkstation({
   const [isProjectsMenuOpen, setIsProjectsMenuOpen] = useState(false);
   const [savedProjects, setSavedProjects] = useState(() => ProjectStorage.list());
   const [saveStatus, setSaveStatus] = useState(null);
+  const [isVideoParamsModalOpen, setIsVideoParamsModalOpen] = useState(false);
+  const [isCustomVideoLoading, setIsCustomVideoLoading] = useState(false);
+  const [customVideoStatus, setCustomVideoStatus] = useState({ stage: '', progress: null, error: null });
+
+  // Cloud Sync Integration via Firebase Firestore
+  const { syncStatus, lastSyncedAt, syncToCloud, isFirebaseConfigured } = useProjectSync(
+    project.artistName || 'astraea_project',
+    project,
+    false
+  );
 
   const canvasRef = useRef(null);
   const audioRef = useRef(null);
@@ -97,13 +118,25 @@ export default function ModernStudioWorkstation({
   const animFrameRef = useRef(null);
   const playbackStartTimeRef = useRef(0);
   const playbackStartOffsetRef = useRef(0);
+  const lastUiUpdateTimeRef = useRef(0);
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const projectRef = useRef(project);
+  projectRef.current = project;
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
 
-  // Compute music-aware song structure
-  const songStructure = SongStructureAnalyzer.analyzeSongStructure(
-    project.duration || 32,
-    project.bpm || 128,
-    project.renderStyle
-  );
+  // Compute music-aware song structure (memoized to avoid new object references every render)
+  const songStructure = useMemo(() => {
+    return SongStructureAnalyzer.analyzeSongStructure(
+      project.duration || 32,
+      project.bpm || 128,
+      project.renderStyle
+    );
+  }, [project.duration, project.bpm, project.renderStyle]);
+
+  const songStructureRef = useRef(songStructure);
+  songStructureRef.current = songStructure;
 
   // Initialize Video Generator on mount or project changes
   useEffect(() => {
@@ -138,16 +171,17 @@ export default function ModernStudioWorkstation({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.aspectRatio, project.renderStyle, project.characterLockPersona, project.selectedVideoModel, project.pacingBeatsPerCut, project.motionIntensity]);
 
-  // Main 60 FPS animation loop
-  const updateLoop = useCallback(() => {
-    if (!isPlaying) return;
+  // Main 60 FPS animation loop decoupled from React state thrashing
+  const runFrame = useCallback(() => {
+    if (!isPlayingRef.current) return;
 
     const now = performance.now() / 1000;
     const elapsed = now - playbackStartTimeRef.current + playbackStartOffsetRef.current;
-    const dur = project.duration || 32;
+    const dur = projectRef.current.duration || 32;
 
     if (elapsed >= dur) {
       setCurrentTime(0);
+      currentTimeRef.current = 0;
       setIsPlaying(false);
       playbackStartOffsetRef.current = 0;
       if (audioRef.current) {
@@ -157,12 +191,20 @@ export default function ModernStudioWorkstation({
       return;
     }
 
-    setCurrentTime(elapsed);
+    // Throttle React state update for scrubber to ~15 FPS (~66ms) so React doesn't re-render 60x/sec,
+    // while canvas render runs at full 60 FPS
+    if (now - lastUiUpdateTimeRef.current >= 0.066) {
+      lastUiUpdateTimeRef.current = now;
+      setCurrentTime(elapsed);
+      currentTimeRef.current = elapsed;
+    }
 
-    // Feed audio spectrum and Freebeat structure metrics into canvas renderer
-    const currentSec = SongStructureAnalyzer.getSectionAtTime(songStructure, elapsed);
+    // Feed audio spectrum and Freebeat structure metrics into canvas renderer at 60 FPS
+    const currentStructure = songStructureRef.current;
+    const currentSec = SongStructureAnalyzer.getSectionAtTime(currentStructure, elapsed);
     const isDrop = currentSec?.isDrop || false;
-    const beatPhase = (elapsed * (project.bpm / 60)) % 1;
+    const bpm = projectRef.current.bpm || 128;
+    const beatPhase = (elapsed * (bpm / 60)) % 1;
     const vocalPulsing = Math.abs(Math.sin(elapsed * 4.5));
 
     if (generatorRef.current) {
@@ -178,18 +220,19 @@ export default function ModernStudioWorkstation({
       });
     }
 
-    animFrameRef.current = requestAnimationFrame(updateLoop);
-  }, [isPlaying, project.duration, project.bpm, songStructure]);
+    animFrameRef.current = requestAnimationFrame(runFrame);
+  }, []);
 
   useEffect(() => {
     if (isPlaying) {
       playbackStartTimeRef.current = performance.now() / 1000;
       playbackStartOffsetRef.current = currentTime;
+      lastUiUpdateTimeRef.current = 0;
       if (audioRef.current && project.audioBlobUrl) {
         audioRef.current.currentTime = currentTime;
         audioRef.current.play().catch(() => {});
       }
-      animFrameRef.current = requestAnimationFrame(updateLoop);
+      animFrameRef.current = requestAnimationFrame(runFrame);
     } else {
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
       if (audioRef.current) audioRef.current.pause();
@@ -198,7 +241,7 @@ export default function ModernStudioWorkstation({
       if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying, updateLoop]);
+  }, [isPlaying, runFrame]);
 
   const togglePlay = () => {
     if (!isPlaying) {
@@ -209,6 +252,7 @@ export default function ModernStudioWorkstation({
 
   const handleSeek = (newTime) => {
     setCurrentTime(newTime);
+    currentTimeRef.current = newTime;
     playbackStartOffsetRef.current = newTime;
     playbackStartTimeRef.current = performance.now() / 1000;
     if (audioRef.current) {
@@ -351,6 +395,92 @@ export default function ModernStudioWorkstation({
     setTimeout(() => setSaveStatus(null), 2000);
   };
 
+  const handleCloudSync = async () => {
+    setSaveStatus('Cloud Syncing...');
+    try {
+      const res = await syncToCloud(project.artistName || 'astraea_project', project);
+      if (res.success) {
+        setSaveStatus(isFirebaseConfigured ? 'Synced to Cloud!' : 'Saved to Local Cache!');
+      } else {
+        setSaveStatus('Sync Failed');
+      }
+    } catch (e) {
+      setSaveStatus('Sync Error');
+    }
+    setTimeout(() => setSaveStatus(null), 2500);
+  };
+
+  const handleCustomVideoGenerate = async (params) => {
+    setIsCustomVideoLoading(true);
+    setCustomVideoStatus({ stage: `Connecting to ${params.model}...`, progress: 15, error: null });
+
+    try {
+      const res = await generateCustomVideo(params);
+
+      if (res.mode === 'fallback') {
+        setCustomVideoStatus({ stage: 'Applying high-fidelity video asset...', progress: 90, error: null });
+        setProject((prev) => ({
+          ...prev,
+          aspectRatio: params.aspectRatio,
+          images: [res.videoUrl, ...(prev.images || []).slice(1)],
+          activeVideoClip: res.videoUrl,
+        }));
+        setTimeout(() => {
+          setIsCustomVideoLoading(false);
+          setIsVideoParamsModalOpen(false);
+        }, 800);
+      } else if (res.mode === 'generating' && res.jobId) {
+        setCustomVideoStatus({
+          stage: 'Task queued with fal.ai cluster. Polling status...',
+          progress: 30,
+          error: null,
+        });
+
+        let pollCount = 0;
+        const interval = setInterval(async () => {
+          pollCount++;
+          const statusRes = await getVideoJobStatus(res.jobId);
+
+          if (statusRes.status === 'COMPLETED') {
+            clearInterval(interval);
+            setCustomVideoStatus({ stage: 'Video clip generated!', progress: 100, error: null });
+            const finalUrl = statusRes.videoUrl || res.videoUrl;
+            setProject((prev) => ({
+              ...prev,
+              aspectRatio: params.aspectRatio,
+              images: [finalUrl, ...(prev.images || []).slice(1)],
+              activeVideoClip: finalUrl,
+            }));
+            setTimeout(() => {
+              setIsCustomVideoLoading(false);
+              setIsVideoParamsModalOpen(false);
+            }, 1000);
+          } else if (statusRes.status === 'FAILED' || pollCount > 100) {
+            clearInterval(interval);
+            setCustomVideoStatus({
+              stage: 'Generation failed',
+              progress: null,
+              error: statusRes.error || 'Video generation timed out or failed.',
+            });
+          } else {
+            setCustomVideoStatus({
+              stage: `Rendering frames (${statusRes.status || 'IN_PROGRESS'})...`,
+              progress: Math.min(95, 30 + pollCount * 3),
+              error: null,
+            });
+          }
+        }, 3000);
+      }
+    } catch (err) {
+      console.error('[ModernStudio] Custom video generation error:', err);
+      setCustomVideoStatus({
+        stage: 'Generation Error',
+        progress: null,
+        error: err.message,
+      });
+    }
+  };
+
   const handleLoadProject = (id) => {
     const entry = ProjectStorage.load(id);
     if (entry) {
@@ -420,6 +550,18 @@ export default function ModernStudioWorkstation({
             >
               <Save className="w-3.5 h-3.5" />
               <span>{saveStatus || 'Save'}</span>
+            </button>
+            <button
+              type="button"
+              className="toolbar-quick-btn cloud-sync-btn"
+              onClick={handleCloudSync}
+              title={`Cloud Sync (${isFirebaseConfigured ? 'Firestore' : 'Local Cache'}) - Last: ${lastSyncedAt || 'Never'}`}
+              style={{
+                color: syncStatus === 'synced' ? 'hsl(140, 80%, 55%)' : syncStatus === 'syncing' ? 'hsl(42, 95%, 52%)' : 'inherit',
+              }}
+            >
+              <Cloud className="w-3.5 h-3.5" />
+              <span>{syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'synced' ? 'Cloud Synced' : 'Cloud Sync'}</span>
             </button>
 
             {isProjectsMenuOpen && (
@@ -513,13 +655,23 @@ export default function ModernStudioWorkstation({
           </select>
           <button
             type="button"
+            className="toolbar-quick-btn studio-btn-primary"
+            onClick={() => setIsVideoParamsModalOpen(true)}
+            style={{ fontWeight: 800, padding: '4px 10px', fontSize: '11px' }}
+            title="Custom AI Video Generation Studio (Model, Prompt, Aspect Ratio, Duration)"
+          >
+            <Wand2 className="w-3.5 h-3.5" />
+            <span>AI Studio Generator</span>
+          </button>
+          <button
+            type="button"
             className="toolbar-quick-btn"
             onClick={handleGenerateAIVideo}
             disabled={isGeneratingAIVideo}
             style={{ background: 'linear-gradient(135deg, #06b6d4, #8b5cf6)', color: '#fff', fontWeight: 800, border: 'none' }}
           >
             <Film className="w-3.5 h-3.5" />
-            <span>🎬 Generate AI Video</span>
+            <span>🎬 Batch AI Video</span>
           </button>
           <button
             type="button"
@@ -865,6 +1017,83 @@ export default function ModernStudioWorkstation({
           </div>
         </div>
       )}
+
+      {/* Custom AI Video Generation Studio Modal */}
+      {isVideoParamsModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="AI Video Generation Studio"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9990,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: 'rgba(5, 7, 18, 0.85)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            padding: '1.5rem',
+          }}
+        >
+          <div
+            className="glass-panel-studio"
+            style={{
+              width: '100%',
+              maxWidth: '620px',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              borderRadius: '20px',
+              padding: '1.75rem',
+              position: 'relative',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'hsl(220, 20%, 96%)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Wand2 size={20} color="hsl(42, 95%, 52%)" />
+                  AI Video Generation Studio
+                </h2>
+                <p style={{ fontSize: '0.8rem', color: 'hsl(220, 15%, 70%)', marginTop: '0.2rem' }}>
+                  Generate custom music video clips with configurable neural models, aspect ratios & negative prompts.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsVideoParamsModalOpen(false)}
+                className="studio-btn-secondary"
+                style={{ padding: '0.35rem 0.6rem' }}
+                aria-label="Close modal"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <VideoParamsForm
+              initialValues={{
+                model: aiVideoModel,
+                aspectRatio: project.aspectRatio || '16:9',
+                duration: 5,
+                prompt: project.images && project.images.length > 0 ? '' : 'Cinematic 4K cosmic music video visualizer',
+              }}
+              isLoading={isCustomVideoLoading}
+              onSubmit={handleCustomVideoGenerate}
+              onCancel={() => setIsVideoParamsModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Loading Overlay */}
+      <LoadingOverlay
+        isOpen={isCustomVideoLoading}
+        title="Synthesizing AI Video"
+        stage={customVideoStatus.stage}
+        progress={customVideoStatus.progress}
+        error={customVideoStatus.error}
+        onCancel={() => setIsCustomVideoLoading(false)}
+      />
     </div>
   );
 }

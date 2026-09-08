@@ -2,8 +2,8 @@ import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import FeatureStudioModal from '../FeatureStudioModal';
 import { AIDanceEngine, DANCE_STYLES } from '../../../services/AIDanceEngine';
-import { AISpecialEffectsEngine, SPECIAL_EFFECTS_PRESETS } from '../../../services/AISpecialEffectsEngine';
-import { StockMediaService, CURATED_STOCK_VIDEOS, CURATED_STOCK_IMAGES } from '../../../services/StockMediaService';
+import { SPECIAL_EFFECTS_PRESETS } from '../../../services/AISpecialEffectsEngine';
+import { StockMediaService } from '../../../services/StockMediaService';
 
 describe('Hot, Beta & Free Feature Studio Suite', () => {
   let container = null;

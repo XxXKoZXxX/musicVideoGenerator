@@ -20,5 +20,6 @@
       "startWithAll": true
     }
   ],
-  "devManager.project.composePath": ""
+  "devManager.project.composePath": "",
+  "css.lint.unknownAtRules": "ignore"
 }

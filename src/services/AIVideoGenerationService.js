@@ -11,6 +11,21 @@ export const AI_VIDEO_GEN_MODELS = [
   { id: 'stable_video', name: 'Stable Video', icon: '🎥', provider: 'Stability AI', desc: 'Open-source latent video diffusion' },
 ];
 
+export const SUPPORTED_ASPECT_RATIOS = [
+  { id: '16:9', label: '16:9 Cinema / YouTube', icon: '🖥️' },
+  { id: '9:16', label: '9:16 Reels / TikTok / Shorts', icon: '📱' },
+  { id: '1:1', label: '1:1 Square / Instagram / Spotify', icon: '⏹️' },
+  { id: '4:5', label: '4:5 Social Portrait', icon: '📸' },
+  { id: '21:9', label: '21:9 Ultra-Panavision', icon: '🎬' },
+];
+
+export const SUPPORTED_DURATIONS = [
+  { value: 5, label: '5s Fast Cut' },
+  { value: 10, label: '10s Extended Scene' },
+  { value: 15, label: '15s Cinema Sequence' },
+];
+
+
 /**
  * Generate a single AI video clip from a text prompt.
  * Returns immediately with { videoUrl } in fallback mode, or { requestId } if queued for real generation.
@@ -163,3 +178,80 @@ export async function pollAllScenesUntilDone(requestIds, onProgress) {
 
   return results;
 }
+
+/**
+ * Custom AI Video generation via POST /api/video/generate
+ * Supports configurable model, aspect ratio, duration, negative prompt, and options.
+ */
+export async function generateCustomVideo({
+  prompt,
+  model = 'kling_ai',
+  aspectRatio = '16:9',
+  duration = 5,
+  negativePrompt = '',
+  apiKey = '',
+  options = {},
+}) {
+  if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+    throw new Error('Prompt is required for AI video generation.');
+  }
+
+  const payload = {
+    prompt: prompt.trim(),
+    model,
+    aspectRatio,
+    duration: String(duration),
+    negativePrompt: negativePrompt ? negativePrompt.trim() : undefined,
+    apiKey: apiKey || undefined,
+    options,
+  };
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/video/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (res.ok) {
+      return await res.json();
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    throw new Error(errData.error || `Server responded with status ${res.status}`);
+  } catch (err) {
+    console.warn('[AIVideoGen] generateCustomVideo network warning:', err.message);
+    // Offline fallback if network fails
+    return {
+      success: true,
+      mode: 'fallback',
+      jobId: `job_${Date.now()}_offline`,
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      thumbnailUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
+      duration: parseInt(duration, 10) || 5,
+      aspectRatio,
+      model,
+      message: 'Offline fallback video (backend server unreachable).',
+    };
+  }
+}
+
+/**
+ * Check status of a custom video generation or server render job via GET /api/video/status/:jobId
+ */
+export async function getVideoJobStatus(jobId) {
+  if (!jobId) return { success: false, error: 'jobId is required' };
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/video/status/${encodeURIComponent(jobId)}`);
+    if (res.ok) {
+      return await res.json();
+    }
+    const err = await res.json().catch(() => ({}));
+    return { success: false, status: 'FAILED', error: err.error || `HTTP ${res.status}` };
+  } catch (err) {
+    console.warn('[AIVideoGen] getVideoJobStatus error:', err.message);
+    return { success: false, status: 'UNKNOWN', error: err.message };
+  }
+}
+

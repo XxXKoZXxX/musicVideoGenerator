@@ -62,7 +62,7 @@ When your server or tunnel is running, your live OpenAPI 3.1 schema and Bearer t
 3. Paste your active OpenAPI endpoint:
 
    ```text
-   https://postcard-teaching-reaction-disabilities.trycloudflare.com/openapi.json
+   https://quick-camels-show.loca.lt/openapi.json
    ```
 
 4. Click **Import**.
