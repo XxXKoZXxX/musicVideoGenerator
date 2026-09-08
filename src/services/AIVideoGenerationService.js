@@ -1,6 +1,10 @@
 // AIVideoGenerationService.js — Frontend client for AI video generation via fal.ai
 
-const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:4000';
+const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || (
+  typeof window !== 'undefined' && (window.location.port === '3210' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'))
+    ? ''
+    : 'http://localhost:4000'
+);
 
 // AI Video Model display names for UI
 export const AI_VIDEO_GEN_MODELS = [

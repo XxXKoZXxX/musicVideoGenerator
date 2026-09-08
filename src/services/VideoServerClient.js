@@ -1,4 +1,8 @@
-const SERVER_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:4000';
+const SERVER_URL = process.env.REACT_APP_VIDEO_SERVER_URL || (
+  typeof window !== 'undefined' && (window.location.port === '3210' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'))
+    ? ''
+    : 'http://localhost:4000'
+);
 
 export async function fetchVideoGenerators() {
   try {

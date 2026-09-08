@@ -103,7 +103,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
           </button>
           <button
             type="button"
-            onClick={() => currentStep > 2 && setCurrentStep(2)}
+            onClick={() => setCurrentStep(2)}
             className={`stepper-pill ${currentStep === 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}
           >
             <span className="pill-badge">2</span>
@@ -111,7 +111,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
           </button>
           <button
             type="button"
-            onClick={() => currentStep > 3 && setCurrentStep(3)}
+            onClick={() => setCurrentStep(3)}
             className={`stepper-pill ${currentStep === 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}
           >
             <span className="pill-badge">3</span>
@@ -119,7 +119,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
           </button>
           <button
             type="button"
-            onClick={() => currentStep >= 4 && setCurrentStep(4)}
+            onClick={() => setCurrentStep(4)}
             className={`stepper-pill ${currentStep === 4 ? 'active' : ''}`}
           >
             <span className="pill-badge">4</span>

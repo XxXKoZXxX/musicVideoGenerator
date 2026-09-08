@@ -22,8 +22,15 @@ app.use(cors());
 app.use(express.json({ limit: '60mb' }));
 app.use(express.urlencoded({ limit: '60mb', extended: true }));
 
-// Serve locally generated video masters
-app.use('/renders', express.static(RENDERS_DIR));
+// Serve locally generated video masters with full CORS and Range streaming support
+app.use('/renders', express.static(RENDERS_DIR, {
+  setHeaders: (res) => {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', '*');
+    res.setHeader('Accept-Ranges', 'bytes');
+  }
+}));
 
 // List of supported video generators (renderer back‑ends)
 const GENERATORS = [

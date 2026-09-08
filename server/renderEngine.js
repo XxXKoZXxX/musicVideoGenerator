@@ -340,11 +340,11 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
           cmd
             .outputOptions([
-              '-c:v libx264',
-              '-preset ultrafast',
-              '-pix_fmt yuv420p',
-              `-r ${fps}`,
-              `-t ${secondsPerScene}`
+              '-c:v', 'libx264',
+              '-preset', 'ultrafast',
+              '-pix_fmt', 'yuv420p',
+              '-r', `${fps}`,
+              '-t', `${secondsPerScene}`
             ])
             .output(segmentFile)
             .on('end', () => resolve(segmentFile))
@@ -375,7 +375,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
         if (localAudioPath && fs.existsSync(localAudioPath)) {
           command = command
             .input(localAudioPath)
-            .outputOptions(['-c:a aac', '-b:a 256k', '-shortest']);
+            .outputOptions(['-c:a', 'aac', '-b:a', '256k', '-shortest']);
         }
 
         command
@@ -384,10 +384,17 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
             '-preset', 'fast',
             '-pix_fmt', 'yuv420p',
             '-movflags', '+faststart',
-            '-metadata', `title=${safeTitle}`,
-            '-metadata', `artist=${safeArtist}`,
             '-t', `${totalDuration}`
-          ])
+          ]);
+
+        if (safeTitle) {
+          command.outputOption('-metadata', `title=${safeTitle}`);
+        }
+        if (safeArtist) {
+          command.outputOption('-metadata', `artist=${safeArtist}`);
+        }
+
+        command
           .output(outputPath)
           .on('progress', (p) => {
             if (p.percent) {
