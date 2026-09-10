@@ -4,6 +4,7 @@ import VideoStudioView from './components/views/VideoStudioView';
 import CharacterStudioView from './components/views/CharacterStudioView';
 import VoiceClonerStudioView from './components/views/VoiceClonerStudioView';
 import ModelHubView from './components/views/ModelHubView';
+import ClipInbetweenerStudioView from './components/views/ClipInbetweenerStudioView';
 import ShareModal from './components/share/ShareModal';
 import ThemeCustomizerModal from './components/theme/ThemeCustomizerModal';
 import FreebeatAutoDirectorModal from './components/common/FreebeatAutoDirectorModal';
@@ -69,6 +70,8 @@ export default function StandaloneMusicVideoApp() {
       setCurrentMode('vocal-cloner');
     } else if (target === 'wizard' || target === 'video') {
       setCurrentMode('musicvid-wizard');
+    } else if (target === 'inbetweener' || target === 'gap-filler' || target === 'clip-inbetweener' || target === 'clip-gap-filler') {
+      setCurrentMode('clip-gap-filler');
     } else if (target === 'models' || target === 'hub') {
       setCurrentMode('model-hub');
     } else {
@@ -131,6 +134,15 @@ export default function StandaloneMusicVideoApp() {
               >
                 <Sliders className="w-4 h-4 text-purple-400" />
                 <span>Timeline DAW</span>
+              </button>
+
+              <button
+                type="button"
+                className={`nav-tab-pill ${currentMode === 'clip-gap-filler' ? 'active' : ''}`}
+                onClick={() => setCurrentMode('clip-gap-filler')}
+              >
+                <Zap className="w-4 h-4 text-amber-400" />
+                <span>Clip Gap Filler & Stitcher</span>
               </button>
 
               <button
@@ -252,6 +264,19 @@ export default function StandaloneMusicVideoApp() {
           <ModernStudioWorkstation
             project={project}
             onNavigate={handleNavigate}
+          />
+        )}
+
+        {currentMode === 'clip-gap-filler' && (
+          <ClipInbetweenerStudioView
+            project={project}
+            onNavigate={handleNavigate}
+            onApplyMasterToProject={(masterData) => {
+              setProject((prev) => ({
+                ...prev,
+                ...masterData,
+              }));
+            }}
           />
         )}
 

@@ -19,6 +19,7 @@ import {
   Play,
   Crown,
   Zap,
+  Palette,
 } from 'lucide-react';
 import { DANCE_STYLES } from '../../services/AIDanceEngine';
 import { SPECIAL_EFFECTS_PRESETS } from '../../services/AISpecialEffectsEngine';
@@ -148,6 +149,7 @@ export default function FeatureStudioModal({
             </span>
             {[
               { id: 'opus_agent', label: 'Claude 3 Opus Agent', icon: Crown },
+              { id: 'clip_gap_filler', label: '⚡ Clip Gap Filler', icon: Zap },
               { id: 'music_video', label: 'Music Video', icon: Film },
               { id: 'ai_video', label: 'AI Video', icon: Video },
               { id: 'special_effects', label: 'AI FX Presets', icon: Sparkles },
@@ -283,7 +285,74 @@ export default function FeatureStudioModal({
           )}
 
           {/* ======================================================== */}
-          {/* 1. MUSIC VIDEO (HOT) */}
+          {/* 0.5. AI CLIP GAP FILLER & INBETWEENER (HOT) */}
+          {/* ======================================================== */}
+          {activeTab === 'clip_gap_filler' && (
+            <div className="space-y-5">
+              <div className="bg-gradient-to-r from-amber-950/50 via-cyan-950/40 to-slate-950 p-5 rounded-2xl border border-amber-400/40 shadow-lg">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl bg-amber-500/20 border border-amber-400/50 text-amber-300">
+                    <Zap className="w-5 h-5 fill-amber-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-extrabold text-amber-300 flex items-center gap-2">
+                      <span>AI Clip Inbetweener & Gap Filler</span>
+                      <span className="text-[10px] bg-amber-400/20 text-amber-300 px-2 py-0.5 rounded-full border border-amber-400/40">
+                        FIRST & LAST FRAME CONTINUITY
+                      </span>
+                    </h4>
+                    <p className="text-xs text-slate-300">
+                      Upload distinct video clips. AI analyzes boundary frames (tail of clip A, head of clip B) and synthesizes the missing in-between scenes so the sequence plays as one continuous, seamless video.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                    <Film className="w-3.5 h-3.5" /> 1. Boundary Keyframe Matching
+                  </span>
+                  <p className="text-xs text-slate-300">
+                    Extracts the exact ending frame of Clip N and opening frame of Clip N+1 for seamless continuity.
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-cyan-400 flex items-center gap-1.5">
+                    <Zap className="w-3.5 h-3.5" /> 2. Dual Generation Engine
+                  </span>
+                  <p className="text-xs text-slate-300">
+                    Use local FFmpeg optical flow motion morphing (fast, 100% free offline) or Cloud AI (Kling/Luma/Gemini Omni).
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-slate-900 border border-white/10 space-y-2">
+                  <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                    <Palette className="w-3.5 h-3.5" /> 3. Color Science Harmonizer
+                  </span>
+                  <p className="text-xs text-slate-300">
+                    Standardizes resolution, framerate, and 35mm film color grading across all clips so it looks like the same video.
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-3 flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    onClose();
+                    window.location.hash = '#clip-gap-filler';
+                    // Trigger custom event or redirect if needed
+                    const navBtn = document.querySelector('[data-mode="clip-gap-filler"]') || document.querySelector('.nav-tab-pill:nth-child(5)');
+                    if (navBtn) navBtn.click();
+                  }}
+                  className="px-6 py-2.5 bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-2 shadow-lg shadow-amber-400/25 hover:brightness-110 transition-all"
+                >
+                  <Zap className="w-4 h-4 fill-slate-950" />
+                  <span>Launch Full Clip Gap Filler Studio ⚡</span>
+                </button>
+              </div>
+            </div>
+          )}
           {/* ======================================================== */}
           {activeTab === 'music_video' && (
             <div className="space-y-5">

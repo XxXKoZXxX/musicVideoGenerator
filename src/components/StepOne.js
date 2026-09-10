@@ -8,7 +8,7 @@ import { CHARACTER_PERSONAS } from '../services/CharacterLockEngine';
 import FreebeatAutoDirectorModal from './common/FreebeatAutoDirectorModal';
 import '../styles/Step.css';
 
-export default function StepOne({ onNext, project }) {
+export default function StepOne({ onNext, project, onNavigate }) {
   const [renderStyle, setRenderStyle] = useState(project.renderStyle || 'photoreal');
   const [singerImageUrl, setSingerImageUrl] = useState(
     project.singerImageUrl || SINGER_PORTRAITS[0].url
@@ -517,6 +517,33 @@ export default function StepOne({ onNext, project }) {
         {/* TAB 4: UPLOAD CUSTOM MEDIA (IMAGES & VIDEOS) */}
         {tab === 'upload' && (
           <div className="upload-section">
+            {/* AI CLIP GAP FILLER BANNER */}
+            <div className="glass-panel p-4 mb-4 rounded-2xl border border-amber-400/40 bg-gradient-to-r from-amber-500/10 via-cyan-500/10 to-purple-500/10 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-amber-400 text-slate-950 font-black shadow-lg shadow-amber-400/20">
+                  ⚡
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-sm font-bold text-white">AI Clip Inbetweener & Seamless Gap Filler</h4>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 font-extrabold border border-amber-400/40">
+                      NEW FEATURE
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-300">
+                    Upload multiple video clips and have AI automatically synthesize the missing in-between scenes to look like the exact same video!
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => onNavigate && onNavigate('clip-gap-filler')}
+                className="btn btn-primary-glow py-2 px-4 rounded-xl text-xs font-black bg-gradient-to-r from-amber-400 to-cyan-400 text-slate-950 whitespace-nowrap shadow-lg shadow-amber-400/20 hover:brightness-110 transition-all"
+              >
+                Launch Clip Inbetweener ⚡
+              </button>
+            </div>
+
             <label className="upload-box" htmlFor="media-file-input">
               <Upload size={36} />
               <h3>Drop or Upload Custom Videos & Images</h3>

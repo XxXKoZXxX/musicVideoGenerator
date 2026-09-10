@@ -805,6 +805,7 @@ export default function ModernStudioWorkstation({
         currentTime={currentTime}
         duration={project.duration || 32}
         onSeek={handleSeek}
+        onNavigate={onNavigate}
         onAddScene={() => {
           setProject((prev) => ({
             ...prev,

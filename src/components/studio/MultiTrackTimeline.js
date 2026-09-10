@@ -22,6 +22,7 @@ export default function MultiTrackTimeline({
   onAddScene = () => {},
   onReorderScene = () => {},
   onRemoveScene = () => {},
+  onNavigate,
 }) {
   const lanesRef = useRef(null);
 
@@ -63,6 +64,14 @@ export default function MultiTrackTimeline({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className="px-2.5 py-1 bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30 rounded text-[10px] font-bold flex items-center gap-1 transition-colors"
+            onClick={() => onNavigate && onNavigate('clip-gap-filler')}
+            title="Upload clips and have AI fill in missing parts seamlessly"
+          >
+            <Zap className="w-3 h-3 text-amber-400" /> Fill Missing Gaps ⚡
+          </button>
           <button
             type="button"
             className="px-2 py-1 bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 rounded text-[10px] font-bold flex items-center gap-1"

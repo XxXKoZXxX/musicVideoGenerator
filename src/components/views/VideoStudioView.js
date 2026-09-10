@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Film, Wand2, User } from 'lucide-react';
+import { Film, Wand2, User, Zap } from 'lucide-react';
 
 // 4-Step Professional Music Video Studio Components
 import StepOne from '../StepOne';
@@ -81,6 +81,13 @@ export default function VideoStudioView({ profile, onNavigate }) {
           </button>
           <button
             type="button"
+            onClick={() => onNavigate && onNavigate('clip-gap-filler')}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20"
+          >
+            <Zap className="w-4 h-4 text-amber-400" /> Clip Gap Filler & Inbetweener ⚡
+          </button>
+          <button
+            type="button"
             onClick={() => onNavigate && onNavigate('characterStudio')}
             className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all bg-amber-400/10 border border-amber-400/30 text-amber-300 hover:bg-amber-400/20"
           >
@@ -129,7 +136,7 @@ export default function VideoStudioView({ profile, onNavigate }) {
 
         {/* STEP CONTENT SWITCHER */}
         {currentStep === 1 && (
-          <StepOne onNext={handleStepOneNext} project={project} />
+          <StepOne onNext={handleStepOneNext} project={project} onNavigate={onNavigate} />
         )}
 
         {currentStep === 2 && (

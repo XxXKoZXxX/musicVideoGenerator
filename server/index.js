@@ -11,6 +11,11 @@ const {
   deleteRenderJob,
   RENDERS_DIR,
 } = require('./renderEngine');
+const {
+  createClipGapFillingJob,
+  getClipGapFillingJobStatus,
+  extractKeyframesForClips,
+} = require('./clipInbetweenerEngine');
 
 const app = express();
 const PORT = process.env.VIDEO_PORT || 4000;
@@ -19,8 +24,8 @@ const PORT = process.env.VIDEO_PORT || 4000;
 const activeJobs = new Map();
 
 app.use(cors());
-app.use(express.json({ limit: '60mb' }));
-app.use(express.urlencoded({ limit: '60mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Serve locally generated video masters with full CORS and Range streaming support
 app.use('/renders', express.static(RENDERS_DIR, {
@@ -190,6 +195,9 @@ app.get('/', (req, res) => {
       '/api/ai-video/status/:id',
       '/api/video/generate',
       '/api/video/status/:jobId',
+      '/api/clips/fill-gaps',
+      '/api/clips/status/:jobId',
+      '/api/clips/extract-keyframes',
       '/api/claude',
       '/api/opus-agent',
       '/api/opus-agent/chat',
@@ -726,6 +734,89 @@ app.delete('/api/server-render/:jobId', (req, res) => {
   const { jobId } = req.params;
   const deleted = deleteRenderJob(jobId);
   res.json({ success: deleted, message: deleted ? 'Job deleted' : 'Job not found' });
+});
+
+// ============================================================
+// AI CLIP GAP FILLER & SEAMLESS VIDEO INBETWEENING ENDPOINTS
+// ============================================================
+
+// Initiate clip gap filling & seamless stitching
+app.post('/api/clips/fill-gaps', async (req, res) => {
+  try {
+    const { clips, gapDuration, engine, colorGrade, transitionStyle, transitionPrompt, audioUrl, audioBlobUrl, resolution, aspectRatio, fps } = req.body;
+    
+    if (!clips || !Array.isArray(clips) || clips.length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'At least 2 video clips are required to fill in the missing parts between them.',
+      });
+    }
+
+    console.log(`[ClipGapFiller] Received request to bridge ${clips.length} clips | gap: ${gapDuration || 3}s | engine: ${engine || 'local_neural_flow'} | style: ${colorGrade || 'hollywood35'}`);
+
+    const job = createClipGapFillingJob(req.body);
+
+    res.json({
+      success: true,
+      jobId: job.id,
+      status: job.status,
+      stage: job.stage,
+      clipsCount: job.clipsCount,
+      gapsCount: job.gapsCount,
+      gapDuration: job.gapDuration,
+      videoUrl: job.videoUrl,
+      downloadUrl: job.downloadUrl,
+      message: 'Clip gap filling and seamless stitching job initiated.',
+    });
+  } catch (err) {
+    console.error('[ClipGapFiller] Error starting gap fill job:', err);
+    res.status(500).json({ success: false, error: err.message || 'Failed to start clip gap filling job' });
+  }
+});
+
+// Check status of clip gap filling job
+app.get('/api/clips/status/:jobId', (req, res) => {
+  const { jobId } = req.params;
+  const job = getClipGapFillingJobStatus(jobId);
+
+  if (!job) {
+    return res.status(404).json({ success: false, error: `Gap filling job ${jobId} not found.` });
+  }
+
+  res.json({
+    success: true,
+    jobId: job.id,
+    status: job.status,
+    progress: job.progress,
+    stage: job.stage,
+    error: job.error,
+    videoUrl: job.videoUrl,
+    downloadUrl: job.downloadUrl,
+    bridges: job.bridges,
+    extractedKeyframes: job.extractedKeyframes,
+    totalDuration: job.totalDuration,
+    clipsCount: job.clipsCount,
+    gapsCount: job.gapsCount,
+  });
+});
+
+// Fast boundary keyframes extraction for real-time UI preview
+app.post('/api/clips/extract-keyframes', async (req, res) => {
+  try {
+    const { clips } = req.body;
+    if (!clips || !Array.isArray(clips) || clips.length === 0) {
+      return res.status(400).json({ success: false, error: 'Clips array is required.' });
+    }
+
+    const keyframes = await extractKeyframesForClips(clips);
+    res.json({
+      success: true,
+      keyframes,
+    });
+  } catch (err) {
+    console.error('[ClipGapFiller] Keyframe extraction failed:', err);
+    res.status(500).json({ success: false, error: err.message || 'Keyframe extraction failed' });
+  }
 });
 
 // Helper to get Anthropic instance
