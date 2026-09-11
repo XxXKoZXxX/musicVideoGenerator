@@ -106,7 +106,7 @@ export const CINEMATIC_STOCK_VIDEOS = [
     category: 'Cyberpunk / Driving',
     type: 'video',
     thumbnail: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    url: '/renders/samples/cyber_city.mp4',
   },
   {
     id: 'laser-concert-vid',
@@ -114,7 +114,7 @@ export const CINEMATIC_STOCK_VIDEOS = [
     category: 'EDM / Concert',
     type: 'video',
     thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    url: '/renders/samples/sunset_horizon.mp4',
   },
   {
     id: 'retro-synth-vid',
@@ -122,7 +122,7 @@ export const CINEMATIC_STOCK_VIDEOS = [
     category: 'Synthwave / Retro',
     type: 'video',
     thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+    url: '/renders/samples/cyber_city.mp4',
   },
   {
     id: 'cosmic-warp-vid',
@@ -130,7 +130,7 @@ export const CINEMATIC_STOCK_VIDEOS = [
     category: 'Sci-Fi / Space',
     type: 'video',
     thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    url: '/renders/samples/cosmic_nebula.mp4',
   },
   {
     id: 'tokyo-shibuya-vid',
@@ -138,7 +138,7 @@ export const CINEMATIC_STOCK_VIDEOS = [
     category: 'Urban / Anime',
     type: 'video',
     thumbnail: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&auto=format&fit=crop&q=80',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    url: '/renders/samples/sunset_horizon.mp4',
   },
   {
     id: 'dj-festival-vid',
@@ -146,7 +146,7 @@ export const CINEMATIC_STOCK_VIDEOS = [
     category: 'Festival / DJ',
     type: 'video',
     thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
+    url: '/renders/samples/cosmic_nebula.mp4',
   },
 ];
 

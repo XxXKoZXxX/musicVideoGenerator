@@ -26,6 +26,7 @@ import {
   startClipGapFilling,
   pollClipGapFillingStatus,
   extractClipKeyframes,
+  uploadClipFile,
 } from '../../services/ClipInbetweenerService';
 import '../../styles/ClipInbetweenerStudioView.css';
 
@@ -102,25 +103,84 @@ export default function ClipInbetweenerStudioView({
     }
   }, [clips]);
 
-  // Handle Video Clip Uploads
-  const handleClipUpload = (e) => {
+  // Handle Video Clip Uploads with browser thumbnail/duration extraction and backend stream upload
+  const handleClipUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const newClips = files.map((file, idx) => {
+    const initialClips = files.map((file, idx) => {
       const blobUrl = URL.createObjectURL(file);
       return {
         id: `custom_${Date.now()}_${idx}`,
         title: file.name.replace(/\.[^/.]+$/, ''),
         url: blobUrl,
         blob: file,
+        path: file.path || null,
         duration: 5,
         thumbnail: null,
       };
     });
 
-    setClips((prev) => [...prev, ...newClips]);
+    setClips((prev) => [...prev, ...initialClips]);
     setError(null);
+
+    // Concurrently extract accurate video metadata/thumbnails and upload to backend
+    initialClips.forEach(async (initialClip) => {
+      const file = initialClip.blob;
+      if (!file) return;
+
+      // Extract accurate duration and thumbnail in browser
+      try {
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.muted = true;
+        v.playsInline = true;
+        v.src = initialClip.url;
+
+        v.onloadedmetadata = () => {
+          const dur = Math.max(1, Math.round(v.duration || 5));
+          v.currentTime = Math.min(1.0, dur * 0.1);
+        };
+
+        v.onseeked = () => {
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.min(480, v.videoWidth || 480);
+            canvas.height = Math.round(canvas.width * ((v.videoHeight || 270) / (v.videoWidth || 480)));
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
+            const thumb = canvas.toDataURL('image/jpeg', 0.7);
+
+            setClips((prev) =>
+              prev.map((c) =>
+                c.id === initialClip.id
+                  ? { ...c, duration: Math.max(1, Math.round(v.duration || c.duration)), thumbnail: thumb }
+                  : c
+              )
+            );
+          } catch (_) {}
+        };
+      } catch (_) {}
+
+      // Upload file directly to backend to get local server path
+      try {
+        const uploadRes = await uploadClipFile(file);
+        if (uploadRes && uploadRes.path) {
+          setClips((prev) =>
+            prev.map((c) =>
+              c.id === initialClip.id
+                ? {
+                    ...c,
+                    path: uploadRes.path,
+                    duration: uploadRes.duration || c.duration,
+                    thumbnail: c.thumbnail || uploadRes.thumbnail,
+                  }
+                : c
+            )
+          );
+        }
+      } catch (_) {}
+    });
   };
 
   // Handle Custom Audio Upload

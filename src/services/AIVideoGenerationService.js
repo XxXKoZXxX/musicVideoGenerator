@@ -53,7 +53,7 @@ export async function generateVideoFromPrompt(prompt, model = 'kling_ai', option
   return {
     success: true,
     mode: 'fallback',
-    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    videoUrl: '/renders/samples/cyber_city.mp4',
     thumbnailUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
     duration: 5,
     model,
@@ -88,11 +88,9 @@ export async function generateAllSceneVideos(scenes, model = 'kling_ai', options
 
   // Offline fallback
   const sampleUrls = [
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-    'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+    '/renders/samples/cyber_city.mp4',
+    '/renders/samples/sunset_horizon.mp4',
+    '/renders/samples/cosmic_nebula.mp4',
   ];
 
   return {
@@ -230,7 +228,7 @@ export async function generateCustomVideo({
       success: true,
       mode: 'fallback',
       jobId: `job_${Date.now()}_offline`,
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      videoUrl: '/renders/samples/cyber_city.mp4',
       thumbnailUrl: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
       duration: parseInt(duration, 10) || 5,
       aspectRatio,

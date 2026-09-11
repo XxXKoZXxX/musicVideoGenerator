@@ -16,6 +16,12 @@ const {
   getClipGapFillingJobStatus,
   extractKeyframesForClips,
 } = require('./clipInbetweenerEngine');
+const { ensureSampleClips } = require('./ensureSampleClips');
+
+// Pre-generate guaranteed local sample clips on startup
+try {
+  ensureSampleClips();
+} catch (_) {}
 
 const app = express();
 const PORT = process.env.VIDEO_PORT || 4000;
@@ -24,8 +30,8 @@ const PORT = process.env.VIDEO_PORT || 4000;
 const activeJobs = new Map();
 
 app.use(cors());
-app.use(express.json({ limit: '100mb' }));
-app.use(express.urlencoded({ limit: '100mb', extended: true }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ limit: '200mb', extended: true }));
 
 // Serve locally generated video masters with full CORS and Range streaming support
 app.use('/renders', express.static(RENDERS_DIR, {
@@ -131,42 +137,42 @@ const GENERATORS = [
 
 const SAMPLE_VIDEOS = {
   'higgsfield-dop': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    url: '/renders/samples/cyber_city.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80',
     title: 'Higgsfield Cinema DoP 6-Axis Motion Sequence',
   },
   'higgsfield_dop': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    url: '/renders/samples/cyber_city.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80',
     title: 'Higgsfield Cinema DoP 6-Axis Motion Sequence',
   },
   'ai-neural': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    url: '/renders/samples/cyber_city.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
     title: 'AI Neural Motion Sequence',
   },
   'runway': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+    url: '/renders/samples/sunset_horizon.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
     title: 'Runway Gen-3 Cinematic Motion',
   },
   'sora': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+    url: '/renders/samples/cyber_city.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
     title: 'Sora Hyper-Realistic Render',
   },
   'kling': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+    url: '/renders/samples/cosmic_nebula.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
     title: 'Kling 1.5 Dynamic Video',
   },
   'stable-diffusion': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+    url: '/renders/samples/sunset_horizon.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&auto=format&fit=crop&q=80',
     title: 'SVD Neural Diffusion',
   },
   'default': {
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+    url: '/renders/samples/sunset_horizon.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
     title: 'HD Cinematic Video Stream',
   }
@@ -817,6 +823,65 @@ app.post('/api/clips/extract-keyframes', async (req, res) => {
     console.error('[ClipGapFiller] Keyframe extraction failed:', err);
     res.status(500).json({ success: false, error: err.message || 'Keyframe extraction failed' });
   }
+});
+
+// Dedicated video clip upload endpoint for large video files
+app.post('/api/clips/upload', (req, res) => {
+  const originalName = req.query.name || `clip_${Date.now()}.mp4`;
+  const safeName = originalName.replace(/[^\w.-]/g, '_');
+  const uploadDir = path.join(__dirname, 'temp', 'uploads');
+  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+
+  const targetFile = path.join(uploadDir, `${Date.now()}_${safeName}`);
+  const writeStream = fs.createWriteStream(targetFile);
+
+  req.pipe(writeStream);
+
+  writeStream.on('finish', () => {
+    try {
+      const { execSync } = require('child_process');
+      const cmd = `ffprobe -v error -show_entries format=duration:stream=width,height -of json "${targetFile}"`;
+      const stdout = execSync(cmd, { timeout: 6000 }).toString();
+      const meta = JSON.parse(stdout);
+      const duration = Math.max(1, Math.round(parseFloat(meta.format?.duration || 5)));
+      const width = meta.streams?.[0]?.width || 1280;
+      const height = meta.streams?.[0]?.height || 720;
+
+      // Extract quick thumbnail
+      const thumbFile = path.join(uploadDir, `thumb_${Date.now()}.jpg`);
+      try {
+        execSync(`ffmpeg -ss 0.1 -i "${targetFile}" -vframes 1 -q:v 2 "${thumbFile}" -y`, { stdio: 'ignore', timeout: 5000 });
+      } catch (_) {}
+
+      let thumbnail = null;
+      if (fs.existsSync(thumbFile)) {
+        thumbnail = `data:image/jpeg;base64,${fs.readFileSync(thumbFile).toString('base64')}`;
+      }
+
+      res.json({
+        success: true,
+        path: targetFile,
+        duration,
+        width,
+        height,
+        thumbnail,
+        name: originalName,
+      });
+    } catch (err) {
+      res.json({
+        success: true,
+        path: targetFile,
+        duration: 5,
+        thumbnail: null,
+        name: originalName,
+      });
+    }
+  });
+
+  writeStream.on('error', (err) => {
+    console.error('[ClipUpload] Write error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  });
 });
 
 // Helper to get Anthropic instance

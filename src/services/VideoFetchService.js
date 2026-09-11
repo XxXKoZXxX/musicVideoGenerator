@@ -17,7 +17,7 @@ export class VideoFetchService {
       keywords: ['cyber', 'neon', 'drive', 'highway', 'night', 'car', 'city', 'tokyo', 'road'],
       type: 'video',
       title: 'Neon Cyberpunk Highway Drive',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      url: '/renders/samples/cyber_city.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
     },
     {
@@ -25,7 +25,7 @@ export class VideoFetchService {
       keywords: ['laser', 'concert', 'edm', 'stage', 'lights', 'party', 'festival', 'crowd', 'dj'],
       type: 'video',
       title: 'Stadium EDM Lasers & Pyro',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+      url: '/renders/samples/sunset_horizon.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
     },
     {
@@ -33,7 +33,7 @@ export class VideoFetchService {
       keywords: ['synthwave', 'retro', '80s', 'grid', 'outrun', 'sunset', 'vintage', 'vhs', 'arcade'],
       type: 'video',
       title: '80s Synthwave Outrun Loop',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+      url: '/renders/samples/cyber_city.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
     },
     {
@@ -41,7 +41,7 @@ export class VideoFetchService {
       keywords: ['space', 'cosmic', 'galaxy', 'warp', 'stars', 'nebula', 'sci-fi', 'quantum', 'universe'],
       type: 'video',
       title: 'Galactic Hyperspace Jump',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+      url: '/renders/samples/cosmic_nebula.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
     },
     {
@@ -49,7 +49,7 @@ export class VideoFetchService {
       keywords: ['rain', 'shibuya', 'alley', 'shadow', 'water', 'wet', 'umbrella', 'storm', 'moody'],
       type: 'video',
       title: 'Tokyo Rain & Neon Reflections',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+      url: '/renders/samples/sunset_horizon.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&auto=format&fit=crop&q=80',
     },
     {
@@ -57,7 +57,7 @@ export class VideoFetchService {
       keywords: ['drop', 'bass', 'beat', 'action', 'energy', 'dance', 'explosion', 'fire', 'climax'],
       type: 'video',
       title: 'Festival Mainstage Beat Drop',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/WeAreGoingOnBullrun.mp4',
+      url: '/renders/samples/cosmic_nebula.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=600&auto=format&fit=crop&q=80',
     },
     {
@@ -65,7 +65,7 @@ export class VideoFetchService {
       keywords: ['sunset', 'nature', 'ocean', 'horizon', 'sky', 'sun', 'peaceful', 'ambient', 'clouds'],
       type: 'video',
       title: 'Cinematic Horizon Sunset Flight',
-      url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
+      url: '/renders/samples/sunset_horizon.mp4',
       thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
     },
   ];

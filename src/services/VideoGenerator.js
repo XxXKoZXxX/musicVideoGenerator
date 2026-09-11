@@ -346,7 +346,34 @@ export class VideoGenerator {
       }
     }
 
-    const isVideo = src.includes('.mp4') || src.includes('.webm') || src.includes('.mov') || src.startsWith('data:video') || (source && source.type && source.type.startsWith('video/'));
+    let isVideo =
+      src.includes('.mp4') ||
+      src.includes('.webm') ||
+      src.includes('.mov') ||
+      src.includes('.m4v') ||
+      src.includes('.mkv') ||
+      src.startsWith('data:video') ||
+      src.includes('/renders/samples/') ||
+      Boolean(source && (source.isVideo || (source.type && source.type.startsWith('video/'))));
+
+    // If source is a blob: URL without an explicit video extension, probe if it is a playable video
+    if (!isVideo && typeof src === 'string' && src.startsWith('blob:')) {
+      if (source && (source.type?.startsWith('video/') || source.name?.match(/\.(mp4|webm|mov|m4v|mkv)$/i))) {
+        isVideo = true;
+      } else {
+        try {
+          const isPlayable = await new Promise((resolve) => {
+            const v = document.createElement('video');
+            v.preload = 'metadata';
+            v.onloadedmetadata = () => resolve(true);
+            v.onerror = () => resolve(false);
+            v.src = src;
+            setTimeout(() => resolve(false), 500);
+          });
+          if (isPlayable) isVideo = true;
+        } catch (_) {}
+      }
+    }
 
     if (isVideo) {
       return new Promise((resolve) => {
