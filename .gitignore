@@ -5,3 +5,7 @@ cloudflared.exe
 .env
 chatgpt_token.txt
 public_url.txt
+# Runtime outputs of the local render server (never commit video masters)
+server/renders/
+server/temp/
+server/tests/*_work/

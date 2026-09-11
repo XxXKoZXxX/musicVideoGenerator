@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Sparkles,
   Layout,
@@ -17,11 +17,15 @@ import {
   Monitor,
   RotateCcw,
   Camera,
+  Activity,
+  Palette,
 } from 'lucide-react';
+import { LyricsEngine } from '../services/LyricsEngine';
 import { generateStorylineFromAudio, generateLyricVisualScenes, MUSIC_GENRES } from '../services/AIService';
 import { STORYLINE_TEMPLATES, CINEMATIC_STOCK_VIDEOS } from '../data/templates';
 import { StoryDirector, DIRECTOR_MODES } from '../services/StoryDirector';
 import { VideoFetchService } from '../services/VideoFetchService';
+import BACKEND_URL from '../services/backendUrl';
 import { AI_VIDEO_MODELS, AI_STORYLINE_GENERATORS } from '../data/aiModels';
 import { RENDERER_ENGINES, getRendererEngineById } from '../data/rendererEngines';
 import SongStructureTimeline from './common/SongStructureTimeline';
@@ -39,6 +43,7 @@ export default function StepThree({ onNext, onBack, project }) {
   const [genre, setGenre] = useState('Cyberpunk / Electro');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingVideos, setIsGeneratingVideos] = useState(false);
+  const [isGeneratingImages, setIsGeneratingImages] = useState(false);
   const [regeneratingIndex, setRegeneratingIndex] = useState(null);
   const [generationProgress, setGenerationProgress] = useState(0);
   const [generationStatus, setGenerationStatus] = useState('');
@@ -81,6 +86,81 @@ export default function StepThree({ onNext, onBack, project }) {
       `[00:00.00] Neon lights reflection in the rain\n[00:06.00] Driving fast to wash away the pain\n[00:12.00] Burning through the midnight city glow\n[00:18.00] Where the electric river starts to flow\n[00:24.00] Forever in the rhythm of the night`
   );
   const [lyricsStyle, setLyricsStyle] = useState(project.lyricsStyle || 'neon');
+
+  // ---- Lyrics tooling: live sync preview, file import, SRT/LRC export ----
+  const lyricsParsed = useMemo(
+    () => LyricsEngine.parseLyrics(lyricsText, project.duration || 32),
+    [lyricsText, project.duration]
+  );
+
+  const handleLyricsFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      setLyricsText(text.trim());
+      project.lyrics = text.trim();
+    } catch (err) {
+      alert('Could not read lyrics file: ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  const handleAutoTimeLyrics = () => {
+    if (!lyricsText.trim()) {
+      alert('Paste or upload lyrics first, then auto-time them.');
+      return;
+    }
+    // Strip LRC timestamps so the engine evenly redistributes lines across the track
+    const plain = lyricsText
+      .split('\n')
+      .map((l) => l.replace(/\[\d{1,3}:\d{2}(?:\.\d{1,3})\]/g, '').trim())
+      .filter(Boolean)
+      .join('\n');
+    setLyricsText(plain);
+    project.lyrics = plain;
+    alert(
+      `✨ Auto-timed ${plain.split('\n').length} lyric lines across ${(project.duration || 32)}s ` +
+      `at ${project.bpm || 128} BPM. Every line now gets an even beat slot — check the Sync Preview below.`
+    );
+  };
+
+  const handleExportLyrics = (kind) => {
+    const fmtTimeSrt = (t) => {
+      const h = Math.floor(t / 3600);
+      const m = Math.floor((t % 3600) / 60);
+      const s = Math.floor(t % 60);
+      const ms = Math.floor((t - Math.floor(t)) * 1000);
+      return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')},${String(ms).padStart(3, '0')}`;
+    };
+    const fmtTimeLrc = (t) => {
+      const m = Math.floor(t / 60);
+      const s = Math.floor(t % 60);
+      const cs = Math.floor((t - Math.floor(t)) * 100);
+      return `[${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}.${String(cs).padStart(2, '0')}]`;
+    };
+
+    let content = '';
+    let filename = '';
+    if (kind === 'srt') {
+      content = lyricsParsed
+        .map((l, i) => `${i + 1}\n${fmtTimeSrt(l.time)} --> ${fmtTimeSrt(l.time + l.duration)}\n${l.text}`)
+        .join('\n\n');
+      filename = 'lyrics.srt';
+    } else {
+      content = lyricsParsed.map((l) => `${fmtTimeLrc(l.time)} ${l.text}`).join('\n');
+      filename = 'lyrics.lrc';
+    }
+
+    const blob = new Blob([content], { type: kind === 'srt' ? 'text/plain' : 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Automatically update storyline when song in project changes
   useEffect(() => {
@@ -150,6 +230,61 @@ export default function StepThree({ onNext, onBack, project }) {
       alert('Error generating lyric video: ' + err.message);
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  // Generate a fresh AI image frame for each scene from its lyric/directive prompt
+  const handleGenerateAISceneImages = async () => {
+    if (!screenplay?.scenes || isGeneratingImages) return;
+
+    setIsGeneratingImages(true);
+    setGenerationProgress(0);
+    setGenerationStatus('Warming up AI image engine...');
+
+    try {
+      const total = screenplay.scenes.length;
+      const nextScenes = [...screenplay.scenes];
+
+      for (let i = 0; i < total; i++) {
+        const scene = nextScenes[i];
+        const prompt =
+          (scene.lyricText || scene.title || scene.directive || 'cinematic music video frame') +
+          ' — cinematic 4K music video still, volumetric lighting, award-winning cinematography';
+
+        setGenerationStatus(`Painting scene ${i + 1}/${total} with AI...`);
+
+        try {
+          const res = await fetch(`${BACKEND_URL}/api/ai-image/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt,
+              aspectRatio: project.aspectRatio || '16:9',
+              style: project.renderStyle || 'photoreal',
+            }),
+          });
+          const data = await res.json();
+          if (data.success && data.imageUrl) {
+            nextScenes[i] = { ...scene, imageUrl: data.imageUrl, media: { ...scene.media, type: 'image' } };
+          }
+        } catch (err) {
+          console.warn(`Scene image generation failed for scene ${i}:`, err);
+        }
+
+        setGenerationProgress(Math.floor(((i + 1) / total) * 100));
+        await new Promise((r) => setTimeout(r, 120));
+      }
+
+      setScreenplay({ ...screenplay, scenes: nextScenes });
+      project.images = nextScenes.map((s) => s.imageUrl).filter(Boolean);
+      setGenerationStatus('✨ AI scene frames painted for every lyric!');
+    } catch (err) {
+      alert('Scene image generation error: ' + err.message);
+    } finally {
+      setTimeout(() => {
+        setIsGeneratingImages(false);
+        setGenerationStatus('');
+      }, 600);
     }
   };
 
@@ -651,6 +786,14 @@ export default function StepThree({ onNext, onBack, project }) {
                 </button>
                 <button
                   className="btn btn-primary btn-sm"
+                  onClick={handleGenerateAISceneImages}
+                  disabled={isGeneratingImages}
+                  title="Paint a fresh AI image frame for every scene from its lyric line"
+                >
+                  <Palette size={14} /> {isGeneratingImages ? 'Painting...' : 'AI Scene Frames'}
+                </button>
+                <button
+                  className="btn btn-primary btn-sm"
                   onClick={handleGenerateAIVideos}
                   disabled={isGeneratingVideos}
                   title="Generate dynamic AI motion video loops for all scenes"
@@ -841,7 +984,11 @@ export default function StepThree({ onNext, onBack, project }) {
             <div className="lyrics-header-row">
               <div>
                 <h3>Synced LRC Lyrics & Kinetic Typography</h3>
-                <p>Edit time-coded lyrics in [MM:SS.xx] format or paste raw lyrics to auto-time</p>
+                <p>
+                  Upload an .lrc / .txt file, paste time-coded lyrics <code>[MM:SS.xx]</code>, or
+                  paste raw lyrics — plain text is auto-timed to your track. The same lines are
+                  burned into the server MP4 master.
+                </p>
               </div>
               <div className="lyrics-style-picker">
                 <label>Typography Style:</label>
@@ -851,17 +998,64 @@ export default function StepThree({ onNext, onBack, project }) {
                   <option value="cinema">Cinema 35mm Minimalist</option>
                   <option value="glitch">Glitch Cyber Matrix</option>
                   <option value="bold">Bold Impact Pop</option>
+                  <option value="off">Off (no lyric overlay)</option>
                 </select>
               </div>
             </div>
 
+            <div className="lyrics-toolbar">
+              <label className="btn btn-secondary btn-sm lyrics-file-btn">
+                <Disc size={14} /> Upload .lrc / .txt
+                <input
+                  type="file"
+                  accept=".lrc,.txt,text/plain"
+                  style={{ display: 'none' }}
+                  onChange={handleLyricsFileUpload}
+                />
+              </label>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={handleAutoTimeLyrics}
+                title="Evenly distribute every line across the track duration (BPM-aware)"
+              >
+                <Zap size={14} /> Auto-Time to Track
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => handleExportLyrics('srt')} disabled={!lyricsParsed.length}>
+                <Type size={14} /> Export SRT
+              </button>
+              <button className="btn btn-secondary btn-sm" onClick={() => handleExportLyrics('lrc')} disabled={!lyricsParsed.length}>
+                <Type size={14} /> Export LRC
+              </button>
+              <span className="lyrics-line-count">
+                {lyricsParsed.length} lines synced
+              </span>
+            </div>
+
             <textarea
               className="lyrics-textarea font-mono"
-              rows={12}
+              rows={10}
               value={lyricsText}
               onChange={(e) => setLyricsText(e.target.value)}
-              placeholder="[00:00.00] Line 1&#10;[00:06.00] Line 2..."
+              placeholder="[00:00.00] Line 1&#10;[00:06.00] Line 2... (or paste raw lyrics — they'll be auto-timed)"
             />
+
+            {/* Live synced-timing preview */}
+            {lyricsParsed.length > 0 && (
+              <div className="lyrics-sync-preview">
+                <div className="section-title" style={{ marginBottom: 6 }}>
+                  <Activity size={14} color="#22d3ee" />
+                  <h3 style={{ fontSize: 12 }}>Sync Preview</h3>
+                </div>
+                {lyricsParsed.map((line, idx) => (
+                  <div key={idx} className="lyrics-sync-line">
+                    <span className="lyrics-sync-time">
+                      {Math.floor(line.time / 60)}:{String(Math.floor(line.time % 60)).padStart(2, '0')}.{String(Math.floor((line.time % 1) * 100)).padStart(2, '0')}
+                    </span>
+                    <span>{line.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

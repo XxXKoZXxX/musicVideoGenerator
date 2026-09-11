@@ -8,27 +8,32 @@ const ffmpeg = require('fluent-ffmpeg');
 
 const RENDERS_DIR = path.join(__dirname, 'renders');
 const TEMP_DIR = path.join(__dirname, 'temp');
+const SIDECAR_DIR = path.join(RENDERS_DIR, 'subtitles');
 
 // Ensure output and temp directories exist
 if (!fs.existsSync(RENDERS_DIR)) fs.mkdirSync(RENDERS_DIR, { recursive: true });
 if (!fs.existsSync(TEMP_DIR)) fs.mkdirSync(TEMP_DIR, { recursive: true });
+if (!fs.existsSync(SIDECAR_DIR)) fs.mkdirSync(SIDECAR_DIR, { recursive: true });
 
 // In-memory job repository
 const renderJobs = new Map();
 
 const { execSync } = require('child_process');
+const { ffmpegPath, ffprobePath, isFFmpegAvailable, probe: probeFfmpeg } = require('./ffmpegPaths');
+const {
+  parseLyrics,
+  toSrt,
+  toLrc,
+  buildDrawtextFilters,
+  findFontfile,
+} = require('./lyricsParser');
 
-// Detect FFmpeg availability quickly
-let isFFmpegAvailable = false;
-try {
-  execSync('ffmpeg -version', { stdio: 'ignore', timeout: 3000 });
-  isFFmpegAvailable = true;
-} catch (_) {
-  isFFmpegAvailable = false;
-}
+// Point fluent-ffmpeg at the resolved binaries (npm-bundled or system)
+if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
+if (ffprobePath) ffmpeg.setFfprobePath(ffprobePath);
 
 function checkFFmpeg() {
-  return Promise.resolve(isFFmpegAvailable);
+  return Promise.resolve(isFFmpegAvailable || Boolean(probeFfmpeg().available));
 }
 
 /**
@@ -201,6 +206,14 @@ function createRenderJob(projectData = {}, options = {}) {
     fps: options.fps || 30,
     duration: projectData.duration || 30,
     scenesCount: (projectData.images || []).length,
+    // Lyric burn-in configuration
+    lyricsStyle: projectData.lyricsStyle || 'neon',
+    lyricsPosition: projectData.lyricsPosition || 'bottom',
+    lyricsVisible: projectData.showLyrics !== false && projectData.lyricsStyle !== 'off',
+    lyricLines: 0,
+    srtUrl: null,
+    lrcUrl: null,
+    thumbnailUrl: null,
   };
 
   renderJobs.set(jobId, job);
@@ -282,9 +295,12 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
     // Probe audio track length if present to sync video length to the actual music track
     let audioDuration = null;
-    if (localAudioPath && fs.existsSync(localAudioPath)) {
+    if (localAudioPath && fs.existsSync(localAudioPath) && ffprobePath) {
       try {
-        const out = execSync(`ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${localAudioPath}"`, { timeout: 4000 });
+        const out = execSync(
+          `"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${localAudioPath}"`,
+          { timeout: 8000 }
+        );
         const parsed = parseFloat(out.toString().trim());
         if (Number.isFinite(parsed) && parsed > 0) {
           audioDuration = parsed;
@@ -292,8 +308,47 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       } catch (_) {}
     }
 
-    const totalDuration = Math.round(audioDuration || projectData.duration || (downloadedAssets.length * 4));
-    const secondsPerScene = Math.max(1, totalDuration / downloadedAssets.length);
+    const totalDuration = Math.round((audioDuration || projectData.duration || (downloadedAssets.length * 4)) * 1000) / 1000;
+
+    // ---- Beat-synced scene planning ----
+    // When the project carries a song structure (Intro/Verse/Drop sections),
+    // cut scene boundaries on the section edges so visual cuts land on beat
+    // drops. Otherwise fall back to even segmentation.
+    const sections = Array.isArray(projectData.songStructure?.sections) && projectData.songStructure.sections.length > 0
+      ? projectData.songStructure.sections
+      : null;
+
+    let scenePlan;
+    if (sections) {
+      scenePlan = sections
+        .filter((s) => Number.isFinite(s.start) && Number.isFinite(s.end) && s.end > s.start)
+        .map((s, i) => ({
+          asset: downloadedAssets[i % downloadedAssets.length],
+          seconds: Math.max(1, s.end - s.start),
+          isDrop: Boolean(s.isDrop),
+          energy: Number(s.energy) || 50,
+          label: s.type || `Section ${i + 1}`,
+        }));
+      if (scenePlan.length === 0) scenePlan = null;
+    }
+
+    if (!scenePlan) {
+      const secondsPerScene = Math.max(1, totalDuration / downloadedAssets.length);
+      scenePlan = downloadedAssets.map((asset, i) => ({
+        asset,
+        seconds: secondsPerScene,
+        isDrop: false,
+        energy: 60,
+        label: `Scene ${i + 1}`,
+      }));
+    }
+
+    const motionForScene = (scene, idx) => {
+      if (scene.isDrop || scene.energy >= 85) return 'kinetic_pulse';
+      if (scene.label === 'Outro') return 'zoom_out';
+      const presets = ['zoom_in', 'pan_left', 'zoom_out', 'pan_right', 'zoom_in'];
+      return presets[idx % presets.length];
+    };
 
     // Check if FFmpeg is available on the system
     const hasFFmpeg = isFFmpegAvailable ?? await checkFFmpeg();
@@ -306,15 +361,15 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       job.stage = 'Compositing 4K/1080p MP4 master with FFmpeg';
       job.progress = 50;
 
-      // Render individual animated scene segments
+      // Render individual animated scene segments (beat-synced cuts)
       const segmentPaths = [];
-      const motionPresets = ['zoom_in', 'pan_left', 'zoom_out', 'pan_right', 'kinetic_pulse'];
 
-      for (let i = 0; i < downloadedAssets.length; i++) {
-        const asset = downloadedAssets[i];
+      for (let i = 0; i < scenePlan.length; i++) {
+        const { asset, seconds: secondsPerScene, label } = scenePlan[i];
         const segmentFile = path.join(jobTempDir, `segment_${i}.mp4`);
-        const motionType = motionPresets[i % motionPresets.length];
+        const motionType = motionForScene(scenePlan[i], i);
         const motionFilter = getMotionFilter(motionType, secondsPerScene, fps, width, height);
+        job.stage = `Rendering ${label || `Scene ${i + 1}`} (${motionType})`;
 
         await new Promise((resolve, reject) => {
           let cmd = ffmpeg(asset.path);
@@ -353,11 +408,58 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
         });
 
         segmentPaths.push(segmentFile);
-        job.progress = 50 + Math.round(((i + 1) / downloadedAssets.length) * 30);
+        job.progress = 50 + Math.round(((i + 1) / scenePlan.length) * 30);
       }
 
-      // Concatenate segments & mux audio
-      job.stage = 'Muxing audio track & finalizing master container';
+      // ---- Parse synced lyrics (LRC-timed or plain text) for burn-in ----
+      let parsedLyrics = [];
+      if (job.lyricsVisible && typeof projectData.lyrics === 'string' && projectData.lyrics.trim()) {
+        try {
+          parsedLyrics = parseLyrics(projectData.lyrics, totalDuration);
+          job.lyricLines = parsedLyrics.length;
+          job.stage = `Parsing ${parsedLyrics.length} synced lyric lines for burn-in`;
+        } catch (e) {
+          console.warn('[ServerRenderEngine] Lyrics parse failed:', e.message);
+        }
+      }
+
+      const fontfile = parsedLyrics.length > 0 ? findFontfile() : '';
+      const lyricFilters =
+        parsedLyrics.length > 0 && fontfile
+          ? buildDrawtextFilters(parsedLyrics, {
+              width,
+              height,
+              style: job.lyricsStyle || 'neon',
+              fontfile,
+              position: job.lyricsPosition || 'bottom',
+              duration: totalDuration,
+            })
+          : [];
+
+      if (parsedLyrics.length > 0 && !fontfile) {
+        console.warn('[ServerRenderEngine] No TTF font found — skipping lyric burn-in');
+      }
+
+      // Write SRT + LRC sidecar subtitle exports for the render
+      // (named after the exact MP4 base so delete/list can always find them)
+      if (parsedLyrics.length > 0) {
+        const baseName = job.outputFileName.replace(/\.(mp4|webm)$/, '');
+        const srtFileName = `${baseName}_lyrics.srt`;
+        const lrcFileName = `${baseName}_lyrics.lrc`;
+        try {
+          fs.writeFileSync(path.join(SIDECAR_DIR, srtFileName), toSrt(parsedLyrics));
+          fs.writeFileSync(path.join(SIDECAR_DIR, lrcFileName), toLrc(parsedLyrics));
+          job.srtUrl = `/renders/subtitles/${srtFileName}`;
+          job.lrcUrl = `/renders/subtitles/${lrcFileName}`;
+        } catch (e) {
+          console.warn('[ServerRenderEngine] Sidecar write failed:', e.message);
+        }
+      }
+
+      // Concatenate segments, burn synced lyrics & mux audio
+      job.stage = lyricFilters.length
+        ? 'Burning synced lyrics & muxing audio into master'
+        : 'Muxing audio track & finalizing master container';
       job.progress = 85;
 
       const concatListPath = path.join(jobTempDir, 'concat_list.txt');
@@ -366,6 +468,8 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
       const safeTitle = (projectData.audioTitle || projectData.artistName || 'Astraea Music Video').replace(/[^\w\s-]/g, '').trim();
       const safeArtist = (projectData.artistName || 'Astraea Cosmic Studio').replace(/[^\w\s-]/g, '').trim();
+
+      const videoFilters = [...(lyricFilters.length ? lyricFilters : []), 'format=yuv420p'];
 
       await new Promise((resolve, reject) => {
         let command = ffmpeg()
@@ -379,6 +483,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
         }
 
         command
+          .videoFilters(videoFilters)
           .outputOptions([
             '-c:v', 'libx264',
             '-preset', 'fast',
@@ -429,6 +534,26 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
           generatedAt: new Date().toISOString()
         };
         fs.writeFileSync(outputPath, JSON.stringify(descriptor, null, 2));
+      }
+    }
+
+    // Generate a thumbnail frame for the renders gallery (when output is a real MP4)
+    if (fs.existsSync(outputPath) && outputPath.endsWith('.mp4') && ffmpegPath) {
+      try {
+        const thumbName = `render_${jobId}_thumb.jpg`;
+        const thumbPath = path.join(RENDERS_DIR, thumbName);
+        const probeOut = ffprobePath
+          ? execSync(`"${ffprobePath}" -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "${outputPath}"`, { timeout: 8000 }).toString().trim()
+          : '2';
+        const dur = parseFloat(probeOut) || 2;
+        const at = Math.max(0.1, Math.min(dur * 0.25, dur - 0.1));
+        execSync(
+          `"${ffmpegPath}" -y -ss ${at.toFixed(2)} -i "${outputPath}" -frames:v 1 -q:v 3 -vf "scale=640:-2" "${thumbPath}"`,
+          { stdio: 'ignore', timeout: 30000 }
+        );
+        job.thumbnailUrl = `/renders/${thumbName}`;
+      } catch (e) {
+        console.warn('[ServerRenderEngine] Thumbnail generation skipped:', e.message);
       }
     }
 
@@ -500,6 +625,12 @@ function listCompletedRenders() {
         title: matchedJob?.projectTitle || fileName,
         resolution: matchedJob?.resolution || '1080p',
         aspectRatio: matchedJob?.aspectRatio || '16:9',
+        duration: matchedJob?.duration || null,
+        lyricLines: matchedJob?.lyricLines || 0,
+        lyricsStyle: matchedJob?.lyricsStyle || 'neon',
+        thumbnailUrl: matchedJob?.thumbnailUrl || (fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '_thumb.jpg'))) ? `/renders/${fileName.replace(/\.mp4$/, '_thumb.jpg')}` : null),
+        srtUrl: matchedJob?.srtUrl || (fs.existsSync(path.join(SIDECAR_DIR, fileName.replace(/\.mp4$/, '_lyrics.srt'))) ? `/renders/subtitles/${fileName.replace(/\.mp4$/, '_lyrics.srt')}` : null),
+        lrcUrl: matchedJob?.lrcUrl || (fs.existsSync(path.join(SIDECAR_DIR, fileName.replace(/\.mp4$/, '_lyrics.lrc'))) ? `/renders/subtitles/${fileName.replace(/\.mp4$/, '_lyrics.lrc')}` : null),
       };
     })
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -514,10 +645,48 @@ function deleteRenderJob(jobId) {
     if (fs.existsSync(job.outputPath)) {
       try { fs.unlinkSync(job.outputPath); } catch (_) {}
     }
+    // Clean up associated sidecars & thumbnail
+    const base = job.outputFileName.replace(/\.mp4$/, '');
+    [
+      path.join(RENDERS_DIR, `${base}_thumb.jpg`),
+      path.join(SIDECAR_DIR, `${base}_lyrics.srt`),
+      path.join(SIDECAR_DIR, `${base}_lyrics.lrc`),
+    ].forEach((p) => {
+      if (fs.existsSync(p)) {
+        try { fs.unlinkSync(p); } catch (_) {}
+      }
+    });
     renderJobs.delete(jobId);
     return true;
   }
   return false;
+}
+
+/**
+ * Deletes a rendered video (and its sidecars) directly by file name.
+ */
+function deleteRenderFile(filename) {
+  const safeName = path.basename(filename);
+  if (!safeName.endsWith('.mp4') && !safeName.endsWith('.webm')) return false;
+  const filePath = path.join(RENDERS_DIR, safeName);
+  if (!fs.existsSync(filePath)) return false;
+  try { fs.unlinkSync(filePath); } catch (_) {}
+
+  const base = safeName.replace(/\.(mp4|webm)$/, '');
+  [
+    path.join(RENDERS_DIR, `${base}_thumb.jpg`),
+    path.join(SIDECAR_DIR, `${base}_lyrics.srt`),
+    path.join(SIDECAR_DIR, `${base}_lyrics.lrc`),
+  ].forEach((p) => {
+    if (fs.existsSync(p)) {
+      try { fs.unlinkSync(p); } catch (_) {}
+    }
+  });
+
+  // Also drop the matching in-memory job so the job list stays consistent
+  const job = Array.from(renderJobs.values()).find((j) => j.outputFileName === safeName);
+  if (job) renderJobs.delete(job.id);
+  return true;
 }
 
 module.exports = {
@@ -525,5 +694,7 @@ module.exports = {
   getJobStatus,
   listCompletedRenders,
   deleteRenderJob,
+  deleteRenderFile,
   RENDERS_DIR,
+  SIDECAR_DIR,
 };

@@ -1,0 +1,237 @@
+/* RendersGallery.css — OPUS-style render library grid */
+
+.renders-gallery {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 8px 4px 60px;
+}
+
+.gallery-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 24px;
+}
+
+.gallery-title-block {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.gallery-icon-badge {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.25), rgba(236, 72, 153, 0.25));
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  color: #22d3ee;
+  flex-shrink: 0;
+}
+
+.gallery-title-block h2 {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #f8fafc;
+}
+
+.gallery-title-block p {
+  margin: 0;
+  font-size: 12px;
+  color: #94a3b8;
+  max-width: 460px;
+  line-height: 1.5;
+}
+
+.gallery-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.gallery-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 999px;
+}
+
+.gallery-status.online {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+}
+
+.gallery-status.offline {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.12);
+  border: 1px solid rgba(251, 113, 133, 0.35);
+}
+
+.gallery-empty {
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  border-radius: 20px;
+  padding: 60px 24px;
+  text-align: center;
+  color: #94a3b8;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.gallery-empty h3 {
+  margin: 0;
+  color: #e2e8f0;
+  font-size: 16px;
+}
+
+.gallery-empty p {
+  margin: 0;
+  max-width: 420px;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.gallery-empty .hint {
+  font-size: 11px;
+  color: #64748b;
+}
+
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.gallery-card {
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.gallery-card:hover {
+  border-color: rgba(6, 182, 212, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.gallery-card.highlight {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 12px 32px rgba(0, 0, 0, 0.5);
+}
+
+.gallery-card-media {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  background: #020617;
+}
+
+.gallery-card-media img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.gallery-card-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+.gallery-card-media:hover .gallery-card-video,
+.gallery-card-video:focus {
+  opacity: 1;
+}
+
+.gallery-card-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.gallery-card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(2, 6, 23, 0.85);
+  color: #e2e8f0;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.gallery-card-badge.ratio {
+  left: auto;
+  right: 10px;
+}
+
+.gallery-card-body {
+  padding: 14px 16px 16px;
+}
+
+.gallery-card-body h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #f1f5f9;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.gallery-card-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.gallery-card-lyrics {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: #38bdf8;
+  margin-bottom: 12px;
+}
+
+.gallery-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-ghost-danger {
+  background: transparent;
+  border: 1px solid rgba(251, 113, 133, 0.3);
+  color: #fb7185;
+}
+
+.btn-ghost-danger:hover {
+  background: rgba(251, 113, 133, 0.12);
+}

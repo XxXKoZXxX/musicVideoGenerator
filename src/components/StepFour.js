@@ -13,6 +13,10 @@ import {
   Palette,
   Monitor,
   RotateCcw,
+  HardDrive,
+  Subtitles,
+  Loader2,
+  Type,
 } from 'lucide-react';
 
 import {
@@ -24,6 +28,7 @@ import {
   IMAGE_TO_VIDEO_MODES,
 } from '../services/VideoGenerator';
 import { audioEngine } from '../services/AudioEngine';
+import { renderVideoOnServer, triggerBrowserDownload } from '../services/LocalServerRenderService';
 import { LyricsEngine } from '../services/LyricsEngine';
 import { lipSyncEngine } from '../services/LipSyncEngine';
 import { StoryDirector } from '../services/StoryDirector';
@@ -84,6 +89,19 @@ export default function StepFour({ onBack, project }) {
   const [exportProgress, setExportProgress] = useState(0);
   const [videoResult, setVideoResult] = useState(null);
   const [error, setError] = useState(null);
+
+  // Server MP4 Master (FFmpeg render with burned-in synced lyrics)
+  const [isServerRendering, setIsServerRendering] = useState(false);
+  const [serverRender, setServerRender] = useState({
+    progress: 0,
+    stage: '',
+    status: '',
+    videoUrl: null,
+    downloadUrl: null,
+    srtUrl: null,
+    lrcUrl: null,
+    error: null,
+  });
 
   // DOM & Engine Refs
   const canvasRef = useRef(null);
@@ -281,6 +299,72 @@ export default function StepFour({ onBack, project }) {
     link.href = videoResult.url;
     link.download = filename;
     link.click();
+  };
+
+  // ---- Server MP4 Master render (FFmpeg + burned-in synced lyrics) ----
+  const handleServerMasterRender = async () => {
+    stopLivePlayback();
+    setIsServerRendering(true);
+    setServerRender({
+      progress: 2,
+      stage: 'Contacting local render server...',
+      status: 'QUEUED',
+      videoUrl: null,
+      downloadUrl: null,
+      srtUrl: null,
+      lrcUrl: null,
+      error: null,
+    });
+
+    try {
+      const result = await renderVideoOnServer(
+        {
+          ...project,
+          // Guarantee the lyric burn-in config travels with the job
+          lyricsStyle: settings.lyricsStyle,
+          showLyrics: true,
+        },
+        {
+          resolution: settings.resolution || '1080p',
+          fps: settings.fps || 30,
+        },
+        (update) => {
+          setServerRender((prev) => ({ ...prev, ...update }));
+        }
+      );
+
+      setServerRender((prev) => ({
+        ...prev,
+        progress: 100,
+        status: 'COMPLETED',
+        stage: 'Master MP4 rendered with burned-in synced lyrics',
+        videoUrl: result.videoUrl,
+        downloadUrl: result.downloadUrl,
+        srtUrl: result.srtUrl,
+        lrcUrl: result.lrcUrl,
+      }));
+
+      // Kick off the MP4 download automatically
+      if (result.downloadUrl) {
+        triggerBrowserDownload(
+          result.downloadUrl,
+          `${(project.artistName || 'MusicVid').replace(/\s+/g, '_')}_Server_MP4_Master.mp4`
+        );
+      }
+    } catch (err) {
+      setServerRender((prev) => ({
+        ...prev,
+        status: 'FAILED',
+        error: err.message || 'Server render failed.',
+      }));
+    } finally {
+      setIsServerRendering(false);
+    }
+  };
+
+  const downloadSidecar = (url, label) => {
+    if (!url) return;
+    triggerBrowserDownload(url, label);
   };
 
   const formatTime = (secs) => {
@@ -520,6 +604,81 @@ export default function StepFour({ onBack, project }) {
             )}
 
             {error && <div className="export-error-msg">❌ {error}</div>}
+          </div>
+
+          {/* SERVER MP4 MASTER — FFmpeg render with burned-in synced lyrics */}
+          <div className="server-master-card" style={{ marginTop: 16 }}>
+            <div className="smc-header">
+              <HardDrive size={17} style={{ color: '#34d399' }} />
+              <div>
+                <h4>Local Server MP4 Master (FFmpeg)</h4>
+                <p>
+                  Renders a real MP4 on your render server — scene cuts synced to beat drops and
+                  your <strong>{LyricsEngine.parseLyrics(project.lyrics || '', duration).length} lyric lines</strong> burned
+                  in as synced kinetic typography, plus SRT/LRC subtitle exports.
+                </p>
+              </div>
+            </div>
+
+            {isServerRendering ? (
+              <div className="smc-progress">
+                <Loader2 size={20} className="spin-icon text-cyan" />
+                <div className="smc-progress-body">
+                  <span className="smc-stage">{serverRender.stage || serverRender.status}</span>
+                  <div className="smc-bar">
+                    <div className="smc-bar-fill" style={{ width: `${serverRender.progress}%` }} />
+                  </div>
+                  <span className="smc-pct font-mono">{serverRender.progress}%</span>
+                </div>
+              </div>
+            ) : serverRender.status === 'COMPLETED' && serverRender.videoUrl ? (
+              <div className="smc-done">
+                <div className="smc-done-row">
+                  <CheckCircle size={18} color="#34d399" />
+                  <span>Master MP4 ready — synced lyrics burned in.</span>
+                </div>
+                <video
+                  src={serverRender.videoUrl}
+                  controls
+                  playsInline
+                  className="smc-preview-video"
+                />
+                <div className="smc-actions">
+                  <button className="btn btn-primary btn-sm" onClick={() => triggerBrowserDownload(serverRender.downloadUrl, 'Server_MP4_Master.mp4')}>
+                    <Download size={14} /> Download MP4
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => downloadSidecar(serverRender.srtUrl, 'lyrics.srt')}
+                    disabled={!serverRender.srtUrl}
+                  >
+                    <Subtitles size={14} /> SRT
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => downloadSidecar(serverRender.lrcUrl, 'lyrics.lrc')}
+                    disabled={!serverRender.lrcUrl}
+                  >
+                    <Type size={14} /> LRC
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={handleServerMasterRender}>
+                    <RotateCcw size={14} /> Re-render
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="smc-cta">
+                <button className="btn btn-primary btn-large" onClick={handleServerMasterRender}>
+                  <HardDrive size={18} /> Render Server MP4 with Synced Lyrics 🔥
+                </button>
+                <span className="smc-sub">
+                  Outputs 16:9 / 9:16 / 1:1 / 4K MP4 · AAC audio · beat-synced cuts
+                  {serverRender.error && (
+                    <span className="smc-err"> — last attempt failed: {serverRender.error}</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* HIGGSFIELD CINEMA DoP STUDIO CONTROLS */}

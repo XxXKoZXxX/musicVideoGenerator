@@ -1,187 +1,492 @@
-/* StandaloneMusicVideoApp.css - Dedicated Standalone Studio Styling */
+/* StandaloneMusicVideoApp.css — OPUS-agent style studio shell */
 
-.standalone-musicvid-app {
+.opus-app {
   min-height: 100vh;
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr);
   background-color: #060913;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.12) 0px, transparent 50%),
-    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.12) 0px, transparent 50%),
-    radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.08) 0px, transparent 50%);
+  background-image:
+    radial-gradient(at 0% 0%, rgba(6, 182, 212, 0.10) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(245, 158, 11, 0.08) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(236, 72, 153, 0.06) 0px, transparent 50%);
   color: #f8fafc;
   font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  display: flex;
-  flex-direction: column;
 }
 
-.standalone-header {
+/* ============ SIDEBAR ============ */
+
+.opus-sidebar {
   position: sticky;
   top: 0;
-  z-index: 50;
+  height: 100vh;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 24px;
-  background: rgba(6, 11, 25, 0.9);
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid rgba(245, 158, 11, 0.2);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+  flex-direction: column;
+  background: rgba(4, 8, 18, 0.92);
+  border-right: 1px solid rgba(148, 163, 184, 0.12);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+  z-index: 60;
 }
 
-.header-left {
-  display: flex;
-  align-items: center;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-
-.app-brand-badge {
+.opus-sidebar-brand {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 16px 16px 14px;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
 }
 
-.brand-title {
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: #0f172a;
+  background: linear-gradient(135deg, #f59e0b 0%, #38bdf8 100%);
+  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.35);
+  flex-shrink: 0;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+
+.brand-name {
+  font-size: 13.5px;
   font-weight: 800;
-  font-size: 15px;
-  background: linear-gradient(135deg, var(--gold, #f59e0b) 0%, var(--cyan, #38bdf8) 100%);
+  background: linear-gradient(135deg, #fbbf24 0%, #22d3ee 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   letter-spacing: -0.01em;
 }
 
-
-.brand-pill {
-  font-size: 9px;
-  font-weight: 900;
-  padding: 2px 8px;
-  border-radius: 9999px;
-  background: rgba(245, 158, 11, 0.2);
-  color: var(--gold, #fbbf24);
-  border: 1px solid var(--panel-border, rgba(245, 158, 11, 0.4));
-  letter-spacing: 0.05em;
-}
-
-.header-nav-tabs {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.8);
-  padding: 4px;
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.nav-tab-pill {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-radius: 12px;
-  font-size: 12px;
+.brand-sub {
+  font-size: 8.5px;
   font-weight: 700;
-  color: #94a3b8;
+  letter-spacing: 0.14em;
+  color: #64748b;
+}
+
+.sidebar-close {
+  display: none;
+  margin-left: auto;
   background: transparent;
   border: none;
+  color: #94a3b8;
   cursor: pointer;
-  transition: all 0.2s ease;
+  padding: 4px;
 }
 
-.nav-tab-pill:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.05);
+.opus-sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 10px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.25) transparent;
 }
 
-.nav-tab-pill.active {
-  color: #ffffff;
-  background: rgba(245, 158, 11, 0.2);
-  border: 1px solid var(--panel-border, rgba(245, 158, 11, 0.4));
-  box-shadow: 0 2px 12px var(--gold-glow, rgba(245, 158, 11, 0.15));
+.nav-section-label {
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #475569;
+  padding: 4px 10px 8px;
 }
 
-.header-right {
+.nav-item {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 9px 10px;
+  margin-bottom: 2px;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: #cbd5e1;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  text-align: left;
 }
 
-.standalone-main-content {
+.nav-item:hover {
+  background: rgba(148, 163, 184, 0.08);
+  color: #f1f5f9;
+}
+
+.nav-item.active {
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.16), rgba(236, 72, 153, 0.10));
+  border-color: rgba(6, 182, 212, 0.35);
+  color: #ffffff;
+}
+
+.nav-item.active .nav-icon {
+  color: #22d3ee;
+}
+
+.nav-icon {
+  color: #7c8aa0;
+  flex-shrink: 0;
+}
+
+.nav-item.active .nav-icon,
+.nav-item:hover .nav-icon {
+  color: #22d3ee;
+}
+
+.nav-label {
   flex: 1;
-  padding: 20px;
-  max-width: 1400px;
-  width: 100%;
-  margin: 0 auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* HEADER ACTION BUTTONS (Theme / Cosmic Studio / Share) — real CSS replacing
-   dead (unconfigured-Tailwind) utility classes. Scoped here, not global App.css,
-   so the astrology app (which never used .btn-ghost/.btn-sm) is unaffected. */
-.btn-ghost {
+.nav-caret {
+  color: #22d3ee;
+  flex-shrink: 0;
+}
+
+.opus-sidebar-footer {
+  padding: 10px 12px 14px;
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.server-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 7px 10px;
+  border-radius: 9px;
+  margin-bottom: 10px;
+  border: 1px solid;
+}
+
+.server-chip.online {
+  color: #34d399;
+  background: rgba(52, 211, 153, 0.08);
+  border-color: rgba(52, 211, 153, 0.3);
+}
+
+.server-chip.offline {
+  color: #fb7185;
+  background: rgba(251, 113, 133, 0.08);
+  border-color: rgba(251, 113, 133, 0.3);
+}
+
+.server-chip.checking {
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.06);
+  border-color: rgba(148, 163, 184, 0.2);
+}
+
+.server-chip .pulse-dot {
+  animation: pulse-dot 1.5s infinite;
+  color: #34d399;
+}
+
+/* ============ MAIN COLUMN ============ */
+
+.opus-main-wrap {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.opus-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 22px;
+  background: rgba(6, 11, 25, 0.88);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(148, 163, 184, 0.12);
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 9px;
+  color: #e2e8f0;
+  padding: 7px 8px;
+  cursor: pointer;
+}
+
+.topbar-context {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.topbar-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #22d3ee;
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.topbar-project {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.topbar-project-icon {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.topbar-title-input {
+  flex: 1;
+  min-width: 60px;
+  max-width: 380px;
   background: transparent;
   border: 1px solid transparent;
-  padding: 6px 12px;
-  border-radius: 10px;
-  font-size: 12px;
+  border-radius: 8px;
+  padding: 5px 8px;
+  color: #f8fafc;
+  font-size: 13px;
   font-weight: 700;
-  color: #cbd5e1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
 }
-.btn-ghost:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
+
+.topbar-title-input:hover,
+.topbar-title-input:focus {
+  border-color: rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  outline: none;
 }
-.btn-sm {
-  padding: 6px 12px;
+
+.topbar-title-pill {
+  font-size: 10px;
+  font-weight: 700;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topbar-saved {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  font-weight: 700;
+  color: #34d399;
+}
+
+.topbar-ghost-btn {
+  white-space: nowrap;
+}
+
+.topbar-render-btn {
+  white-space: nowrap;
+  box-shadow: 0 4px 18px rgba(6, 182, 212, 0.35);
+}
+
+.opus-main-content {
+  flex: 1;
+  padding: 22px 26px 80px;
+  min-width: 0;
+}
+
+/* Resume banner (restored project needs audio re-attach) */
+.resume-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fcd34d;
+  border-radius: 12px;
+  padding: 10px 14px;
   font-size: 12px;
+  margin-bottom: 18px;
 }
-.header-action-btn {
+
+.resume-banner button {
+  margin-left: auto;
+  background: transparent;
+  border: 1px solid rgba(245, 158, 11, 0.4);
+  color: #fcd34d;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+/* ============ FLOATING QUICK RENDER CARD ============ */
+
+.quick-render-card {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  width: 340px;
+  max-width: calc(100vw - 40px);
+  background: rgba(8, 13, 28, 0.97);
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 16px;
+  padding: 14px 16px 16px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.6);
+  z-index: 80;
+}
+
+.qrc-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.qrc-title {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #f1f5f9;
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 
-/* NAV / AUTOMATIC HEADER SPLIT — separates true navigation from feature-launch
-   actions (Phase 1d) */
-.header-mode-nav {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.header-automatic-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding-left: 12px;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.automatic-mode-pill {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 14px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 800;
+.qrc-close {
+  background: transparent;
+  border: none;
+  color: #64748b;
   cursor: pointer;
-  border: 1px solid rgba(245, 158, 11, 0.4);
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(6, 182, 212, 0.12));
-  color: #fbbf24;
-  transition: all 0.15s;
-  white-space: nowrap;
+  padding: 2px;
 }
-.automatic-mode-pill:hover {
-  background: linear-gradient(135deg, rgba(245, 158, 11, 0.3), rgba(6, 182, 212, 0.2));
-  transform: translateY(-1px);
+
+.qrc-stage {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.5;
 }
-.automatic-mode-pill.storytelling {
-  border-color: rgba(56, 189, 248, 0.4);
-  color: #67e8f9;
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.18), rgba(245, 158, 11, 0.1));
+
+.qrc-error {
+  margin: 0 0 8px;
+  font-size: 11.5px;
+  color: #fb7185;
+  line-height: 1.5;
 }
-.automatic-mode-pill.storytelling:hover {
-  background: linear-gradient(135deg, rgba(56, 189, 248, 0.3), rgba(245, 158, 11, 0.18));
+
+.qrc-progress {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+}
+
+.qrc-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #06b6d4, #ec4899);
+  transition: width 0.4s ease;
+}
+
+.qrc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* ============ LEGACY (kept for compatibility with older children) ============ */
+
+.standalone-musicvid-app,
+.standalone-header {
+  /* retired by the OPUS shell — no-op */
+}
+
+/* ============ RESPONSIVE ============ */
+
+@media (max-width: 1023px) {
+  .opus-app {
+    grid-template-columns: 1fr;
+  }
+
+  .opus-sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 270px;
+    transform: translateX(-102%);
+    transition: transform 0.25s ease;
+    box-shadow: 20px 0 60px rgba(0, 0, 0, 0.55);
+  }
+
+  .opus-sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close {
+    display: inline-flex;
+  }
+
+  .mobile-menu-btn {
+    display: inline-flex;
+  }
+
+  .sidebar-scrim {
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.6);
+    z-index: 55;
+  }
+
+  .topbar-crumb,
+  .topbar-title-pill,
+  .topbar-ghost-btn .hide-mobile {
+    display: none;
+  }
+
+  .opus-topbar {
+    padding: 10px 14px;
+  }
+
+  .opus-main-content {
+    padding: 16px 14px 90px;
+  }
 }

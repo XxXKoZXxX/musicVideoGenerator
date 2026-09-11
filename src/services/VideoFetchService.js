@@ -1,4 +1,5 @@
 // VideoFetchService.js - Intelligent Video Asset Matcher, Procedural Video Generator, Multi-AI Video Engines & Pexels Engine
+import BACKEND_URL from './backendUrl';
 
 export class VideoFetchService {
   static getApiKey(overrideKey) {
@@ -107,7 +108,7 @@ export class VideoFetchService {
   static async generateAIVideo(query, modelId = 'runway_gen3', apiKeyOverride = '', sceneIndex = 0) {
     // 1. Try local server API if running on port 4000
     try {
-      const serverResponse = await fetch('http://localhost:4000/api/generate', {
+      const serverResponse = await fetch(`${BACKEND_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

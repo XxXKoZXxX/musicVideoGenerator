@@ -9,6 +9,7 @@ const {
   getJobStatus,
   listCompletedRenders,
   deleteRenderJob,
+  deleteRenderFile,
   RENDERS_DIR,
 } = require('./renderEngine');
 const {
@@ -734,6 +735,153 @@ app.delete('/api/server-render/:jobId', (req, res) => {
   const { jobId } = req.params;
   const deleted = deleteRenderJob(jobId);
   res.json({ success: deleted, message: deleted ? 'Job deleted' : 'Job not found' });
+});
+
+// Delete a rendered video file (plus thumbnail & subtitle sidecars) by filename
+app.delete('/api/server-render/file/:filename', (req, res) => {
+  const { filename } = req.params;
+  const deleted = deleteRenderFile(filename);
+  res.json({ success: deleted, message: deleted ? 'Render deleted' : 'File not found' });
+});
+
+// FFmpeg runtime diagnostics (UI health chip uses this)
+app.get('/api/ffmpeg-status', (req, res) => {
+  const info = require('./ffmpegPaths').probe();
+  res.json({
+    available: info.available,
+    source: info.source,
+    ffmpeg: info.ffmpeg ? 'detected' : 'missing',
+    ffprobe: info.ffprobe ? 'detected' : 'missing',
+  });
+});
+
+// ============================================================
+// AI SCENE IMAGE GENERATION via fal.ai (lyrics → cinematic frames)
+// ============================================================
+
+const FAL_IMAGE_ENDPOINTS = {
+  flux: 'fal-ai/flux/dev',
+  fast_sdxl: 'fal-ai/fast-sdxl',
+  turbo: 'fal-ai/fast-sdxl',
+  sdxl: 'fal-ai/fast-sdxl',
+};
+
+const IMAGE_ASPECT_MAP = {
+  '16:9': { image_size: 'landscape_16_9' },
+  '9:16': { image_size: 'portrait_16_9' },
+  '1:1': { image_size: 'square_hd' },
+  '4:5': { image_size: 'portrait_4_5' },
+  '21:9': { image_size: 'ultrawide_21_9' },
+};
+
+// Offline fallback pool — curated cinematic Unsplash frames
+const STOCK_IMAGE_POOL = [
+  'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200&auto=format&fit=crop&q=80',
+];
+
+function stockImageForPrompt(prompt) {
+  let hash = 0;
+  for (let i = 0; i < prompt.length; i++) hash = (hash * 31 + prompt.charCodeAt(i)) >>> 0;
+  return STOCK_IMAGE_POOL[hash % STOCK_IMAGE_POOL.length];
+}
+
+// POST /api/ai-image/generate — text-to-image scene frame generation
+app.post('/api/ai-image/generate', async (req, res) => {
+  const { prompt, model, aspectRatio, apiKey, options } = req.body;
+  const falKey = getFalKey(apiKey);
+
+  if (!prompt) {
+    return res.status(400).json({ success: false, error: 'Missing prompt' });
+  }
+
+  const endpoint = FAL_IMAGE_ENDPOINTS[model] || FAL_IMAGE_ENDPOINTS.fast_sdxl;
+  const sizeCfg = IMAGE_ASPECT_MAP[aspectRatio] || { image_size: 'landscape_16_9' };
+
+  console.log(`[AI-Image] Scene frame request | model: ${model || 'fast_sdxl'} | ratio: ${aspectRatio || '16:9'} | prompt: "${String(prompt).substring(0, 80)}..."`);
+
+  // Offline fallback — deterministic stock pick keeps the feature fully usable
+  if (!falKey) {
+    const url = stockImageForPrompt(prompt);
+    return res.json({
+      success: true,
+      mode: 'fallback',
+      imageUrl: url,
+      prompt,
+      message: 'Using curated stock frame (no FAL_KEY configured).',
+    });
+  }
+
+  try {
+    const body = {
+      prompt,
+      ...sizeCfg,
+      ...(options && Object.keys(options).length ? options : {}),
+    };
+
+    const submission = await fetch(`https://queue.fal.run/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${falKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!submission.ok) {
+      throw new Error(`fal.ai image submit failed (${submission.status}): ${await submission.text()}`);
+    }
+
+    const sub = await submission.json();
+    const requestId = sub.request_id;
+    const statusUrl = sub.status_url;
+    const responseUrl = sub.response_url;
+
+    // Poll (fast-sdxl usually completes in < 20s)
+    let result = null;
+    for (let i = 0; i < 30; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${falKey}` } });
+      const status = await statusRes.json();
+      if (status.status === 'COMPLETED') {
+        const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${falKey}` } });
+        result = await resultRes.json();
+        break;
+      }
+      if (status.status === 'FAILED') {
+        throw new Error(status.error || 'fal.ai image generation failed');
+      }
+    }
+
+    if (!result) throw new Error('fal.ai image generation timed out');
+
+    const imageUrl = result.images?.[0]?.url || result.url || '';
+    if (!imageUrl) throw new Error('fal.ai returned no image URL');
+
+    return res.json({
+      success: true,
+      mode: 'ai',
+      imageUrl,
+      prompt,
+      requestId,
+    });
+  } catch (err) {
+    console.error('[AI-Image] generation error:', err.message);
+    return res.json({
+      success: true,
+      mode: 'fallback',
+      imageUrl: stockImageForPrompt(prompt),
+      prompt,
+      error: err.message,
+      message: 'fal.ai image API error — using curated stock frame fallback.',
+    });
+  }
 });
 
 // ============================================================

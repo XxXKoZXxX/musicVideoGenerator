@@ -5,6 +5,9 @@ const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
 const { execSync, spawn } = require('child_process');
+const { ffmpegPath: FFMPEG_BIN, ffprobePath: FFPROBE_BIN } = require('./ffmpegPaths');
+const FFMPEG = FFMPEG_BIN || 'ffmpeg';
+const FFPROBE = FFPROBE_BIN || 'ffprobe';
 
 const RENDERS_DIR = path.join(__dirname, 'renders');
 const TEMP_DIR = path.join(__dirname, 'temp');
@@ -88,7 +91,7 @@ async function downloadOrSaveAsset(source, destPath) {
  */
 function probeVideoFile(filePath) {
   try {
-    const cmd = `ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate,codec_name -of json "${filePath}"`;
+    const cmd = `${FFPROBE} -v error -show_entries format=duration:stream=width,height,r_frame_rate,codec_name -of json "${filePath}"`;
     const stdout = execSync(cmd, { timeout: 8000 }).toString();
     const data = JSON.parse(stdout);
     const duration = parseFloat(data.format?.duration || 0);
@@ -122,13 +125,13 @@ function extractBoundaryKeyframes(clipPath, outDir, clipIndex) {
 
   try {
     // First frame (head)
-    execSync(`ffmpeg -ss 0.05 -i "${clipPath}" -frames:v 1 -q:v 2 "${headFramePath}" -y`, {
+    execSync(`${FFMPEG} -ss 0.05 -i "${clipPath}" -frames:v 1 -q:v 2 "${headFramePath}" -y`, {
       stdio: 'ignore',
       timeout: 6000,
     });
   } catch (_) {
     try {
-      execSync(`ffmpeg -i "${clipPath}" -vframes 1 -q:v 2 "${headFramePath}" -y`, { stdio: 'ignore', timeout: 6000 });
+      execSync(`${FFMPEG} -i "${clipPath}" -vframes 1 -q:v 2 "${headFramePath}" -y`, { stdio: 'ignore', timeout: 6000 });
     } catch (e) {
       console.warn(`[ClipInbetweener] Failed to extract head frame for clip ${clipIndex}:`, e.message);
     }
@@ -136,7 +139,7 @@ function extractBoundaryKeyframes(clipPath, outDir, clipIndex) {
 
   try {
     // Last frame (tail)
-    execSync(`ffmpeg -sseof -0.15 -i "${clipPath}" -frames:v 1 -q:v 2 "${tailFramePath}" -y`, {
+    execSync(`${FFMPEG} -sseof -0.15 -i "${clipPath}" -frames:v 1 -q:v 2 "${tailFramePath}" -y`, {
       stdio: 'ignore',
       timeout: 6000,
     });
@@ -281,7 +284,7 @@ function generateLocalBridgeSegment({
       '-y',
     ];
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     let stderr = '';
 
     proc.stderr.on('data', (d) => {
@@ -332,7 +335,7 @@ function fallbackGenerateBridgeSegment(tailPath, headPath, outputPath, duration,
       '-y',
     ];
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     proc.on('close', (code) => {
       if (code === 0 && fs.existsSync(outputPath)) resolve(outputPath);
       else reject(new Error(`Fallback bridge generation failed with code ${code}`));
@@ -366,7 +369,7 @@ function normalizeClipSegment(inputPath, outputPath, width, height, fps, colorGr
       '-y'
     ];
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     proc.on('close', (code) => {
       if (code === 0 && fs.existsSync(outputPath)) resolve(outputPath);
       else reject(new Error(`Clip normalization failed for ${inputPath} (code ${code})`));
@@ -409,7 +412,7 @@ function stitchAllSegments(segmentPaths, audioPath, outputPath, fps = 30) {
       '-y'
     );
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     let stderr = '';
     proc.stderr.on('data', d => stderr += d.toString());
 
@@ -575,7 +578,7 @@ async function executeClipGapFilling(jobId, rawClips, payload, jobTempDir, outpu
       const bridgeThumbFile = path.join(jobTempDir, `bridge_thumb_${i}.jpg`);
       let bridgeThumbBase64 = null;
       try {
-        execSync(`ffmpeg -ss ${Math.max(0.1, job.gapDuration / 2)} -i "${bridgeFile}" -vframes 1 -q:v 2 "${bridgeThumbFile}" -y`, { stdio: 'ignore', timeout: 4000 });
+        execSync(`${FFMPEG} -ss ${Math.max(0.1, job.gapDuration / 2)} -i "${bridgeFile}" -vframes 1 -q:v 2 "${bridgeThumbFile}" -y`, { stdio: 'ignore', timeout: 4000 });
         if (fs.existsSync(bridgeThumbFile)) {
           bridgeThumbBase64 = `data:image/jpeg;base64,${fs.readFileSync(bridgeThumbFile).toString('base64')}`;
         }

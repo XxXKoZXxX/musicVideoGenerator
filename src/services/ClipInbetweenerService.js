@@ -1,11 +1,7 @@
 // src/services/ClipInbetweenerService.js - Client Service for AI Clip Inbetweening & Gap Filling
 import { blobToDataUri } from './LocalServerRenderService';
 
-const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || (
-  typeof window !== 'undefined' && (window.location.port === '3210' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'))
-    ? ''
-    : 'http://localhost:4000'
-);
+import BACKEND_URL from './backendUrl';
 
 export const COLOR_GRADE_PRESETS = [
   {
