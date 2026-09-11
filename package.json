@@ -35,7 +35,7 @@
     "react-build": "react-scripts build",
     "serve:build": "npx -y serve -s build",
     "test": "react-scripts test",
-    "test:server": "node --test server/tests/lyricsParser.test.js server/tests/renderPipeline.test.js",
+    "test:server": "node --test server/tests/lyricsParser.test.js server/tests/cinematicFilters.test.js server/tests/renderPipeline.test.js",
     "test:all": "npm test && npm run test:server",
     "lint": "eslint src/**/*.js",
     "test:e2e": "cypress run",

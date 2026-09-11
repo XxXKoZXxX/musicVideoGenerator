@@ -27,6 +27,16 @@ const {
   buildDrawtextFilters,
   findFontfile,
 } = require('./lyricsParser');
+const {
+  buildLookFilter,
+  buildVignetteFilter,
+  buildGrainFilter,
+  buildFadeFilter,
+  buildBeatFlashFilter,
+  buildWatermarkFilter,
+  buildTimecodeFilter,
+  buildChaptersMeta,
+} = require('./cinematicFilters');
 
 // Point fluent-ffmpeg at the resolved binaries (npm-bundled or system)
 if (ffmpegPath) ffmpeg.setFfmpegPath(ffmpegPath);
@@ -214,6 +224,17 @@ function createRenderJob(projectData = {}, options = {}) {
     srtUrl: null,
     lrcUrl: null,
     thumbnailUrl: null,
+    gifUrl: null,
+    // Cinematic master options
+    colorLook: options.colorLook || projectData.colorLook || 'standard',
+    useVignette: Boolean(options.vignette),
+    useGrain: Boolean(options.filmGrain),
+    transitions: options.transitions === 'fade' ? 'fade' : 'none',
+    beatFlash: options.beatFlash !== false, // on by default for drop sections
+    watermarkText: typeof options.watermarkText === 'string' ? options.watermarkText : '',
+    useTimecode: Boolean(options.timecode),
+    loudnessNormalize: Boolean(options.loudnessNormalize),
+    chapters: options.chapters !== false,
   };
 
   renderJobs.set(jobId, job);
@@ -364,12 +385,27 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       // Render individual animated scene segments (beat-synced cuts)
       const segmentPaths = [];
 
+      // Cinematic grade + atmosphere overlays applied to every segment
+      const lookFilter = buildLookFilter(job.colorLook);
+      const overlayFilters = [
+        job.useVignette ? buildVignetteFilter() : '',
+        job.useGrain ? buildGrainFilter(10) : '',
+      ].filter(Boolean);
+
       for (let i = 0; i < scenePlan.length; i++) {
         const { asset, seconds: secondsPerScene, label } = scenePlan[i];
         const segmentFile = path.join(jobTempDir, `segment_${i}.mp4`);
         const motionType = motionForScene(scenePlan[i], i);
         const motionFilter = getMotionFilter(motionType, secondsPerScene, fps, width, height);
         job.stage = `Rendering ${label || `Scene ${i + 1}`} (${motionType})`;
+
+        // Per-segment cinematic chain: motion -> grade -> overlays -> transitions -> beat flash
+        const segmentEffects = [
+          lookFilter,
+          ...overlayFilters,
+          job.transitions === 'fade' ? buildFadeFilter(secondsPerScene, 0.35) : '',
+          scenePlan[i].isDrop && job.beatFlash ? buildBeatFlashFilter() : '',
+        ].filter(Boolean);
 
         await new Promise((resolve, reject) => {
           let cmd = ffmpeg(asset.path);
@@ -380,6 +416,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
               .videoFilters([
                 `scale=${width}:${height}:force_original_aspect_ratio=increase`,
                 `crop=${width}:${height}`,
+                ...segmentEffects,
                 'format=yuv420p'
               ]);
           } else {
@@ -389,6 +426,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
                 `scale=${width}:${height}:force_original_aspect_ratio=increase`,
                 `crop=${width}:${height}`,
                 motionFilter,
+                ...segmentEffects,
                 'format=yuv420p'
               ]);
           }
@@ -469,7 +507,34 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       const safeTitle = (projectData.audioTitle || projectData.artistName || 'Astraea Music Video').replace(/[^\w\s-]/g, '').trim();
       const safeArtist = (projectData.artistName || 'Astraea Cosmic Studio').replace(/[^\w\s-]/g, '').trim();
 
-      const videoFilters = [...(lyricFilters.length ? lyricFilters : []), 'format=yuv420p'];
+      // Graphic overlays (watermark / timecode) need a font even without lyrics
+      const finalOverlayFilters = [];
+      if (job.watermarkText || job.useTimecode) {
+        const overlayFont = fontfile || findFontfile();
+        if (overlayFont) {
+          if (job.watermarkText) {
+            finalOverlayFilters.push(buildWatermarkFilter(job.watermarkText, overlayFont));
+          }
+          if (job.useTimecode) {
+            finalOverlayFilters.push(buildTimecodeFilter(overlayFont));
+          }
+        }
+      }
+
+      const videoFilters = [...(lyricFilters.length ? lyricFilters : []), ...finalOverlayFilters, 'format=yuv420p'];
+
+      // Chapter metadata from the song structure (Intro / Verse / Drop / Outro)
+      let chaptersMetaPath = null;
+      if (job.chapters) {
+        const meta = buildChaptersMeta(
+          projectData.songStructure?.sections || [],
+          totalDuration
+        );
+        if (meta) {
+          chaptersMetaPath = path.join(jobTempDir, 'chapters.ffmeta');
+          fs.writeFileSync(chaptersMetaPath, meta);
+        }
+      }
 
       await new Promise((resolve, reject) => {
         let command = ffmpeg()
@@ -480,6 +545,18 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
           command = command
             .input(localAudioPath)
             .outputOptions(['-c:a', 'aac', '-b:a', '256k', '-shortest']);
+          if (job.loudnessNormalize) {
+            command = command.audioFilters(['loudnorm=I=-14:TP=-1.5:LRA=11']);
+          }
+        }
+
+        if (chaptersMetaPath) {
+          // Input indices: 0 = concat list, 1 = audio (when present), then the ffmetadata chapters
+          const chaptersInputIndex = localAudioPath && fs.existsSync(localAudioPath) ? 2 : 1;
+          command = command
+            .input(chaptersMetaPath)
+            .inputOptions(['-f', 'ffmetadata'])
+            .outputOptions(['-map_chapters', String(chaptersInputIndex)]);
         }
 
         command
@@ -631,6 +708,8 @@ function listCompletedRenders() {
         thumbnailUrl: matchedJob?.thumbnailUrl || (fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '_thumb.jpg'))) ? `/renders/${fileName.replace(/\.mp4$/, '_thumb.jpg')}` : null),
         srtUrl: matchedJob?.srtUrl || (fs.existsSync(path.join(SIDECAR_DIR, fileName.replace(/\.mp4$/, '_lyrics.srt'))) ? `/renders/subtitles/${fileName.replace(/\.mp4$/, '_lyrics.srt')}` : null),
         lrcUrl: matchedJob?.lrcUrl || (fs.existsSync(path.join(SIDECAR_DIR, fileName.replace(/\.mp4$/, '_lyrics.lrc'))) ? `/renders/subtitles/${fileName.replace(/\.mp4$/, '_lyrics.lrc')}` : null),
+        gifUrl: fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '.gif'))) ? `/renders/${fileName.replace(/\.mp4$/, '.gif')}` : null,
+        colorLook: matchedJob?.colorLook || 'standard',
       };
     })
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -663,6 +742,66 @@ function deleteRenderJob(jobId) {
 }
 
 /**
+ * Creates an animated GIF preview from a completed render (palette-based,
+ * capped in duration and width for a small shareable file).
+ */
+function createGifFromRender(fileName, opts = {}) {
+  const safeName = path.basename(fileName);
+  if (!safeName.endsWith('.mp4') && !safeName.endsWith('.webm')) {
+    return { success: false, error: 'Only rendered video files can be converted to GIF' };
+  }
+  const sourcePath = path.join(RENDERS_DIR, safeName);
+  if (!fs.existsSync(sourcePath)) {
+    return { success: false, error: 'Render file not found' };
+  }
+
+  const maxSeconds = Math.max(2, Math.min(30, Number(opts.maxSeconds) || 8));
+  const gifWidth = Math.max(240, Math.min(960, Number(opts.width) || 480));
+  const fps = Math.max(8, Math.min(24, Number(opts.fps) || 12));
+
+  const base = safeName.replace(/\.(mp4|webm)$/, '');
+  const gifName = `${base}.gif`;
+  const gifPath = path.join(RENDERS_DIR, gifName);
+  const workDir = path.join(TEMP_DIR, `gif_${Date.now()}`);
+  fs.mkdirSync(workDir, { recursive: true });
+  const palettePath = path.join(workDir, 'palette.png');
+
+  try {
+    // 1) Build an optimized palette from the first N seconds
+    execSync(
+      `"${ffmpegPath}" -y -i "${sourcePath}" -t ${maxSeconds} ` +
+      `-vf "fps=${fps},scale=${gifWidth}:-1:flags=lanczos,palettegen=stats_mode=diff" ` +
+      `"${palettePath}"`,
+      { stdio: 'ignore', timeout: 120000 }
+    );
+
+    // 2) Render the GIF using that palette
+    execSync(
+      `"${ffmpegPath}" -y -i "${sourcePath}" -t ${maxSeconds} -i "${palettePath}" ` +
+      `-lavfi "fps=${fps},scale=${gifWidth}:-1:flags=lanczos [x]; [x][1:v] paletteuse=dither=bayer:bayer_scale=4" ` +
+      `"${gifPath}"`,
+      { stdio: 'ignore', timeout: 180000 }
+    );
+
+    const size = fs.statSync(gifPath).size;
+    return {
+      success: true,
+      fileName: gifName,
+      gifUrl: `/renders/${gifName}`,
+      downloadUrl: `/api/server-render/download/${gifName}`,
+      size,
+    };
+  } catch (err) {
+    console.error('[ServerRenderEngine] GIF export failed:', err.message);
+    return { success: false, error: 'GIF export failed' };
+  } finally {
+    try {
+      if (fs.existsSync(workDir)) fs.rmSync(workDir, { recursive: true, force: true });
+    } catch (_) {}
+  }
+}
+
+/**
  * Deletes a rendered video (and its sidecars) directly by file name.
  */
 function deleteRenderFile(filename) {
@@ -675,6 +814,7 @@ function deleteRenderFile(filename) {
   const base = safeName.replace(/\.(mp4|webm)$/, '');
   [
     path.join(RENDERS_DIR, `${base}_thumb.jpg`),
+    path.join(RENDERS_DIR, `${base}.gif`),
     path.join(SIDECAR_DIR, `${base}_lyrics.srt`),
     path.join(SIDECAR_DIR, `${base}_lyrics.lrc`),
   ].forEach((p) => {
@@ -695,6 +835,7 @@ module.exports = {
   listCompletedRenders,
   deleteRenderJob,
   deleteRenderFile,
+  createGifFromRender,
   RENDERS_DIR,
   SIDECAR_DIR,
 };

@@ -10,6 +10,7 @@ const {
   listCompletedRenders,
   deleteRenderJob,
   deleteRenderFile,
+  createGifFromRender,
   RENDERS_DIR,
 } = require('./renderEngine');
 const {
@@ -191,6 +192,7 @@ app.get('/', (req, res) => {
       '/api/server-render/status/:jobId',
       '/api/server-render/list',
       '/api/server-render/download/:filename',
+      '/api/server-render/gif',
       '/api/ai-video/generate',
       '/api/ai-video/generate-scenes',
       '/api/ai-video/status/:id',
@@ -742,6 +744,23 @@ app.delete('/api/server-render/file/:filename', (req, res) => {
   const { filename } = req.params;
   const deleted = deleteRenderFile(filename);
   res.json({ success: deleted, message: deleted ? 'Render deleted' : 'File not found' });
+});
+
+// Convert a completed render into a shareable animated GIF preview
+app.post('/api/server-render/gif', (req, res) => {
+  const { fileName, maxSeconds, width, fps } = req.body || {};
+  if (!fileName || typeof fileName !== 'string') {
+    return res.status(400).json({ success: false, error: 'fileName is required' });
+  }
+  try {
+    const result = createGifFromRender(fileName, { maxSeconds, width, fps });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json({ success: true, ...result, videoUrl: `/renders/${fileName}` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // FFmpeg runtime diagnostics (UI health chip uses this)

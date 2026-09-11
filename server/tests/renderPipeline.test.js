@@ -13,7 +13,7 @@ const { createRenderJob, getJobStatus, listCompletedRenders, deleteRenderFile } 
 const FFMPEG = ffmpegPath || 'ffmpeg';
 const FFPROBE = ffprobePath || 'ffprobe';
 const WORK = path.join(__dirname, 'pipeline_work');
-let audio, img1, img2, job;
+let audio, img1, img2, job, cinematicJob;
 
 function sh(cmd) {
   return execSync(cmd, { timeout: 120000 }).toString().trim();
@@ -52,6 +52,14 @@ before(() => {
 after(() => {
   try {
     if (job) fs.rmSync(job.outputPath, { force: true });
+  } catch (_) {}
+  try {
+    if (cinematicJob) {
+      fs.rmSync(cinematicJob.outputPath, { force: true });
+      const base = cinematicJob.outputFileName.replace(/\.mp4$/, '');
+      fs.rmSync(path.join(__dirname, '..', 'renders', `${base}.gif`), { force: true });
+      fs.rmSync(path.join(__dirname, '..', 'renders', `${base}_thumb.jpg`), { force: true });
+    }
   } catch (_) {}
   try {
     fs.rmSync(WORK, { recursive: true, force: true });
@@ -161,4 +169,84 @@ test('deleteRenderFile removes master, thumbnail and subtitle sidecars', () => {
   assert.ok(!fs.existsSync(thumbBefore), 'thumbnail removed');
   if (srtBefore) assert.ok(!fs.existsSync(srtBefore), 'SRT sidecar removed');
   if (lrcBefore) assert.ok(!fs.existsSync(lrcBefore), 'LRC sidecar removed');
+});
+
+test('cinematic options: vintage look + vignette + grain + fades + watermark + timecode + chapters + loudness', async () => {
+  const cJob = createRenderJob(
+    {
+      audioTitle: 'Cinematic Grade Anthem',
+      artistName: 'Integration Bot',
+      audioDataUrl: 'data:audio/wav;base64,' + fs.readFileSync(audio).toString('base64'),
+      images: [img1, img2],
+      duration: 8,
+      bpm: 128,
+      aspectRatio: '16:9',
+      resolution: '720p',
+      lyricsStyle: 'neon',
+      showLyrics: true,
+      lyrics: '[00:01.00] graded to perfection',
+      songStructure: {
+        sections: [
+          { id: 'c1', type: 'Verse', start: 0, end: 4, energy: 50, isDrop: false },
+          { id: 'c2', type: 'Chorus / Drop', start: 4, end: 8, energy: 95, isDrop: true },
+        ],
+      },
+    },
+    {
+      resolution: '720p',
+      colorLook: 'vintage',
+      vignette: true,
+      filmGrain: true,
+      transitions: 'fade',
+      beatFlash: true,
+      watermarkText: 'MusicVid Pro',
+      timecode: true,
+      loudnessNormalize: true,
+    }
+  );
+
+  const done = await waitForJob(cJob.id);
+  cinematicJob = cJob;
+
+  assert.ok(fs.existsSync(done.outputPath));
+  assert.ok(done.fileSize > 10000);
+
+  const probe = JSON.parse(
+    sh(`"${FFPROBE}" -v error -show_format -show_streams -show_chapters -of json "${done.outputPath}"`)
+  );
+  const types = probe.streams.map((s) => s.codec_type);
+  assert.ok(types.includes('video') && types.includes('audio'), 'A/V streams present');
+  assert.ok(Array.isArray(probe.chapters) && probe.chapters.length === 2, 'two chapters written');
+  assert.strictEqual(probe.chapters[0].tags.title, 'Verse');
+  assert.strictEqual(probe.chapters[1].tags.title, 'Chorus / Drop');
+
+  const list = listCompletedRenders();
+  const entry = list.find((r) => r.fileName === done.outputFileName);
+  assert.ok(entry, 'listed in gallery');
+  assert.strictEqual(entry.colorLook, 'vintage');
+});
+
+test('GIF export produces a shareable animated preview', () => {
+  assert.ok(cinematicJob, 'cinematic render must exist first');
+  const { createGifFromRender } = require('../renderEngine');
+  const result = createGifFromRender(cinematicJob.outputFileName, { maxSeconds: 4, width: 480, fps: 12 });
+  assert.strictEqual(result.success, true, result.error);
+  assert.ok(result.fileName.endsWith('.gif'));
+  assert.ok(result.gifUrl.startsWith('/renders/'));
+
+  const gifPath = path.join(__dirname, '..', 'renders', result.fileName);
+  assert.ok(fs.existsSync(gifPath), 'gif file on disk');
+  assert.ok(fs.statSync(gifPath).size > 10000, 'gif is a real animated file');
+
+  // Header bytes: GIF8
+  const head = fs.readFileSync(gifPath).subarray(0, 4).toString('ascii');
+  assert.strictEqual(head, 'GIF8');
+
+  const list = listCompletedRenders();
+  const entry = list.find((r) => r.fileName === cinematicJob.outputFileName);
+  assert.strictEqual(entry.gifUrl, result.gifUrl, 'gallery exposes the gif');
+
+  // Invalid input is rejected gracefully
+  const bad = createGifFromRender('does_not_exist.mp4');
+  assert.strictEqual(bad.success, false);
 });

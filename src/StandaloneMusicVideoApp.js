@@ -20,6 +20,7 @@ import {
   Sparkles,
   Flame,
   ChevronRight,
+  Plus,
 } from 'lucide-react';
 
 import VideoStudioView from './components/views/VideoStudioView';
@@ -42,6 +43,24 @@ import {
 import './styles/StandaloneMusicVideoApp.css';
 
 const STORAGE_KEY = 'musicvid_project_v2';
+const RECENTS_KEY = 'musicvid_recents_v1';
+const MAX_RECENTS = 6;
+
+function loadRecents() {
+  try {
+    const raw = localStorage.getItem(RECENTS_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function saveRecents(list) {
+  try {
+    localStorage.setItem(RECENTS_KEY, JSON.stringify(list.slice(0, MAX_RECENTS)));
+  } catch (_) {}
+}
 
 /** Sidebar navigation definition (OPUS-agent style). */
 const NAV_ITEMS = [
@@ -122,6 +141,7 @@ export default function StandaloneMusicVideoApp() {
 
   const [savedAt, setSavedAt] = useState(null);
   const [serverOnline, setServerOnline] = useState(null);
+  const [recents, setRecents] = useState(() => loadRecents());
 
   // Quick-render state (floating progress card)
   const [quickRender, setQuickRender] = useState({
@@ -155,15 +175,52 @@ export default function StandaloneMusicVideoApp() {
   }, []);
 
   // ---- Project autosave (debounced, session-safe fields only) ----
+  // Also maintains a deduped "Recent Projects" list keyed by title+artist.
   useEffect(() => {
     const t = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(stripHeavyFields(project)));
+        const snapshot = stripHeavyFields(project);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
         setSavedAt(new Date());
+
+        const key = `${(project.audioTitle || 'Untitled').trim()}::${(project.artistName || '').trim()}`;
+        const stamp = Date.now();
+        setRecents((prev) => {
+          const others = prev.filter((r) => r.key !== key);
+          const next = [{ key, title: project.audioTitle || 'Untitled', artist: project.artistName || 'Unknown Artist', at: stamp, snapshot }, ...others];
+          saveRecents(next);
+          return next;
+        });
       } catch (_) {}
     }, 800);
     return () => clearTimeout(t);
   }, [project]);
+
+  const handleLoadRecent = (entry) => {
+    if (!entry || !entry.snapshot) return;
+    setProject((prev) => ({ ...prev, ...entry.snapshot }));
+    handleNavigate('wizard');
+  };
+
+  const handleDeleteRecent = (key) => {
+    setRecents((prev) => {
+      const next = prev.filter((r) => r.key !== key);
+      saveRecents(next);
+      return next;
+    });
+  };
+
+  const handleNewProject = () => {
+    setProject((prev) => ({
+      ...prev,
+      audioTitle: '',
+      artistName: prev.artistName || 'Astraea Cosmic',
+      lyrics: '',
+      images: [],
+      needsAudioReattach: true,
+    }));
+    handleNavigate('wizard');
+  };
 
   const handleNavigate = useCallback((target) => {
     setSidebarOpen(false);

@@ -235,3 +235,67 @@
 .btn-ghost-danger:hover {
   background: rgba(251, 113, 133, 0.12);
 }
+
+/* ============ GALLERY TOOLBAR (search / sort) ============ */
+.gallery-toolbar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.gallery-search {
+  flex: 1;
+  max-width: 380px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  padding: 8px 12px;
+  color: #64748b;
+}
+
+.gallery-search:focus-within {
+  border-color: rgba(6, 182, 212, 0.6);
+}
+
+.gallery-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f1f5f9;
+  font-size: 12.5px;
+  font-family: inherit;
+}
+
+.gallery-sort {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 10px;
+  color: #cbd5e1;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.gallery-count {
+  font-size: 11px;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .gallery-toolbar {
+    flex-wrap: wrap;
+  }
+  .gallery-search {
+    max-width: none;
+    flex-basis: 100%;
+  }
+}

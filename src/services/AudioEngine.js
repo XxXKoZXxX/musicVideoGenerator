@@ -451,8 +451,16 @@ class AudioEngine {
     this.isSynthesized = false;
     this.trackBlobUrl = blobUrl;
 
-    // Estimate BPM
-    const bpm = this.estimateBPM(decodedBuffer);
+    // BPM: onset-based detector first (with tempo disambiguation),
+    // fast autocorrelation estimator as fallback.
+    let bpm = 128;
+    try {
+      const { detectBPMFromBuffer } = await import('./BeatDetector');
+      const detection = detectBPMFromBuffer(decodedBuffer);
+      if (detection.confidence > 0.1) bpm = detection.bpm;
+    } catch (_) {
+      bpm = this.estimateBPM(decodedBuffer);
+    }
 
     return {
       audioBuffer: decodedBuffer,
