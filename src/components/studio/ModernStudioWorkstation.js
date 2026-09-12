@@ -335,8 +335,27 @@ export default function ModernStudioWorkstation({
         }
       );
 
-      if (result.downloadUrl) {
-        triggerBrowserDownload(result.downloadUrl, `${project.artistName.replace(/\s+/g, '_')}_Server_Master.mp4`);
+      if (result) {
+        setServerRenderProgress({
+          status: 'COMPLETED',
+          progress: 100,
+          stage: 'Server Video Render Complete!',
+          videoUrl: result.videoUrl,
+          downloadUrl: result.downloadUrl,
+          error: null,
+        });
+
+        project.stitchedVideoUrl = result.videoUrl;
+        project.videoUrl = result.videoUrl;
+        if (Array.isArray(project.images)) {
+          project.images = [result.videoUrl, ...project.images.filter((img) => img !== result.videoUrl)];
+        }
+      }
+
+      if (result && result.downloadUrl) {
+        try {
+          triggerBrowserDownload(result.downloadUrl, `${(project.artistName || 'Astraea').replace(/\s+/g, '_')}_Server_Master.mp4`);
+        } catch (_) {}
       }
     } catch (err) {
       console.error('[ServerRender] Render error:', err);

@@ -118,6 +118,7 @@ export default function ClipInbetweenerStudioView({
         path: file.path || null,
         duration: 5,
         thumbnail: null,
+        isUploading: true,
       };
     });
 
@@ -174,12 +175,21 @@ export default function ClipInbetweenerStudioView({
                     path: uploadRes.path,
                     duration: uploadRes.duration || c.duration,
                     thumbnail: c.thumbnail || uploadRes.thumbnail,
+                    isUploading: false,
                   }
                 : c
             )
           );
+        } else {
+          setClips((prev) =>
+            prev.map((c) => (c.id === initialClip.id ? { ...c, isUploading: false } : c))
+          );
         }
-      } catch (_) {}
+      } catch (_) {
+        setClips((prev) =>
+          prev.map((c) => (c.id === initialClip.id ? { ...c, isUploading: false } : c))
+        );
+      }
     });
   };
 
@@ -277,6 +287,10 @@ export default function ClipInbetweenerStudioView({
       setProgressPercent(100);
       setProgressStage('Seamless Video Render Complete!');
 
+      setTimeout(() => {
+        masterVideoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+
       if (onApplyMasterToProject) {
         onApplyMasterToProject({
           stitchedVideoUrl: result.videoUrl,
@@ -331,6 +345,45 @@ export default function ClipInbetweenerStudioView({
           ))}
         </div>
       </header>
+
+      {/* COMPLETED MASTER BANNER */}
+      {renderedMaster && (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-950/70 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-4 shadow-xl shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
+              <CheckCircle className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-sm font-black text-white flex items-center gap-2">
+                Seamless Master Video Ready!
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">
+                  {renderedMaster.totalDuration || estimatedTotalMasterDuration.toFixed(0)}s MP4
+                </span>
+              </h4>
+              <p className="text-xs text-slate-300">
+                All video clips have been patched together and harmonized into one seamless master video.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
+              onClick={() => masterVideoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+            >
+              <Film className="w-3.5 h-3.5" /> Watch Video
+            </button>
+            <a
+              href={renderedMaster.downloadUrl || renderedMaster.videoUrl}
+              download="seamless_master.mp4"
+              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
+              style={{ textDecoration: 'none' }}
+            >
+              <Download className="w-3.5 h-3.5 text-emerald-400" /> Download MP4
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* ERROR NOTICE */}
       {error && (
@@ -555,6 +608,17 @@ export default function ClipInbetweenerStudioView({
                   autoPlay
                   loop
                   playsInline
+                  preload="auto"
+                  onError={(e) => {
+                    console.warn('[ClipInbetweenerStudio] Video player load notice:', e);
+                    if (e.target.src && !e.target.src.includes(':4000') && renderedMaster.videoUrl) {
+                      const cleanPath = renderedMaster.videoUrl.startsWith('/') ? renderedMaster.videoUrl : `/${renderedMaster.videoUrl}`;
+                      e.target.src = `http://localhost:4000${cleanPath}`;
+                    } else if (e.target.src && e.target.src.includes(':4000') && renderedMaster.videoUrl) {
+                      const filename = renderedMaster.videoUrl.split('/').pop();
+                      e.target.src = `/renders/${filename}`;
+                    }
+                  }}
                 />
               </div>
 
@@ -832,6 +896,18 @@ export default function ClipInbetweenerStudioView({
                 <span>{progressPercent}%</span>
               </div>
             </div>
+          )}
+
+          {/* VIEW MASTER BUTTON (WHEN READY) */}
+          {renderedMaster && !isProcessing && (
+            <button
+              type="button"
+              className="w-full py-3 mb-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
+              onClick={() => masterVideoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+            >
+              <Film className="w-4 h-4" />
+              <span>🎬 View Stitched Master ({renderedMaster.totalDuration || estimatedTotalMasterDuration.toFixed(0)}s)</span>
+            </button>
           )}
 
           {/* PRIMARY EXECUTION ACTION BUTTON */}

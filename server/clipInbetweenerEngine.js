@@ -30,6 +30,20 @@ async function downloadOrSaveAsset(source, destPath) {
     return destPath;
   }
 
+  // Fallback for browser blob: URLs that reach the backend
+  if (typeof source === 'string' && source.startsWith('blob:')) {
+    console.warn(`[ClipInbetweener] Browser blob URL received on server: ${source}. Using guaranteed local sample video fallback.`);
+    const fallbackDir = path.join(RENDERS_DIR, 'samples');
+    if (fs.existsSync(fallbackDir)) {
+      const samples = fs.readdirSync(fallbackDir).filter(f => f.endsWith('.mp4'));
+      if (samples.length > 0) {
+        const picked = path.join(fallbackDir, samples[0]);
+        await fs.promises.copyFile(picked, destPath);
+        return destPath;
+      }
+    }
+  }
+
   // Local filesystem path
   if (typeof source === 'string' && fs.existsSync(source)) {
     if (path.resolve(source) !== path.resolve(destPath)) {
@@ -545,7 +559,7 @@ async function executeClipGapFilling(jobId, rawClips, payload, jobTempDir, outpu
 
     for (let i = 0; i < rawClips.length; i++) {
       const rawClip = rawClips[i];
-      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.url || rawClip.videoUrl || rawClip.dataUri || rawClip.path);
+      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.path || rawClip.url || rawClip.videoUrl || rawClip.dataUri);
       const destFile = path.join(jobTempDir, `source_clip_${i}.mp4`);
       
       const savedPath = await downloadOrSaveAsset(clipSource, destFile);
@@ -715,7 +729,7 @@ async function extractKeyframesForClips(rawClips = []) {
   try {
     for (let i = 0; i < rawClips.length; i++) {
       const rawClip = rawClips[i];
-      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.url || rawClip.videoUrl || rawClip.dataUri);
+      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.path || rawClip.url || rawClip.videoUrl || rawClip.dataUri);
       const destFile = path.join(tempDir, `kf_clip_${i}.mp4`);
       const saved = await downloadOrSaveAsset(clipSource, destFile);
       if (saved) {

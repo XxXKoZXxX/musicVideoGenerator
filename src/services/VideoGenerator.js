@@ -378,7 +378,9 @@ export class VideoGenerator {
     if (isVideo) {
       return new Promise((resolve) => {
         const video = document.createElement('video');
-        video.crossOrigin = 'anonymous';
+        if (typeof src === 'string' && !src.startsWith('blob:') && !src.startsWith('data:')) {
+          video.crossOrigin = 'anonymous';
+        }
         video.muted = true;
         video.playsInline = true;
         video.loop = true;
@@ -1361,6 +1363,7 @@ export class VideoGenerator {
 
     // If media is a video element, trigger play to update frames
     if (mediaItem instanceof HTMLVideoElement && mediaItem.duration) {
+      mediaItem.muted = true;
       if (mediaItem.paused) {
         mediaItem.play().catch(() => {});
       }

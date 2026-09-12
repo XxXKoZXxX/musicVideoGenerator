@@ -180,10 +180,37 @@ export async function prepareClipsForSubmission(clips) {
       processed.push({
         ...clip,
         path: clip.path,
+        url: clip.path,
         title: clip.title || 'Video Clip',
         duration: clip.duration || 5,
       });
       continue;
+    }
+
+    // Direct binary stream upload for File or Blob objects
+    if (typeof clip === 'object' && (clip.blob || (typeof clip.url === 'string' && clip.url.startsWith('blob:')))) {
+      try {
+        let fileToUpload = clip.blob;
+        if (!fileToUpload && typeof clip.url === 'string') {
+          const fetched = await fetch(clip.url);
+          fileToUpload = await fetched.blob();
+        }
+        if (fileToUpload) {
+          const uploadRes = await uploadClipFile(fileToUpload);
+          if (uploadRes && uploadRes.path) {
+            processed.push({
+              ...clip,
+              path: uploadRes.path,
+              url: uploadRes.path,
+              title: clip.title || 'Video Clip',
+              duration: uploadRes.duration || clip.duration || 5,
+            });
+            continue;
+          }
+        }
+      } catch (uploadErr) {
+        console.warn('[ClipInbetweenerService] Stream upload fallback:', uploadErr.message);
+      }
     }
 
     let sourceUrl = typeof clip === 'string' ? clip : (clip.url || clip.videoUrl || clip.dataUri);
@@ -237,6 +264,9 @@ export async function startClipGapFilling(payload) {
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.error || `Server responded with status ${res.status}`);
   } catch (err) {
+    if (err.message && !err.message.includes('fetch') && !err.message.includes('Network') && !err.message.includes('offline')) {
+      throw err;
+    }
     console.warn('[ClipInbetweenerService] Backend request failed, falling back to simulated pipeline:', err.message);
 
     // Simulated fallback for offline or headless environments

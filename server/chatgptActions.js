@@ -2,7 +2,6 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { exec } = require('child_process');
 
 const EXEC_TOKEN_PATH = path.join(__dirname, '..', 'chatgpt_token.txt');
 let cachedExecToken = process.env.CHATGPT_EXEC_TOKEN || '';
@@ -986,7 +985,7 @@ servers:
     const useExecFile = allowedReadOnly.some(rx => rx.test(command.trim())) || isBuildTestAllowed;
     if (useExecFile) {
       // Split command into executable + args safely (no shell parsing)
-      const parts = command.trim().match(/(?:[^\s\"]+|\"[^\"]*\")+/g) || [];
+      const parts = command.trim().match(/(?:[^\s"]+|"[^"]*")+/g) || [];
       const execPath = parts.shift();
       const execArgs = parts;
       const { execFile } = require('child_process');

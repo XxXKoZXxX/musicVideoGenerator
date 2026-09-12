@@ -749,7 +749,7 @@ app.delete('/api/server-render/:jobId', (req, res) => {
 // Initiate clip gap filling & seamless stitching
 app.post('/api/clips/fill-gaps', async (req, res) => {
   try {
-    const { clips, gapDuration, engine, colorGrade, transitionStyle, transitionPrompt, audioUrl, audioBlobUrl, resolution, aspectRatio, fps } = req.body;
+    const { clips, gapDuration, engine, colorGrade } = req.body;
     
     if (!clips || !Array.isArray(clips) || clips.length < 2) {
       return res.status(400).json({
@@ -834,6 +834,17 @@ app.post('/api/clips/upload', (req, res) => {
 
   const targetFile = path.join(uploadDir, `${Date.now()}_${safeName}`);
   const writeStream = fs.createWriteStream(targetFile);
+
+  req.on('aborted', () => {
+    writeStream.destroy();
+    fs.unlink(targetFile, () => {});
+  });
+
+  req.on('error', (err) => {
+    writeStream.destroy();
+    fs.unlink(targetFile, () => {});
+    if (!res.headersSent) res.status(500).json({ success: false, error: err.message });
+  });
 
   req.pipe(writeStream);
 
