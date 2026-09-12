@@ -474,6 +474,13 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       }
     }
 
+    // Sync to public/renders so webpack dev server or static host can serve directly
+    const publicDest = path.join(__dirname, '..', 'public', 'renders', path.basename(outputPath));
+    try {
+      if (!fs.existsSync(path.dirname(publicDest))) fs.mkdirSync(path.dirname(publicDest), { recursive: true });
+      fs.copyFileSync(outputPath, publicDest);
+    } catch (_) {}
+
     // Step Complete!
     job.status = 'COMPLETED';
     job.progress = 100;

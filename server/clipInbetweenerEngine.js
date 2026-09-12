@@ -672,6 +672,13 @@ async function executeClipGapFilling(jobId, rawClips, payload, jobTempDir, outpu
 
     await stitchAllSegments(sequenceInOrder, localAudioPath, outputPath, fps);
 
+    // Sync to public/renders so webpack dev server or static host can serve directly
+    const publicDest = path.join(__dirname, '..', 'public', 'renders', path.basename(outputPath));
+    try {
+      if (!fs.existsSync(path.dirname(publicDest))) fs.mkdirSync(path.dirname(publicDest), { recursive: true });
+      fs.copyFileSync(outputPath, publicDest);
+    } catch (_) {}
+
     // Probe final master
     const finalMeta = probeVideoFile(outputPath);
     job.totalDuration = Math.round(finalMeta.duration);

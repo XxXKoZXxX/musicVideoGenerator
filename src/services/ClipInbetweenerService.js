@@ -225,7 +225,14 @@ export async function startClipGapFilling(payload) {
     });
 
     if (res.ok) {
-      return await res.json();
+      const data = await res.json();
+      if (data.videoUrl && !data.videoUrl.startsWith('http')) {
+        data.videoUrl = `${BACKEND_URL}${data.videoUrl.startsWith('/') ? '' : '/'}${data.videoUrl}`;
+      }
+      if (data.downloadUrl && !data.downloadUrl.startsWith('http')) {
+        data.downloadUrl = `${BACKEND_URL}${data.downloadUrl.startsWith('/') ? '' : '/'}${data.downloadUrl}`;
+      }
+      return data;
     }
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.error || `Server responded with status ${res.status}`);
@@ -293,10 +300,23 @@ export async function pollClipGapFillingStatus(jobId, onProgress = () => {}) {
       const data = await res.json();
       if (!data.success) continue;
 
-      onProgress(data);
+      const fullVideoUrl = data.videoUrl
+        ? (data.videoUrl.startsWith('http') ? data.videoUrl : `${BACKEND_URL}${data.videoUrl.startsWith('/') ? '' : '/'}${data.videoUrl}`)
+        : null;
+      const fullDownloadUrl = data.downloadUrl
+        ? (data.downloadUrl.startsWith('http') ? data.downloadUrl : `${BACKEND_URL}${data.downloadUrl.startsWith('/') ? '' : '/'}${data.downloadUrl}`)
+        : null;
+
+      const augmentedData = {
+        ...data,
+        videoUrl: fullVideoUrl || data.videoUrl,
+        downloadUrl: fullDownloadUrl || data.downloadUrl,
+      };
+
+      onProgress(augmentedData);
 
       if (data.status === 'COMPLETED') {
-        return data;
+        return augmentedData;
       }
 
       if (data.status === 'FAILED') {
