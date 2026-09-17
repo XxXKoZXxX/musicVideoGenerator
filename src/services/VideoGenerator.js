@@ -66,6 +66,73 @@ export const COLOR_LUTS = {
 // Global Memory Cache for Instant Canvas Drawing & Zero-Lag Playback
 const GLOBAL_IMAGE_CACHE = new Map();
 
+// Pre-rendered offscreen noise and scanline patterns to eliminate hundreds of fillRect calls per frame
+let cachedNoiseCanvas = null;
+let cachedScanlineCanvas = null;
+
+export function getNoisePattern(ctx) {
+  if (typeof document === 'undefined') return null;
+  if (!cachedNoiseCanvas) {
+    try {
+      const size = 128;
+      const c = document.createElement('canvas');
+      c.width = size;
+      c.height = size;
+      const cCtx = c.getContext('2d');
+      if (cCtx) {
+        const imgData = cCtx.createImageData(size, size);
+        const data = imgData.data;
+        for (let i = 0; i < data.length; i += 4) {
+          const val = Math.random() > 0.5 ? 255 : 0;
+          data[i] = val;
+          data[i + 1] = val;
+          data[i + 2] = val;
+          data[i + 3] = Math.floor(Math.random() * 55) + 15;
+        }
+        cCtx.putImageData(imgData, 0, 0);
+        cachedNoiseCanvas = c;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+  if (cachedNoiseCanvas && ctx && typeof ctx.createPattern === 'function') {
+    try {
+      return ctx.createPattern(cachedNoiseCanvas, 'repeat');
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
+export function getScanlinePattern(ctx) {
+  if (typeof document === 'undefined') return null;
+  if (!cachedScanlineCanvas) {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 4;
+      c.height = 4;
+      const cCtx = c.getContext('2d');
+      if (cCtx) {
+        cCtx.fillStyle = '#000000';
+        cCtx.fillRect(0, 0, 4, 2);
+        cachedScanlineCanvas = c;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+  if (cachedScanlineCanvas && ctx && typeof ctx.createPattern === 'function') {
+    try {
+      return ctx.createPattern(cachedScanlineCanvas, 'repeat');
+    } catch (e) {
+      return null;
+    }
+  }
+  return null;
+}
+
 export function getCachedImage(source) {
   if (!source) return null;
   if (typeof source !== 'string') return source;
@@ -241,6 +308,19 @@ export class VideoGenerator {
   }
 
   initParticles(count = 300) {
+    if (this.particles && this.particles.length === count) {
+      for (let i = 0; i < count; i++) {
+        const p = this.particles[i];
+        p.x = Math.random();
+        p.y = Math.random();
+        p.vx = (Math.random() - 0.5) * 0.004;
+        p.vy = (Math.random() - 0.5) * 0.004;
+        p.size = Math.random() * 3 + 1;
+        p.color = Math.random() > 0.5 ? '#06b6d4' : '#ec4899';
+        p.alpha = Math.random() * 0.7 + 0.3;
+      }
+      return;
+    }
     this.particles = [];
     for (let i = 0; i < count; i++) {
       this.particles.push({
@@ -691,13 +771,34 @@ export class VideoGenerator {
         });
       };
 
+      let lastRecordedTime = 0;
+      let lastWallTime = 0;
+
       const drawLoop = () => {
         if (this.cancelled) {
           if (recorder.state === 'recording') recorder.stop();
           return;
         }
 
-        const elapsed = (performance.now() - startTime) / 1000;
+        const now = performance.now();
+        if (lastWallTime === 0) lastWallTime = now;
+        const wallDelta = (now - lastWallTime) / 1000;
+        lastWallTime = now;
+
+        // Deterministic stepping synchronized with audio clock where available;
+        // prevents multi-second frame skips or video freezes if tab is throttled
+        let elapsed = 0;
+        if (audio && audio.element && !audio.element.paused && audio.element.currentTime > 0) {
+          elapsed = audio.element.currentTime;
+        } else if (audioContext && audioContext.state === 'running' && audioContext.currentTime > 0) {
+          elapsed = audioContext.currentTime;
+        } else {
+          const frameStep = 1 / fps;
+          const maxStep = frameStep * 1.5;
+          const dt = Math.min(Math.max(frameStep, wallDelta), maxStep);
+          elapsed = Math.min(duration, lastRecordedTime + dt);
+        }
+        lastRecordedTime = elapsed;
 
         let masterEnergy = 0;
         let subBass = 0;
@@ -1190,13 +1291,22 @@ export class VideoGenerator {
 
     // SHADER D: Lo-Fi Textured Watercolor Paper Grain
     if (styleId === 'lofi_art' || renderStyleObj.hasPaperGrain) {
-      ctx.save();
-      ctx.globalAlpha = 0.04;
-      ctx.fillStyle = '#fef3c7';
-      for (let i = 0; i < 300; i++) {
-        ctx.fillRect(Math.random() * width, Math.random() * height, 3, 3);
+      const pattern = getNoisePattern(ctx);
+      if (pattern) {
+        ctx.save();
+        ctx.globalAlpha = 0.04;
+        ctx.fillStyle = pattern;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      } else {
+        ctx.save();
+        ctx.globalAlpha = 0.04;
+        ctx.fillStyle = '#fef3c7';
+        for (let i = 0; i < 40; i++) {
+          ctx.fillRect(Math.random() * width, Math.random() * height, 3, 3);
+        }
+        ctx.restore();
       }
-      ctx.restore();
     }
 
     // SHADER E: 3D CGI Volumetric Bloom
@@ -1361,10 +1471,10 @@ export class VideoGenerator {
     if (rotation !== 0) ctx.rotate(rotation);
     ctx.translate(-centerX, -centerY);
 
-    // If media is a video element, trigger play to update frames
+    // If media is a video element, trigger play to update frames safely
     if (mediaItem instanceof HTMLVideoElement && mediaItem.duration) {
       mediaItem.muted = true;
-      if (mediaItem.paused) {
+      if (mediaItem.paused && !mediaItem.seeking && mediaItem.readyState >= 2) {
         mediaItem.play().catch(() => {});
       }
     }
@@ -1527,6 +1637,8 @@ export class VideoGenerator {
       ctx.stroke();
     } else if (style === 'particles') {
       const burst = subBass > 0.65 ? subBass * 0.025 : 0.002;
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
 
       for (const p of this.particles) {
         p.x += p.vx * (1 + burst * 20);
@@ -1537,21 +1649,24 @@ export class VideoGenerator {
         if (p.y < 0) p.y = 1;
         if (p.y > 1) p.y = 0;
 
-        ctx.fillStyle = p.color;
-        ctx.shadowColor = p.color;
-        ctx.shadowBlur = 8 * intensity;
-        ctx.globalAlpha = p.alpha * (0.4 + subBass * 0.6);
+        const currentAlpha = p.alpha * (0.4 + subBass * 0.6);
+        const radius = p.size * (1 + subBass * 1.5);
+        const px = p.x * width;
+        const py = p.y * height;
 
+        // Screen-blended dual-arc particle glow (avoids CPU-bound Gaussian shadowBlur bottlenecks)
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = currentAlpha * 0.35;
         ctx.beginPath();
-        ctx.arc(
-          p.x * width,
-          p.y * height,
-          p.size * (1 + subBass * 1.5),
-          0,
-          Math.PI * 2
-        );
+        ctx.arc(px, py, radius * 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.globalAlpha = currentAlpha;
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.restore();
     } else if (style === 'bars') {
       const numBars = 48;
       const barWidth = (width / numBars) * 0.7;
@@ -1634,10 +1749,19 @@ export class VideoGenerator {
 
     // 3. VHS 90s MTV Effects
     if (lut === 'vhs' || styleId === 'vhs_retro') {
-      ctx.globalAlpha = 0.12;
-      ctx.fillStyle = '#000000';
-      for (let y = 0; y < height; y += 4) {
-        ctx.fillRect(0, y, width, 2);
+      const scanPattern = getScanlinePattern(ctx);
+      if (scanPattern) {
+        ctx.save();
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = scanPattern;
+        ctx.fillRect(0, 0, width, height);
+        ctx.restore();
+      } else {
+        ctx.globalAlpha = 0.12;
+        ctx.fillStyle = '#000000';
+        for (let y = 0; y < height; y += 4) {
+          ctx.fillRect(0, y, width, 2);
+        }
       }
 
       ctx.globalAlpha = 0.08;
@@ -1662,10 +1786,22 @@ export class VideoGenerator {
 
     // 5. Film Grain
     if (lut === 'vhs' || lut === 'cinema35' || lut === 'noir' || styleId === 'photoreal' || styleId === 'gothic_noir') {
-      ctx.globalAlpha = 0.04;
-      for (let i = 0; i < 350; i++) {
-        ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
-        ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
+      const grainPattern = getNoisePattern(ctx);
+      if (grainPattern) {
+        ctx.save();
+        ctx.globalAlpha = 0.04;
+        const jitterX = Math.floor((Math.sin(elapsed * 43) + 1) * 32);
+        const jitterY = Math.floor((Math.cos(elapsed * 57) + 1) * 32);
+        ctx.translate(jitterX, jitterY);
+        ctx.fillStyle = grainPattern;
+        ctx.fillRect(-jitterX, -jitterY, width + 64, height + 64);
+        ctx.restore();
+      } else {
+        ctx.globalAlpha = 0.04;
+        for (let i = 0; i < 40; i++) {
+          ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
+          ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
+        }
       }
     }
 
