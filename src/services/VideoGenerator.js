@@ -703,7 +703,6 @@ export class VideoGenerator {
       const spectrum = analyser ? new Uint8Array(analyser.frequencyBinCount) : new Uint8Array(64);
       const bassData = bassAnalyser ? new Uint8Array(bassAnalyser.frequencyBinCount) : new Uint8Array(32);
       const midsData = midsAnalyser ? new Uint8Array(midsAnalyser.frequencyBinCount) : new Uint8Array(32);
-      let startTime = 0;
       let frameHandle = null;
 
       const cleanup = () => {
@@ -847,7 +846,7 @@ export class VideoGenerator {
       };
 
       const startRecording = () => {
-        startTime = performance.now();
+        lastWallTime = performance.now();
         if (bufferSource) {
           try { bufferSource.start(0); } catch (e) {}
         }

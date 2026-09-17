@@ -31,6 +31,8 @@
   },
   "scripts": {
     "freebeat": "node bin/freebeat.js",
+    "vercel-build": "react-scripts build",
+    "deploy:vercel": "npx -y vercel --prod",
     "react-start": "react-scripts start",
     "react-build": "react-scripts build",
     "serve:build": "npx -y serve -s build",

@@ -48,8 +48,13 @@ If you want the app to stay online 24/7 even when your computer is shut down, yo
 
 ### Deploy with Vercel (Free):
 ```bash
-npm install -g vercel
-vercel --prod build
+# Automated via git: Pushing to main automatically builds and deploys on Vercel
+git push origin main
+
+# Or deploy directly via CLI:
+npm run deploy:vercel
+# or
+bash scripts/deploy-vercel.sh
 ```
 
 ### Deploy with Netlify (Free):

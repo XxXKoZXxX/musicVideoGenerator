@@ -1,0 +1,11 @@
+node_modules
+.git
+.venv
+dist
+*.log
+chatgpt_token.txt
+public_url.txt
+cloudflared.exe
+ngrok.exe
+ngrok.zip
+server/

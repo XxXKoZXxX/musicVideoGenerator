@@ -1,4 +1,10 @@
-import { VideoGenerator, RESOLUTION_PRESETS, ASPECT_RATIOS } from '../VideoGenerator';
+import {
+  VideoGenerator,
+  RESOLUTION_PRESETS,
+  ASPECT_RATIOS,
+  getNoisePattern,
+  getScanlinePattern,
+} from '../VideoGenerator';
 
 describe('VideoGenerator Frame & Export Tests', () => {
   test('calculates correct even frame dimensions for 16:9 1080p', () => {
@@ -70,5 +76,26 @@ describe('VideoGenerator Frame & Export Tests', () => {
 
     expect(typeof generator.exportVideo).toBe('function');
     expect(typeof generator.getFrameSize).toBe('function');
+  });
+
+  test('pools and reuses particle instances to prevent GC allocations', () => {
+    const generator = new VideoGenerator(null, {
+      resolution: '720p',
+      aspectRatio: '16:9',
+    });
+
+    expect(generator.particles.length).toBe(300);
+    const initialFirstParticle = generator.particles[0];
+
+    // Re-initialize same particle count
+    generator.initParticles(300);
+    expect(generator.particles.length).toBe(300);
+    // Same object reference reused to avoid Garbage Collector thrashing
+    expect(generator.particles[0]).toBe(initialFirstParticle);
+  });
+
+  test('exports getNoisePattern and getScanlinePattern helper functions', () => {
+    expect(typeof getNoisePattern).toBe('function');
+    expect(typeof getScanlinePattern).toBe('function');
   });
 });
