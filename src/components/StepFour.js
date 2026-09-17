@@ -93,11 +93,15 @@ export default function StepFour({ onBack, project }) {
   const loadedImagesRef = useRef([]);
   const parsedLyricsRef = useRef([]);
   const settingsRef = useRef(settings);
+  const lastUiUpdateTimeRef = useRef(0);
 
   useEffect(() => {
     settingsRef.current = settings;
     project.rendererEngine = settings.rendererEngine;
     project.renderStyle = settings.renderStyle;
+    if (generatorRef.current) {
+      generatorRef.current.settings = { ...generatorRef.current.settings, ...settings };
+    }
   }, [settings, project]);
 
   // Preload Images, Size Canvas, and Parse Lyrics on Mount
@@ -111,9 +115,10 @@ export default function StepFour({ onBack, project }) {
     }
 
     const generator = new VideoGenerator(project, settings);
+    generatorRef.current = generator;
     generator.loadImages().then((imgs) => {
       loadedImagesRef.current = imgs;
-      drawPreviewFrame(0);
+      drawPreviewFrame(0, true);
     });
 
     const parsed = LyricsEngine.parseLyrics(project.lyrics || '', duration);
@@ -137,42 +142,48 @@ export default function StepFour({ onBack, project }) {
     canvas.width = baseWidth;
     canvas.height = baseHeight;
 
-    drawPreviewFrame(currentTime);
+    drawPreviewFrame(currentTime, true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.aspectRatio]);
 
   // Redraw preview frame when settings change
   useEffect(() => {
     if (!isPlaying) {
-      drawPreviewFrame(currentTime);
+      drawPreviewFrame(currentTime, true);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
   // Live Canvas Frame Drawer
-  const drawPreviewFrame = (elapsedTime) => {
+  const drawPreviewFrame = (elapsedTime, updateUi = true) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const images = loadedImagesRef.current;
     if (!images || images.length === 0) return;
 
-    const generator = new VideoGenerator(project, settingsRef.current);
+    let generator = generatorRef.current;
+    if (!generator) {
+      generator = new VideoGenerator(project, settingsRef.current);
+      generatorRef.current = generator;
+    }
     const audioMetrics = audioEngine.getAudioMetrics();
     const secondsPerImage = duration / images.length;
 
-    const shot = StoryDirector.evaluateDirectorShot(
-      generator.screenplay,
-      elapsedTime,
-      settingsRef.current.directorMode || 'hybrid',
-      audioMetrics
-    );
-    const viseme = lipSyncEngine.extractViseme(audioMetrics);
-    setCurrentShotInfo({
-      isSingerShot: shot.isSingerShot,
-      viseme: viseme.viseme,
-      energy: Math.round(audioMetrics.mids * 100),
-    });
+    if (updateUi) {
+      const shot = StoryDirector.evaluateDirectorShot(
+        generator.screenplay,
+        elapsedTime,
+        settingsRef.current.directorMode || 'hybrid',
+        audioMetrics
+      );
+      const viseme = lipSyncEngine.extractViseme(audioMetrics);
+      setCurrentShotInfo({
+        isSingerShot: shot.isSingerShot,
+        viseme: viseme.viseme,
+        energy: Math.round(audioMetrics.mids * 100),
+      });
+    }
 
     generator.renderCompositedFrame(
       ctx,
@@ -187,7 +198,7 @@ export default function StepFour({ onBack, project }) {
     );
   };
 
-  // Live Playback Loop (60 FPS)
+  // Live Playback Loop (60 FPS Canvas with Throttled 15 FPS React UI Updates)
   const startLivePlayback = () => {
     if (!liveAudioRef.current) return;
 
@@ -197,11 +208,19 @@ export default function StepFour({ onBack, project }) {
       .play()
       .then(() => {
         setIsPlaying(true);
+        lastUiUpdateTimeRef.current = 0;
         const loop = () => {
           if (liveAudioRef.current && !liveAudioRef.current.paused) {
             const t = liveAudioRef.current.currentTime;
-            setCurrentTime(t);
-            drawPreviewFrame(t);
+            const now = performance.now() / 1000;
+            // Throttle React UI updates to ~15 FPS to prevent main-thread UI lockups,
+            // while canvas frame rendering runs at full 60 FPS
+            const shouldUpdateUi = now - lastUiUpdateTimeRef.current >= 0.066;
+            if (shouldUpdateUi) {
+              lastUiUpdateTimeRef.current = now;
+              setCurrentTime(t);
+            }
+            drawPreviewFrame(t, shouldUpdateUi);
             liveAnimFrameRef.current = requestAnimationFrame(loop);
           } else {
             setIsPlaying(false);
@@ -218,6 +237,7 @@ export default function StepFour({ onBack, project }) {
     }
     if (liveAnimFrameRef.current) {
       cancelAnimationFrame(liveAnimFrameRef.current);
+      liveAnimFrameRef.current = null;
     }
     setIsPlaying(false);
   };
