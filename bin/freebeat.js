@@ -158,7 +158,7 @@ function updateEnvVariable(key, val) {
 // Mask sensitive API key
 function maskKey(key) {
   if (!key || key.length < 8) return '****';
-  return key.slice(0, 6) + '...' + '****' + key.slice(-4);
+  return `${key.slice(0, 6)}...****${key.slice(-4)}`;
 }
 
 // Print Banner
