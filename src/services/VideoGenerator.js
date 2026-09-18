@@ -133,6 +133,73 @@ export function getScanlinePattern(ctx) {
   return null;
 }
 
+// Procedural fallback canvas generator to guarantee same-origin visual scenes and prevent canvas tainting
+export function createProceduralFallbackCanvas(label = 'SCENE', width = 1280, height = 720) {
+  if (typeof document === 'undefined') return null;
+  const c = document.createElement('canvas');
+  c.width = width;
+  c.height = height;
+  const ctx = c.getContext('2d');
+  if (!ctx) return c;
+
+  try {
+    // Cinematic sci-fi gradient background
+    if (typeof ctx.createLinearGradient === 'function' && typeof ctx.fillRect === 'function') {
+      const grad = ctx.createLinearGradient(0, 0, width, height);
+      grad.addColorStop(0, '#030712');
+      grad.addColorStop(0.35, '#0f172a');
+      grad.addColorStop(0.7, '#1e1b4b');
+      grad.addColorStop(1, '#0c4a6e');
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    // High-tech circular portal glow
+    const cx = width / 2;
+    const cy = height * 0.48;
+    if (typeof ctx.createRadialGradient === 'function' && typeof ctx.arc === 'function') {
+      const radGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.min(width, height) * 0.45);
+      radGrad.addColorStop(0, 'rgba(6, 182, 212, 0.45)');
+      radGrad.addColorStop(0.5, 'rgba(236, 72, 153, 0.2)');
+      radGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = radGrad;
+      ctx.beginPath();
+      ctx.arc(cx, cy, Math.min(width, height) * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Perspective Grid Lines
+    if (typeof ctx.beginPath === 'function' && typeof ctx.moveTo === 'function' && typeof ctx.lineTo === 'function' && typeof ctx.stroke === 'function') {
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.lineWidth = 1.5;
+      const horizon = height * 0.6;
+      for (let y = horizon; y < height; y += (y - horizon + 16) * 0.4) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(width, y);
+        ctx.stroke();
+      }
+      for (let x = -width * 0.2; x <= width * 1.2; x += width * 0.12) {
+        ctx.beginPath();
+        ctx.moveTo(cx, horizon);
+        ctx.lineTo(x, height);
+        ctx.stroke();
+      }
+    }
+
+    // Neon bounding frame
+    if (typeof ctx.strokeRect === 'function') {
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(30, 30, width - 60, height - 60);
+    }
+  } catch (err) {
+    // Graceful in headless / jsdom mock environments
+  }
+
+  return c;
+}
+
 export function getCachedImage(source) {
   if (!source) return null;
   if (typeof source !== 'string') return source;
@@ -150,11 +217,27 @@ export function getCachedImage(source) {
     GLOBAL_IMAGE_CACHE.set(source, img);
   };
   img.onerror = () => {
-    const fallbackImg = new Image();
-    fallbackImg.onload = () => {
-      GLOBAL_IMAGE_CACHE.set(source, fallbackImg);
-    };
-    fallbackImg.src = source;
+    // Attempt blob fetch to bypass strict image element CORS if possible,
+    // otherwise fallback to same-origin procedural canvas to prevent canvas tainting
+    if (typeof fetch === 'function' && source.startsWith('http')) {
+      fetch(source, { mode: 'cors' })
+        .then((res) => (res.ok ? res.blob() : null))
+        .then((blob) => {
+          if (blob) {
+            const blobUrl = URL.createObjectURL(blob);
+            const blobImg = new Image();
+            blobImg.onload = () => GLOBAL_IMAGE_CACHE.set(source, blobImg);
+            blobImg.src = blobUrl;
+          } else {
+            GLOBAL_IMAGE_CACHE.set(source, createProceduralFallbackCanvas(source));
+          }
+        })
+        .catch(() => {
+          GLOBAL_IMAGE_CACHE.set(source, createProceduralFallbackCanvas(source));
+        });
+    } else {
+      GLOBAL_IMAGE_CACHE.set(source, createProceduralFallbackCanvas(source));
+    }
   };
   img.src = source;
   GLOBAL_IMAGE_CACHE.set(source, img);
@@ -402,10 +485,13 @@ export class VideoGenerator {
     try {
       this.singerImage = await this.loadMedia(singerUrl);
     } catch {
-      this.singerImage = loaded[0];
+      this.singerImage = loaded[0] || createProceduralFallbackCanvas('SINGER');
+    }
+    if (!this.singerImage) {
+      this.singerImage = loaded[0] || createProceduralFallbackCanvas('SINGER');
     }
 
-    return loaded.length > 0 ? loaded : [this.singerImage];
+    return loaded.length > 0 ? loaded : [this.singerImage || createProceduralFallbackCanvas('SCENE')];
   }
 
   async loadMedia(source) {
@@ -488,12 +574,17 @@ export class VideoGenerator {
   }
 
   loadImage(source) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       if (GLOBAL_IMAGE_CACHE.has(source)) {
         const cached = GLOBAL_IMAGE_CACHE.get(source);
         if (cached && (cached.naturalWidth || cached.width)) {
           return resolve(cached);
         }
+      }
+
+      if (typeof Image === 'undefined') {
+        const fallback = createProceduralFallbackCanvas(source);
+        return resolve(fallback);
       }
 
       const img = new Image();
@@ -503,13 +594,39 @@ export class VideoGenerator {
         resolve(img);
       };
       img.onerror = () => {
-        const fallbackImg = new Image();
-        fallbackImg.onload = () => {
-          GLOBAL_IMAGE_CACHE.set(source, fallbackImg);
-          resolve(fallbackImg);
-        };
-        fallbackImg.onerror = () => reject(new Error(`Failed to load image: ${source}`));
-        fallbackImg.src = source;
+        if (typeof fetch === 'function' && typeof source === 'string' && source.startsWith('http')) {
+          fetch(source, { mode: 'cors' })
+            .then((r) => (r.ok ? r.blob() : null))
+            .then((blob) => {
+              if (blob) {
+                const blobUrl = URL.createObjectURL(blob);
+                const blobImg = new Image();
+                blobImg.onload = () => {
+                  GLOBAL_IMAGE_CACHE.set(source, blobImg);
+                  resolve(blobImg);
+                };
+                blobImg.onerror = () => {
+                  const fallback = createProceduralFallbackCanvas(source);
+                  GLOBAL_IMAGE_CACHE.set(source, fallback);
+                  resolve(fallback);
+                };
+                blobImg.src = blobUrl;
+              } else {
+                const fallback = createProceduralFallbackCanvas(source);
+                GLOBAL_IMAGE_CACHE.set(source, fallback);
+                resolve(fallback);
+              }
+            })
+            .catch(() => {
+              const fallback = createProceduralFallbackCanvas(source);
+              GLOBAL_IMAGE_CACHE.set(source, fallback);
+              resolve(fallback);
+            });
+        } else {
+          const fallback = createProceduralFallbackCanvas(source);
+          GLOBAL_IMAGE_CACHE.set(source, fallback);
+          resolve(fallback);
+        }
       };
       img.src = source;
     });
@@ -561,9 +678,14 @@ export class VideoGenerator {
   async generate() {
     const images = await this.loadImages();
     const audio = await this.loadAudio();
+    const duration = (audio && Number.isFinite(audio.duration) && audio.duration > 0)
+      ? audio.duration
+      : (Number.isFinite(this.project?.duration) && this.project.duration > 0
+          ? this.project.duration
+          : (images.length * 4));
     const lyrics = LyricsEngine.parseLyrics(
       this.project.lyrics || '',
-      audio ? audio.duration : images.length * 4
+      duration
     );
 
     return this.recordVideo(images, audio, lyrics);
@@ -581,7 +703,7 @@ export class VideoGenerator {
     };
 
     const result = await this.generate();
-    if (onComplete) onComplete(result.url);
+    if (onComplete) onComplete(result.url, result);
     return result;
   }
 
@@ -589,7 +711,11 @@ export class VideoGenerator {
   recordVideo(images, audio, lyrics) {
     const { width, height } = this.getFrameSize();
     const fps = this.settings.fps || 30;
-    const duration = audio ? audio.duration : Math.max(12, images.length * (3.5 / this.settings.speed));
+    const duration = (audio && Number.isFinite(audio.duration) && audio.duration > 0)
+      ? audio.duration
+      : (Number.isFinite(this.project?.duration) && this.project.duration > 0
+          ? this.project.duration
+          : Math.max(12, images.length * (3.5 / (this.settings.speed || 1.0))));
     const secondsPerImage = duration / images.length;
 
     const canvas = document.createElement('canvas');
@@ -598,6 +724,19 @@ export class VideoGenerator {
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
+
+    // Pre-render initial frame 0 before captureStream so the canvas is non-empty
+    this.renderCompositedFrame(
+      ctx,
+      images,
+      lyrics,
+      0,
+      duration,
+      secondsPerImage,
+      { masterEnergy: 0, subBass: 0, mids: 0, isKick: false, spectrum: new Uint8Array(64) },
+      width,
+      height
+    );
 
     const stream = canvas.captureStream(fps);
     let audioContext = null;
@@ -610,9 +749,6 @@ export class VideoGenerator {
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioCtx();
-        if (audioContext.state === 'suspended') {
-          audioContext.resume();
-        }
 
         const gain = audioContext.createGain();
         gain.gain.value = (this.settings.audioBoost || 100) / 100;
@@ -663,18 +799,31 @@ export class VideoGenerator {
       }
     }
 
-    const mimeCandidates = [
-      'video/webm;codecs=vp9,opus',
-      'video/webm;codecs=vp8,opus',
-      'video/webm',
-      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-      'video/mp4',
-    ];
+    const isMp4Preferred = (this.settings.format || 'mp4').toLowerCase() === 'mp4';
+    const mimeCandidates = isMp4Preferred
+      ? [
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4;codecs=avc1',
+          'video/mp4',
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
+        ]
+      : [
+          'video/webm;codecs=vp9,opus',
+          'video/webm;codecs=vp8,opus',
+          'video/webm',
+          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+          'video/mp4;codecs=avc1,mp4a.40.2',
+          'video/mp4;codecs=avc1',
+          'video/mp4',
+        ];
     let selectedMime = '';
-    let ext = 'webm';
+    let ext = isMp4Preferred ? 'mp4' : 'webm';
 
     for (const cand of mimeCandidates) {
-      if (MediaRecorder.isTypeSupported(cand)) {
+      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(cand)) {
         selectedMime = cand;
         ext = cand.includes('mp4') ? 'mp4' : 'webm';
         break;
@@ -688,10 +837,15 @@ export class VideoGenerator {
         ? 10_000_000
         : 5_000_000;
 
-    const recorder = new MediaRecorder(stream, {
-      ...(selectedMime ? { mimeType: selectedMime } : {}),
-      videoBitsPerSecond: bitrate,
-    });
+    let recorder;
+    try {
+      recorder = new MediaRecorder(stream, {
+        ...(selectedMime ? { mimeType: selectedMime } : {}),
+        videoBitsPerSecond: bitrate,
+      });
+    } catch {
+      recorder = new MediaRecorder(stream);
+    }
     this.recorder = recorder;
 
     const chunks = [];
@@ -757,7 +911,7 @@ export class VideoGenerator {
           reject(new Error('Cancelled'));
           return;
         }
-        const blob = new Blob(chunks, { type: selectedMime || 'video/webm' });
+        const blob = new Blob(chunks, { type: selectedMime || (ext === 'mp4' ? 'video/mp4' : 'video/webm') });
         this.progressCallback(100);
         resolve({
           blob,
@@ -770,6 +924,7 @@ export class VideoGenerator {
         });
       };
 
+      let audioStartTime = 0;
       let lastRecordedTime = 0;
       let lastWallTime = 0;
 
@@ -787,10 +942,10 @@ export class VideoGenerator {
         // Deterministic stepping synchronized with audio clock where available;
         // prevents multi-second frame skips or video freezes if tab is throttled
         let elapsed = 0;
-        if (audio && audio.element && !audio.element.paused && audio.element.currentTime > 0) {
-          elapsed = audio.element.currentTime;
-        } else if (audioContext && audioContext.state === 'running' && audioContext.currentTime > 0) {
-          elapsed = audioContext.currentTime;
+        if (audio && audio.element && !audio.element.paused) {
+          elapsed = Math.max(0, audio.element.currentTime);
+        } else if (audioContext && audioContext.state === 'running' && bufferSource) {
+          elapsed = Math.max(0, audioContext.currentTime - audioStartTime);
         } else {
           const frameStep = 1 / fps;
           const maxStep = frameStep * 1.5;
@@ -845,7 +1000,13 @@ export class VideoGenerator {
         scheduleNextFrame();
       };
 
-      const startRecording = () => {
+      const startRecording = async () => {
+        if (audioContext) {
+          if (audioContext.state === 'suspended') {
+            try { await audioContext.resume(); } catch (e) {}
+          }
+          audioStartTime = audioContext.currentTime;
+        }
         lastWallTime = performance.now();
         if (bufferSource) {
           try { bufferSource.start(0); } catch (e) {}

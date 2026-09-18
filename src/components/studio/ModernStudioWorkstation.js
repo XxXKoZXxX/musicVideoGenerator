@@ -294,11 +294,12 @@ export default function ModernStudioWorkstation({
       await generatorRef.current.exportVideo(
         project.duration || 32,
         (progress) => setExportProgress(Math.round(progress * 100)),
-        (blobUrl) => {
+        (blobUrl, result) => {
           setIsExporting(false);
+          const ext = result?.extension || 'mp4';
           const a = document.createElement('a');
           a.href = blobUrl;
-          a.download = `${project.artistName.replace(/\s+/g, '_')}_Master_Music_Video_${project.aspectRatio}.webm`;
+          a.download = `${project.artistName.replace(/\s+/g, '_')}_Master_Music_Video_${project.aspectRatio}.${ext}`;
           a.click();
         }
       );
@@ -729,8 +730,8 @@ export default function ModernStudioWorkstation({
             onClick={handleExportVideo}
             disabled={isExporting}
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export 4K Master</span>
+            <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-bounce text-cyan-400' : ''}`} />
+            <span>{isExporting ? `Exporting ${exportProgress}%...` : 'Export 4K Master'}</span>
           </button>
         </div>
       </header>

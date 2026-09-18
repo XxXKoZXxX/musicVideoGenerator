@@ -4,6 +4,7 @@ import {
   ASPECT_RATIOS,
   getNoisePattern,
   getScanlinePattern,
+  createProceduralFallbackCanvas,
 } from '../VideoGenerator';
 
 describe('VideoGenerator Frame & Export Tests', () => {
@@ -97,5 +98,18 @@ describe('VideoGenerator Frame & Export Tests', () => {
   test('exports getNoisePattern and getScanlinePattern helper functions', () => {
     expect(typeof getNoisePattern).toBe('function');
     expect(typeof getScanlinePattern).toBe('function');
+  });
+
+  test('creates procedural fallback canvas with correct dimensions', () => {
+    expect(typeof createProceduralFallbackCanvas).toBe('function');
+    const canvas = createProceduralFallbackCanvas('SCENE', 1920, 1080);
+    expect(canvas).not.toBeNull();
+    expect(canvas.width).toBe(1920);
+    expect(canvas.height).toBe(1080);
+  });
+
+  test('defaults to mp4 export format', () => {
+    const generator = new VideoGenerator(null, {});
+    expect(generator.settings.format).toBe('mp4');
   });
 });
