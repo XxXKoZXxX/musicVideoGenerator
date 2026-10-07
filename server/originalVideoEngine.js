@@ -20,8 +20,8 @@ const { createCanvas, GlobalFonts } = require('@napi-rs/canvas');
 
 const { makeRng } = require('./lyricsAnalysis');
 const { ffmpegPath } = require('./ffmpegPaths');
-const { buildStoryboard, sceneAt, isTwoShot } = require('./storyEngine');
-const { paintCharacterInScene } = require('./characterPainter');
+const { createCast, paintCharacter, createMouthDriver, blinkAt } = require('./characterEngine');
+const { buildStoryline } = require('./storyEngine');
 
 // ---------------------------------------------------------------------------
 // Setup: fonts
@@ -1374,44 +1374,45 @@ function paintPostFX(ctx, s, opts) {
 // ---------------------------------------------------------------------------
 // Frame renderer
 // ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// Lyric timing — one source of truth for lyric typography AND lip sync
-// ---------------------------------------------------------------------------
-function assignLineTimes(analysis, duration) {
-  const lines = (analysis && analysis.lines) || [];
-  if (!lines.length || lines.some((l) => l.time != null)) return analysis;
-  const total = duration || analysis.duration || 60;
-  // character-weighted: longer lines hold the stage longer
-  const weights = lines.map((l) => Math.max(8, (l.text || '').replace(/\s+/g, '').length + ((l.words && l.words.length) || 0) * 2));
-  const wSum = weights.reduce((a, b) => a + b, 0);
-  const startPad = Math.min(1.2, total * 0.04);
-  const usable = Math.max(2, total - startPad);
-  let acc = 0;
-  for (let i = 0; i < lines.length; i++) {
-    const share = (weights[i] / wSum) * usable;
-    lines[i].time = startPad + acc;
-    lines[i].duration = Math.max(0.45, share * 0.92); // micro-gaps close the mouth
-    acc += share;
-  }
-  return analysis;
-}
-
 function createFramePainter(analysis, audioInfo, scenes, opts, dims) {
   const { W, H, fps } = dims;
   const canvas = createCanvas(W, H);
   const ctx = canvas.getContext('2d');
 
-  // --- cast + storyboard (characters, narrative beats, lip-sync timing) ---
-  assignLineTimes(analysis, audioInfo.duration || analysis.duration);
-  const storyboard = buildStoryboard({
-    analysis,
-    audioInfo,
-    seed: analysis.seed,
-    genre: analysis.genre,
-    cast: analysis.cast,
-  });
-  analysis.cast = storyboard.cast; // stable for poster frames too
+  // ---- cast & storyline (characters + lip-sync) ----
+  const storyMode = opts.storyMode || 'story';
+  const sectionsForStory = (audioInfo.sections && audioInfo.sections.length
+    ? audioInfo.sections
+    : [{ type: 'song', start: 0, end: audioInfo.duration || opts.duration || 60, energy: 60, isDrop: false }]);
+  const story = storyMode === 'visuals-only'
+    ? null
+    : buildStoryline(analysis, sectionsForStory, { castSize: opts.castSize, mood: analysis.summary.mood });
+  if (story && storyMode === 'performance') {
+    // artist-performance mode: every section after the intro is a singing shot
+    let perfN = 0;
+    story.beats = story.beats.map((b) => {
+      if (b.type === 'establish') return b;
+      perfN += 1;
+      return { ...b, type: 'perf', action: 'sing', pose: perfN % 3 === 2 ? 'dance' : 'sing', framing: perfN % 3 === 2 ? 'medium' : 'closeup', charIdxs: [0], label: `${b.section} — perf` };
+    });
+  }
+  const cast = story ? story.cast : [];
 
+  // word timeline for the lip-sync driver
+  const wordTimeline = [];
+  for (const line of analysis.lines) {
+    if (line.time == null) continue;
+    const words = (line.words && line.words.length ? line.words : String(line.text || '').split(/\s+/).filter(Boolean));
+    let acc = 0;
+    const total = words.reduce((s, w) => s + Math.max(1.6, w.length + 1), 0) || 1;
+    words.forEach((w, wi) => {
+      const dur = (Math.max(1.6, w.length + 1) / total) * line.duration;
+      wordTimeline.push({ start: line.time + (acc / total) * line.duration, end: line.time + (acc / total) * line.duration + dur, word: w, lineIdx: line.time });
+      acc += Math.max(1.6, w.length + 1);
+    });
+  }
+  wordTimeline.sort((a, b) => a.start - b.start);
+  const mouthDriver = createMouthDriver(wordTimeline, audioInfo.vocal || null, analysis.seed);
   const parsed = analysis.lines.map((l, i) => {
     const total = analysis.duration;
     const per = total / Math.max(1, analysis.lines.length);
@@ -1527,51 +1528,77 @@ function createFramePainter(analysis, audioInfo, scenes, opts, dims) {
       ctx.globalAlpha = 1;
     }
 
-    // --- character layer: cast acting the storyline, lip-synced ---
-    const storyScene = sceneAt(storyboard, t);
-    if (storyScene) {
-      const specs = storyboard.cast;
-      const layer = {
-        W, H, t,
-        pal: analysis.palette,
-        parsed,
-        pulse: Math.min(1, pulse),
-        energy: Math.min(1, energy),
-      };
-      if (isTwoShot(storyScene, specs.length)) {
-        // duo share the stage: featured partner behind, protagonist in focus
-        const offsets = [-0.18, 0.2];
-        const order = [1 - storyScene.castIndex, storyScene.castIndex]; // draw partner first
-        for (const ci of order) {
-          paintCharacterInScene(ctx, {
-            ...layer,
-            spec: specs[ci] || specs[0],
-            framing: storyScene.framing,
-            action: ci === storyScene.castIndex ? storyScene.action : (storyScene.action === 'sing' ? 'idle' : storyScene.action),
-            expression: ci === storyScene.castIndex ? storyScene.expression : { browRaise: 0.15, browAnger: 0 },
-            offsetX: offsets[ci] || 0,
-            scale: ci === storyScene.castIndex ? 1 : 0.86,
-            dim: ci === storyScene.castIndex ? 0 : 0.18,
-            lipSync: ci === storyScene.castIndex,
-          });
-        }
-      } else {
-        paintCharacterInScene(ctx, {
-          ...layer,
-          spec: specs[storyScene.castIndex] || specs[0],
-          framing: storyScene.framing,
-          action: storyScene.action,
-          expression: storyScene.expression,
-        });
-      }
-    }
-
     // drop white flash
     if (scene.isDrop && st < 0.5) {
       ctx.fillStyle = `rgba(255,255,255,${0.5 * Math.exp(-st * 9)})`;
       ctx.fillRect(0, 0, W, H);
     }
     ctx.restore(); // camera
+
+    // --- CHARACTERS + LIP-SYNC (screen-space composite, freebeat style) ---
+    if (story && story.cast.length) {
+      const beat = story.beats.find((b) => t >= b.start && t < b.end)
+        || story.beats[story.beats.length - 1];
+      const singing = beat.type === 'perf' || beat.type === 'duet' || (beat.framing === 'closeup' || beat.framing === 'two-shot');
+      const mouth = mouthDriver(t);
+
+      // closeups get a darkened backdrop so the artist pops
+      if (beat.framing === 'closeup' || beat.framing === 'two-shot') {
+        const dk = ctx.createLinearGradient(0, 0, 0, H);
+        dk.addColorStop(0, 'rgba(4,3,12,0.45)');
+        dk.addColorStop(1, 'rgba(4,3,12,0.66)');
+        ctx.fillStyle = dk;
+        ctx.fillRect(0, 0, W, H);
+      }
+
+      const rim = analysis.palette.glow;
+      const mood = analysis.summary.mood === 'uplifting' ? 'happy' : analysis.summary.mood === 'melancholy' ? 'sad' : 'fierce';
+      const amp = singing ? 1 : 0.16;
+
+      const drawCastMember = (ci, x, y, u, dimv) => {
+        const ch = story.cast[ci];
+        if (!ch) return;
+        paintCharacter(ctx, {
+          x, y, u, t,
+          char: ch,
+          pulse: Math.min(1, pulse),
+          energy,
+          mood,
+          pose: singing ? (beat.pose === 'dance' ? 'dance' : beat.pose === 'point' ? 'point' : beat.pose === 'chest' ? 'chest' : 'sing') : (beat.pose || 'idle'),
+          mouth: { open: mouth.open * amp, shape: mouth.open * amp > 0.07 ? mouth.shape : 'rest' },
+          blink: blinkAt(t, ch.phase),
+          faceYaw: Math.sin(t * 0.4 + ch.phase) * 0.35,
+          rim,
+          dim: dimv,
+          ground: beat.framing === 'wide' || beat.framing === 'medium',
+        });
+      };
+
+      // puppet spans -4u (hair) .. +100u (feet) from its anchor point
+      if (beat.framing === 'closeup') {
+        // head + shoulders fills the frame — lip-sync readable
+        const u = H * 0.023;
+        drawCastMember(beat.charIdxs[0] || 0, W * 0.5 + Math.sin(t * 0.3) * 4, H * 0.40 - 8 * u, u, 1);
+      } else if (beat.framing === 'medium') {
+        // waist-up performance shot
+        const u = H * 0.0139;
+        drawCastMember(beat.charIdxs[0] || 0, W * 0.5, H * 0.42 - 8 * u, u, 1);
+      } else if (beat.framing === 'two-shot') {
+        const u = H * 0.0080;
+        const gy = H * 0.95 - 100 * u;
+        drawCastMember(0, W * 0.34, gy, u, 1);
+        if (story.cast.length > 1) drawCastMember(1, W * 0.66, gy + 2 * u, u * 0.96, 0.94);
+      } else { // wide / establish — full body in the world
+        const u = H * 0.0053;
+        const gy = H * 0.92 - 100 * u;
+        if (beat.charIdxs.length > 1 && story.cast.length > 1) {
+          drawCastMember(0, W * 0.36, gy, u, 1);
+          drawCastMember(1, W * 0.64, gy + 2 * u, u * 0.96, 0.94);
+        } else {
+          drawCastMember(beat.charIdxs[0] || 0, W * (0.5 + Math.sin(t * 0.12) * 0.06), gy, u, 1);
+        }
+      }
+    }
 
     // --- overlays in screen space ---
     const sScreen = { ...s0 };

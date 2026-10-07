@@ -106,7 +106,7 @@ async function runJob(job) {
     }
     try {
       const info = analyzeAudio(uploadedPath, ffmpegPath);
-      audioInfo = { duration: info.duration, beats: info.beats, sections: info.sections, energy: info.energy, path: uploadedPath, bpm: info.bpm };
+      audioInfo = { duration: info.duration, beats: info.beats, sections: info.sections, energy: info.energy, vocal: info.vocal, path: uploadedPath, bpm: info.bpm };
       log(job, `Beat grid locked: ${info.bpm} BPM, ${info.beats.length} beats, ${info.sections.length} sections detected`);
     } catch (e) {
       log(job, `Audio analysis unavailable (${e.message}) — continuing with estimated grid`);
@@ -127,7 +127,7 @@ async function runJob(job) {
     fs.mkdirSync(jobTemp, { recursive: true });
     const wavPath = path.join(jobTemp, 'original_score.wav');
     fs.writeFileSync(wavPath, track.wav);
-    audioInfo = { duration: track.duration, beats: track.beats, sections: track.sections, path: wavPath, bpm: track.bpm, original: true };
+    audioInfo = { duration: track.duration, beats: track.beats, sections: track.sections, energy: track.energy, vocal: track.vocal, path: wavPath, bpm: track.bpm, original: true };
     log(job, `Original score ready — ${track.duration.toFixed(0)}s, key ${track.key}, ${track.sections.length} sections (intro/verse/chorus…)`);
   }
 
@@ -179,8 +179,13 @@ async function runJob(job) {
     title: req.title || req.audioTitle || '',
     filmGrain: req.filmGrain !== false,
     letterbox: Boolean(req.letterbox),
+    storyMode: req.storyMode || 'story', // 'story' | 'performance' | 'visuals-only'
+    castSize: req.castSize, // 'auto' | 'solo' | 'duo'
     duration: audioInfo.duration,
   };
+  if (opts.storyMode !== 'visuals-only') {
+    log(job, `Cast assembled — ${opts.storyMode === 'performance' ? 'studio performance mode' : 'story mode with narrative scenes + lip-sync'}`);
+  }
 
   // ---- render --------------------------------------------------------------
   job.status = 'RENDERING';

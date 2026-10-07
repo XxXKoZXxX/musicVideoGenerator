@@ -9,6 +9,8 @@
 // Pure JS — no native deps.
 
 const { execFileSync } = require('child_process');
+
+const clamp01 = (v) => Math.max(0, Math.min(1, v));
 const fs = require('fs');
 const path = require('path');
 
@@ -124,6 +126,47 @@ function analyzeAudio(audioPath, ffmpegPath) {
     energy[i] = Math.min(1, (rms[f] / peak) * 1.4);
   }
 
+  // ---- Vocal-band envelope (~60 fps) for lip-sync ----
+  // Band-pass the PCM to the speech/vocal formant region (300–3400 Hz) with
+  // cascaded one-pole filters, then track smoothed RMS. This is what the
+  // character's mouth follows — real audio-driven lip-sync for any upload.
+  const hpState = { x: 0, y: 0 };
+  const lp1 = { y: 0 }, lp2 = { y: 0 };
+  const dt = 1 / SR;
+  const rcHP = 1 / (2 * Math.PI * 280);
+  const aHP = rcHP / (rcHP + dt);
+  const rcLP = 1 / (2 * Math.PI * 3400);
+  const aLP = dt / (rcLP + dt);
+  const vHop = Math.round(SR / eFps);
+  const vWin = Math.round(SR * 0.024);
+  const vocalRaw = new Float32Array(eFrames);
+  for (let i = 0; i < eFrames; i++) {
+    const start = i * vHop;
+    let sum = 0, n = 0;
+    for (let j = start; j < Math.min(pcm.length, start + vWin); j++) {
+      const x = pcm[j];
+      // high-pass 280Hz
+      hpState.y = aHP * (hpState.y + x - hpState.x);
+      hpState.x = x;
+      // low-pass 3400Hz (two poles)
+      lp1.y += aLP * (hpState.y - lp1.y);
+      lp2.y += aLP * (lp1.y - lp2.y);
+      sum += lp2.y * lp2.y;
+      n++;
+    }
+    vocalRaw[i] = n ? Math.sqrt(sum / n) : 0;
+  }
+  // smooth + normalize (95th percentile as reference)
+  const sorted = Float32Array.from(vocalRaw).sort();
+  const p95 = sorted[Math.floor(sorted.length * 0.95)] || 1;
+  const vocalEnv = new Float32Array(eFrames);
+  let vs = 0;
+  for (let i = 0; i < eFrames; i++) {
+    const norm = Math.min(1.25, vocalRaw[i] / (p95 || 1));
+    vs = vs * 0.55 + norm * 0.45;
+    vocalEnv[i] = clamp01(vs);
+  }
+
   // Coarse sections via energy: smooth energy at 1s resolution, split at
   // largest sustained transitions, ~20s target length.
   const sections = [];
@@ -142,7 +185,7 @@ function analyzeAudio(audioPath, ffmpegPath) {
     });
   }
 
-  return { bpm, beats, energy: { fps: eFps, data: energy }, sections, duration };
+  return { bpm, beats, energy: { fps: eFps, data: energy }, vocal: { fps: eFps, data: vocalEnv }, sections, duration };
 }
 
 module.exports = { analyzeAudio, decodeToMono };

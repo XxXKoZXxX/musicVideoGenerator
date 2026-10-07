@@ -98,6 +98,13 @@ function extractParams(message, session) {
   else if (t.includes('480') || t.includes('draft') || t.includes('quick')) p.quality = 'draft';
   else if (t.includes('720') || t.includes('standard')) p.quality = 'standard';
 
+  // cast & storyline preferences
+  if (/(no|without|zero)\s+(characters|cast|people|singers)|visuals?\s*-?only/.test(t)) p.storyMode = 'visuals-only';
+  else if (/performance|concert|studio (video|session)|just (the |him |her )?singing/.test(t)) p.storyMode = 'performance';
+  else if (/stor(y|ies)|narrative|characters?\b|lips?\s*-?sync|lip\s?sync/.test(t)) p.storyMode = 'story';
+  if (/\bduo\b|\bduet\b|two (characters|singers|artists|people)|both (singers|artists)/.test(t)) p.castSize = 'duo';
+  else if (/\bsolo\b|one (character|singer|artist|person)|single (character|singer|artist)/.test(t)) p.castSize = 'solo';
+
   const dur = t.match(/(\d+)\s*(seconds?|secs?|s\b|minutes?|mins?|m\b)/);
   if (dur) {
     const n = parseInt(dur[1], 10);
@@ -199,6 +206,8 @@ function planFromMessage(message, session) {
         aspectRatio: p.aspectRatio || session.context.aspectRatio || undefined,
         quality: p.quality || session.context.quality || undefined,
         duration: p.duration || session.context.duration || undefined,
+        storyMode: p.storyMode || session.context.storyMode || undefined,
+        castSize: p.castSize || session.context.castSize || undefined,
       },
     });
     plan.push({ tool: 'monitor_render', args: {} });
@@ -303,9 +312,13 @@ const TOOLS = {
       aspectRatio: args.aspectRatio || ctx.aspectRatio || '16:9',
       quality: args.quality || ctx.quality || 'standard',
       duration: args.duration || ctx.duration || undefined,
+      storyMode: args.storyMode || ctx.storyMode || 'story',
+      castSize: args.castSize || ctx.castSize || 'auto',
       autoTrack: true,
     };
     if (args.genre) ctx.genre = args.genre;
+    if (args.storyMode) ctx.storyMode = args.storyMode;
+    if (args.castSize) ctx.castSize = args.castSize;
     if (args.captionStyle) ctx.captionStyle = args.captionStyle;
     if (args.aspectRatio) ctx.aspectRatio = args.aspectRatio;
     if (args.quality) ctx.quality = args.quality;

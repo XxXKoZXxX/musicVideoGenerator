@@ -109,6 +109,7 @@ function composeTrack({ seed = 42, genre = 'pop', bpm = 112, duration = 60, vale
 
   const beats = [];
   const barSec = secPerBeat * 4;
+  const leadEvents = []; // for the lip-sync "vocal" envelope
 
   // ---- helpers -----------------------------------------------------------
   function addSample(idx, val, pan = 0.5) {
@@ -306,14 +307,21 @@ function composeTrack({ seed = 42, genre = 'pop', bpm = 112, duration = 60, vale
         }
       }
 
-      // lead melody on chorus (deterministic motif per section)
+      // lead melody on chorus (deterministic motif per section) — also the
+      // "vocal" line the singer character lip-syncs to
       if (tpl.melody && isChorus) {
         for (let beat = 0; beat < 4; beat++) {
           if (rng() < 0.72) {
             const deg = Math.floor(rng() * scale.length);
             const m = root + 24 + scale[deg];
-            pluck(barStart + beat * secPerBeat, m, secPerBeat * 0.9, 0.30, 0.5);
-            if (rng() < 0.3) pluck(barStart + beat * secPerBeat + secPerBeat / 2, m + (rng() < 0.5 ? 2 : -2), secPerBeat * 0.4, 0.18, 0.45);
+            const nt = barStart + beat * secPerBeat;
+            pluck(nt, m, secPerBeat * 0.9, 0.30, 0.5);
+            leadEvents.push({ t: nt, dur: secPerBeat * 0.9 });
+            if (rng() < 0.3) {
+              const nt2 = nt + secPerBeat / 2;
+              pluck(nt2, m + (rng() < 0.5 ? 2 : -2), secPerBeat * 0.4, 0.18, 0.45);
+              leadEvents.push({ t: nt2, dur: secPerBeat * 0.4 });
+            }
           }
         }
       }
@@ -334,6 +342,24 @@ function composeTrack({ seed = 42, genre = 'pop', bpm = 112, duration = 60, vale
   for (let t = beat0, i = 0; t < durationSec; t += secPerBeat, i++) {
     beats.push({ t, index: i, strong: i % 4 === 0 });
   }
+
+  // vocal envelope from lead events (60fps) — drives character lip-sync
+  const vFps = 60;
+  const vFrames = Math.max(1, Math.floor(durationSec * vFps));
+  const vocal = new Float32Array(vFrames);
+  for (const ev of leadEvents) {
+    const s0 = Math.max(0, Math.floor(ev.t * vFps));
+    const s1 = Math.min(vFrames, Math.ceil((ev.t + ev.dur) * vFps));
+    for (let i = s0; i < s1; i++) {
+      const p = (i - s0) / Math.max(1, s1 - s0);
+      const v = 0.95 * (1 - p * 0.55) * (0.6 + 0.4 * Math.abs(Math.sin(p * Math.PI * 3)));
+      vocal[i] = Math.min(1.2, Math.max(vocal[i], v));
+    }
+  }
+  // light smoothing
+  let pv = 0;
+  for (let i = 0; i < vFrames; i++) { pv = pv * 0.5 + vocal[i] * 0.5; vocal[i] = pv; }
+  const vocalEnvelope = { fps: vFps, data: vocal };
 
   // ---- master chain: soft clip + fade in/out + stereo width --------------
   const fadeIn = Math.floor(0.35 * SAMPLE_RATE);
@@ -356,7 +382,7 @@ function composeTrack({ seed = 42, genre = 'pop', bpm = 112, duration = 60, vale
   }
 
   const wav = encodeWav(L, R, SAMPLE_RATE);
-  return { wav, duration: durationSec, bpm, beats, sections, key: `Root ${root} ${scaleName}`, sampleRate: SAMPLE_RATE };
+  return { wav, duration: durationSec, bpm, beats, sections, vocal: vocalEnvelope, key: `Root ${root} ${scaleName}`, sampleRate: SAMPLE_RATE };
 }
 
 function encodeWav(L, R, sampleRate) {

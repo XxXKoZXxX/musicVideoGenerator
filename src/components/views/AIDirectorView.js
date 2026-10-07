@@ -7,7 +7,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Sparkles, Wand2, Square, Download, Music, Mic2, Film,
   Gauge, Palette, Type, Ratio, Loader2, CheckCircle2, AlertTriangle,
-  Terminal, RefreshCw, Music4, Eye,
+  Terminal, RefreshCw, Music4, Eye, Users,
 } from 'lucide-react';
 import {
   previewAnalysis,
@@ -38,6 +38,18 @@ const CAPTION_STYLES = [
   { id: 'typewriter', label: 'Typewriter' },
   { id: 'minimal', label: 'Minimal' },
   { id: 'off', label: 'No Lyrics' },
+];
+
+const STORY_MODES = [
+  { id: 'story', label: 'Story + lip-sync', hint: 'cast & narrative' },
+  { id: 'performance', label: 'Performance', hint: 'artist closeups' },
+  { id: 'visuals-only', label: 'Visuals only', hint: 'no cast' },
+];
+
+const CAST_SIZES = [
+  { id: 'auto', label: 'Auto cast', hint: 'fits the song' },
+  { id: 'solo', label: 'Solo artist', hint: 'one lead' },
+  { id: 'duo', label: 'Duo', hint: 'two leads' },
 ];
 
 const RATIOS = [
@@ -86,6 +98,8 @@ const DEFAULT_PROJECT = {
   aspectRatio: '16:9',
   quality: 'standard',
   captionStyle: 'karaoke',
+  storyMode: 'story',
+  castSize: 'auto',
   autoTrack: true,
   audioFile: null,
   audioName: '',
@@ -178,6 +192,8 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
         aspectRatio: form.aspectRatio,
         quality: form.quality,
         captionStyle: form.captionStyle,
+        storyMode: form.storyMode,
+        castSize: form.castSize,
         filmGrain: form.filmGrain,
         duration: form.audioFile ? undefined : Number(form.duration) || undefined,
         audioDataUrl: form.audioFile || undefined,
@@ -297,6 +313,20 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
                 {QUALITIES.map((q) => <option key={q.id} value={q.id}>{q.label} · {q.hint}</option>)}
               </select>
             </label>
+            <label className="ctl">
+              <span><Users size={11} /> Video style</span>
+              <select value={form.storyMode} onChange={(e) => update({ storyMode: e.target.value })}>
+                {STORY_MODES.map((s) => <option key={s.id} value={s.id}>{s.label} · {s.hint}</option>)}
+              </select>
+            </label>
+            {form.storyMode !== 'visuals-only' && (
+              <label className="ctl">
+                <span><Users size={11} /> Cast</span>
+                <select value={form.castSize} onChange={(e) => update({ castSize: e.target.value })}>
+                  {CAST_SIZES.map((c) => <option key={c.id} value={c.id}>{c.label} · {c.hint}</option>)}
+                </select>
+              </label>
+            )}
             <label className="ctl">
               <span><Palette size={11} /> Lyrics style</span>
               <select value={form.captionStyle} onChange={(e) => update({ captionStyle: e.target.value })}>
