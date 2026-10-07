@@ -4,6 +4,64 @@
 [![React](https://img.shields.io/badge/React-18.2.0-cyan.svg)](https://reactjs.org/)
 [![Status](https://img.shields.io/badge/Status-Live%20Production-emerald.svg)](http://localhost:3210)
 
+---
+
+## 🎬 AI DIRECTOR — 100% ORIGINAL VIDEO FROM LYRICS (new)
+
+The flagship **AI Director — Original** studio turns raw lyrics into a completely original
+music video — **no stock footage, no external AI APIs, nothing downloaded**:
+
+1. **Lyric intelligence** — structure ([Verse]/[Chorus] tags or automatic detection),
+   imagery→world mapping (12 generative environments), emotion/valence/energy arcs,
+   genre & BPM estimation, HSL palette synthesis.
+2. **Original soundtrack** — a royalty-free instrumental is *composed from scratch*
+   (kick/snare/hats, 808/sub bass, pads, arps, lead motif — genre templates for Pop, EDM,
+   Trap, Lo-Fi, Rock, Cinematic, Synthwave, R&B) in the song's key & BPM. Upload your own
+   track instead and the beat detector (onset autocorrelation) locks the grid for you.
+3. **Shot planning** — scenes are cut on section boundaries & beat drops; choruses get a
+   signature world so the hook feels iconic. Camera moves (push/drift/sway), beat-punch
+   zooms, shake, crossfades & drop flashes are all beat-reactive.
+4. **Frame-by-frame generation** — every frame is painted procedurally on a Skia canvas
+   (@napi-rs/canvas) and piped raw into ffmpeg → libx264 **MP4 master** with burned-in
+   **kinetic lyrics** (Karaoke, Kinetic, Impact, Neon, Typewriter, Minimal), title card,
+   film grain, vignette, poster frame and SRT/LRC sidecars.
+
+Fire it from the sidebar: **AI Director — Original** (default view), or
+`POST /api/agent-video/create { lyrics, ... }` and poll `/api/agent-video/status/:jobId`
+for the live director log. Render completely offline.
+
+## 🤖 OPUS AGENT — real autonomous director runtime (new)
+
+The sidebar **Opus Director Agent** is now a *real* agent — no canned replies,
+no API key needed. It plans multi-step work and executes actual tools with a
+live transcript (thinking → tool cards → artifacts → reply):
+
+- ✍️ **write_lyrics** — original songwriting engine (`server/lyricWriter.js`):
+  theme detection (13 banks), rhyme families, verse/chorus/bridge structure,
+  deterministic seeds for "regenerate" variations.
+- 🔍 **analyze_lyrics** — the full lyric-intelligence brief.
+- 🎬 **render_original_video** — launches the AI Director engine from chat.
+- 📡 **monitor_render** — babysits the render, streaming progress milestones.
+- 📖 **production_bible**, 💡 **suggest_concepts**, 📊 **get_render_status**,
+  🗂 **list_renders**, 🛑 **cancel_render**, 🎛 **set_preferences**.
+
+Chain commands naturally: *"Write a lo-fi song about midnight rain, then make
+the video — vertical, 1080p, karaoke captions"* → it writes, renders, monitors
+and hands you the playable master inline.
+
+API: `POST /api/opus/agent {message, sessionId?}` then poll
+`GET /api/opus/agent/session/:id` for the live transcript. The legacy
+`/api/opus-agent/chat` route now runs through the same brain.
+
+```bash
+npm run video-server
+
+```bash
+npm run video-server        # backend :4000
+npm run start:musicvid      # web app :3220 (proxies /api to :4000)
+npm run test:server         # includes originalEngine.test.js (end-to-end MP4 render test)
+```
+
 > **Astraea** is a sovereign, standalone esoteric super-application integrating the **Secret Language of Birthdays (366 Day Archetypes)**, **Astrological Birth Chart & Planetary Transits**, **The Grand Occult Grimoire (10 Portals)**, **Astral Dream Sanctuary**, **Pythagorean Numerology Matrix**, **Dual-Person Relationship Synastry & Twin Flame Quiz**, **Interactive 3-Card Tarot Spreads**, **78-Card Tarot Encyclopedia**, **Dual-Host Conversational Voice Podcast (Atlas & Luna)**, **60 FPS Motion Video Forecast Studio**, and **20+ Solfeggio Sacred Frequencies**.
 
 ---

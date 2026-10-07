@@ -1,0 +1,225 @@
+/* HomeView.css — freebeat-style creation dashboard */
+
+.home-view {
+  --purple: #8b7cf6;
+  --pink: #ff2d95;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 10px clamp(14px, 3vw, 36px) 70px;
+  color: #efeaff;
+}
+
+.spin { animation: hv-spin 1s linear infinite; }
+@keyframes hv-spin { to { transform: rotate(360deg); } }
+
+/* ============ HERO ============ */
+.home-hero {
+  position: relative;
+  text-align: center;
+  padding: clamp(30px, 6vh, 62px) 16px 30px;
+  overflow: hidden;
+}
+.hero-glow {
+  position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none;
+}
+.hero-glow.g1 { width: 420px; height: 420px; background: rgba(124,108,242,0.28); top: -160px; left: -80px; }
+.hero-glow.g2 { width: 380px; height: 380px; background: rgba(255,45,149,0.2); top: -100px; right: -60px; }
+
+.hero-badge {
+  position: relative;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 2px;
+  color: #d9d2ff;
+  border: 1px solid rgba(139,124,246,0.4);
+  background: rgba(139,124,246,0.09);
+  border-radius: 999px; padding: 6px 14px; margin-bottom: 20px;
+}
+.home-hero h1 {
+  position: relative;
+  font-size: clamp(30px, 5vw, 52px);
+  line-height: 1.08;
+  margin: 0 0 14px;
+  letter-spacing: -1px;
+}
+.home-hero h1 em {
+  font-style: normal;
+  background: linear-gradient(92deg, #9d8cff, #ff2d95 60%, #ff9f1c);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero-sub {
+  position: relative;
+  max-width: 640px; margin: 0 auto 28px;
+  color: rgba(233,228,255,0.66);
+  font-size: 14.5px; line-height: 1.7;
+}
+
+/* ---- composer card ---- */
+.hero-composer {
+  position: relative;
+  max-width: 780px; margin: 0 auto;
+  background: rgba(14, 11, 30, 0.82);
+  border: 1px solid rgba(139,124,246,0.28);
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.02) inset;
+  backdrop-filter: blur(10px);
+  text-align: left;
+  overflow: hidden;
+}
+.composer-top {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 16px 18px 8px;
+  color: rgba(207,199,255,0.6);
+}
+.composer-top textarea {
+  flex: 1; resize: vertical; min-height: 96px;
+  background: transparent; border: none; outline: none;
+  color: #f2efff; font-family: 'SF Mono', Consolas, monospace;
+  font-size: 13.5px; line-height: 1.75;
+}
+.composer-top textarea::placeholder { color: rgba(207,199,255,0.35); }
+.composer-bottom {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px 14px;
+  border-top: 1px solid rgba(139,124,246,0.14);
+  background: rgba(139,124,246,0.04);
+}
+.chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip {
+  font-size: 11px; padding: 6px 11px; border-radius: 999px; cursor: pointer;
+  background: rgba(139,124,246,0.07); color: #cfc7ff;
+  border: 1px solid rgba(139,124,246,0.22);
+  white-space: nowrap;
+}
+.chip.on {
+  background: linear-gradient(92deg, rgba(124,108,242,0.4), rgba(255,45,149,0.3));
+  border-color: rgba(255,45,149,0.55); color: #fff;
+}
+.composer-actions { display: flex; align-items: center; gap: 10px; }
+.aspect-pick {
+  display: inline-flex; align-items: center; gap: 6px;
+  color: rgba(207,199,255,0.6); font-size: 12px;
+}
+.aspect-pick select {
+  background: rgba(10,8,24,0.8); color: #f2efff;
+  border: 1px solid rgba(139,124,246,0.25); border-radius: 9px;
+  font-size: 12px; padding: 7px 8px; outline: none;
+}
+.create-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: linear-gradient(92deg, #7c6cf2, #c44df0 55%, #ff2d95);
+  color: #fff; border: none; cursor: pointer;
+  font-size: 14.5px; font-weight: 800; letter-spacing: 0.2px;
+  padding: 12px 22px; border-radius: 13px;
+  box-shadow: 0 10px 30px rgba(160,80,255,0.4);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.create-btn:hover { transform: translateY(-1px); box-shadow: 0 14px 38px rgba(160,80,255,0.55); }
+
+.hero-meta {
+  position: relative;
+  display: flex; gap: 18px; justify-content: center; flex-wrap: wrap;
+  margin-top: 18px; font-size: 11.5px; color: rgba(233,228,255,0.45);
+}
+.hero-meta span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* ============ SECTIONS ============ */
+.home-section { margin-top: 44px; }
+.section-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px;
+}
+.section-head h3 {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0; font-size: 16.5px; letter-spacing: 0.2px;
+}
+.section-head h3 svg { color: var(--pink); }
+.link-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  color: #9d8cff; font-size: 12.5px; font-weight: 600;
+}
+.link-btn:hover { color: #c6bcff; }
+
+/* ---- recent renders ---- */
+.recent-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); gap: 14px;
+}
+.recent-card {
+  position: relative; text-align: left; cursor: pointer;
+  background: rgba(14,11,30,0.75);
+  border: 1px solid rgba(139,124,246,0.2);
+  border-radius: 14px; overflow: hidden; padding: 0;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.recent-card:hover { transform: translateY(-3px); border-color: rgba(255,45,149,0.5); }
+.recent-card video {
+  width: 100%; aspect-ratio: 16/9; object-fit: cover;
+  display: block; background: #000;
+}
+.recent-title {
+  display: block; padding: 10px 12px 2px;
+  font-size: 12.5px; font-weight: 700; color: #f2efff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.recent-sub {
+  display: block; padding: 0 12px 10px;
+  font-size: 10.5px; color: rgba(233,228,255,0.45);
+}
+.recent-empty {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 34px 18px; text-align: center;
+  border: 1px dashed rgba(139,124,246,0.3); border-radius: 16px;
+  color: rgba(233,228,255,0.6); font-size: 13px;
+}
+.recent-empty .empty-art { font-size: 34px; }
+
+/* ---- how it works ---- */
+.how-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+}
+.how-card {
+  position: relative;
+  background: rgba(14,11,30,0.72);
+  border: 1px solid rgba(139,124,246,0.18);
+  border-radius: 16px; padding: 20px 18px 18px;
+}
+.how-n {
+  display: inline-grid; place-items: center;
+  width: 26px; height: 26px; border-radius: 9px;
+  background: linear-gradient(135deg, #7c6cf2, #ff2d95);
+  font-size: 12.5px; font-weight: 800; color: #fff;
+  margin-bottom: 10px;
+}
+.how-card h4 { margin: 0 0 6px; font-size: 14.5px; }
+.how-card p { margin: 0; font-size: 12.5px; line-height: 1.65; color: rgba(233,228,255,0.58); }
+
+/* ---- tool cards ---- */
+.tool-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 14px;
+}
+.tool-card {
+  display: flex; align-items: center; gap: 13px; text-align: left;
+  background: rgba(14,11,30,0.72);
+  border: 1px solid rgba(139,124,246,0.18);
+  border-radius: 16px; padding: 17px 16px;
+  color: #efeaff; cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+.tool-card:hover { transform: translateY(-2px); border-color: rgba(139,124,246,0.5); }
+.tool-card.accent { border-color: rgba(255,45,149,0.4); background: linear-gradient(135deg, rgba(124,108,242,0.12), rgba(255,45,149,0.07)); }
+.tool-card > svg:first-child { color: #9d8cff; flex-shrink: 0; }
+.tool-card.accent > svg:first-child { color: #ff2d95; }
+.tool-card h4 { margin: 0 0 3px; font-size: 13.5px; }
+.tool-card p { margin: 0; font-size: 11.5px; line-height: 1.55; color: rgba(233,228,255,0.55); }
+.tool-card > div { flex: 1; }
+.tool-card > svg:last-child { color: rgba(207,199,255,0.4); }
+
+.home-offline {
+  margin-top: 26px;
+  display: flex; align-items: center; gap: 8px; justify-content: center;
+  font-size: 12.5px; color: #ffc9d4;
+  background: rgba(248,68,100,0.09); border: 1px solid rgba(248,68,100,0.3);
+  border-radius: 12px; padding: 11px 16px;
+}
+.home-offline code { background: rgba(0,0,0,0.3); padding: 2px 7px; border-radius: 6px; font-size: 11.5px; }

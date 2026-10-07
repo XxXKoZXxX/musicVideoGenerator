@@ -267,7 +267,7 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
 
     const rawImages = projectData.images && projectData.images.length > 0
       ? projectData.images
-      : ['https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80'];
+      : [];
 
     const downloadedAssets = [];
     for (let i = 0; i < rawImages.length; i++) {
@@ -275,6 +275,11 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       const isVideoAsset = typeof rawAsset === 'string' && (rawAsset.includes('.mp4') || rawAsset.includes('.webm'));
       const ext = isVideoAsset ? (rawAsset.includes('.webm') ? '.webm' : '.mp4') : '.jpg';
       const assetPath = path.join(jobTempDir, `scene_${i}${ext}`);
+      // Only attempt real downloads for http(s)/data assets; anything else
+      // (e.g. blob: references that never reached us) is skipped outright.
+      if (!/^https?:\/\//.test(String(rawAsset)) && !String(rawAsset).startsWith('data:')) {
+        continue;
+      }
       try {
         const saved = await downloadAsset(rawAsset, assetPath);
         if (saved) downloadedAssets.push({ path: saved, isVideo: isVideoAsset });
@@ -283,8 +288,41 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       }
     }
 
+    // ---- Procedural fallback: guarantee a real render with zero network ----
+    // If no stock/uploaded asset could be fetched (offline sandbox, dead CDN,
+    // expired links), paint original scene stills with the generative engine.
     if (downloadedAssets.length === 0) {
-      throw new Error('No valid image assets could be prepared for video rendering.');
+      job.stage = 'Painting original generative scenes (no external assets needed)';
+      job.progress = 12;
+      try {
+        const {
+          analyzeLyrics,
+        } = require('./lyricsAnalysis');
+        const { renderPosterFrame } = require('./originalVideoEngine');
+        const lyricsText = (typeof projectData.lyrics === 'string' && projectData.lyrics.trim())
+          || `${projectData.audioTitle || 'Original'} ${projectData.artistName || ''} neon city stars ocean fire storm dream`.trim();
+        const analysis = analyzeLyrics(lyricsText, { duration: projectData.duration || 30 });
+        const want = Math.max(3, Math.min(8, Number(projectData.duration) > 90 ? 8 : 5));
+        const { resolveDims } = require('./originalVideoEngine');
+        const dims = resolveDims(projectData.aspectRatio || '16:9', 'standard');
+        for (let i = 0; i < want; i++) {
+          const png = renderPosterFrame(
+            analysis,
+            { duration: projectData.duration || 30, beats: [], sections: null, bpm: analysis.bpm },
+            { aspectRatio: projectData.aspectRatio || '16:9', captions: 'off', filmGrain: true },
+            2.2 + i * 3.7,
+            dims
+          );
+          const p = path.join(jobTempDir, `procedural_${i}.png`);
+          fs.writeFileSync(p, png);
+          downloadedAssets.push({ path: p, isVideo: false, procedural: true });
+        }
+        job.usedProceduralScenes = true;
+        console.log(`[ServerRenderEngine] Using ${want} procedurally painted scenes (offline mode)`);
+      } catch (e) {
+        console.error('[ServerRenderEngine] Procedural fallback failed:', e);
+        throw new Error('No visual assets could be prepared for rendering (downloads failed and procedural engine unavailable).');
+      }
     }
 
     // Prepare audio asset if provided
@@ -705,7 +743,8 @@ function listCompletedRenders() {
         duration: matchedJob?.duration || null,
         lyricLines: matchedJob?.lyricLines || 0,
         lyricsStyle: matchedJob?.lyricsStyle || 'neon',
-        thumbnailUrl: matchedJob?.thumbnailUrl || (fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '_thumb.jpg'))) ? `/renders/${fileName.replace(/\.mp4$/, '_thumb.jpg')}` : null),
+        thumbnailUrl: matchedJob?.thumbnailUrl || (fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '_thumb.jpg'))) ? `/renders/${fileName.replace(/\.mp4$/, '_thumb.jpg')}` : fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '_poster.png'))) ? `/renders/${fileName.replace(/\.mp4$/, '_poster.png')}` : null),
+        posterUrl: fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '_poster.png'))) ? `/renders/${fileName.replace(/\.mp4$/, '_poster.png')}` : null,
         srtUrl: matchedJob?.srtUrl || (fs.existsSync(path.join(SIDECAR_DIR, fileName.replace(/\.mp4$/, '_lyrics.srt'))) ? `/renders/subtitles/${fileName.replace(/\.mp4$/, '_lyrics.srt')}` : null),
         lrcUrl: matchedJob?.lrcUrl || (fs.existsSync(path.join(SIDECAR_DIR, fileName.replace(/\.mp4$/, '_lyrics.lrc'))) ? `/renders/subtitles/${fileName.replace(/\.mp4$/, '_lyrics.lrc')}` : null),
         gifUrl: fs.existsSync(path.join(RENDERS_DIR, fileName.replace(/\.mp4$/, '.gif'))) ? `/renders/${fileName.replace(/\.mp4$/, '.gif')}` : null,

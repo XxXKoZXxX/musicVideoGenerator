@@ -1,7 +1,7 @@
 {
   "name": "astraea-cosmic-studio",
   "version": "1.0.0",
-  "description": "Astraea — Sovereign Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire, Tarot & Numerology Studio",
+  "description": "Astraea \u2014 Sovereign Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire, Tarot & Numerology Studio",
   "author": "Astraea Cosmic Studios <support@astraea.app>",
   "main": "public/electron.js",
   "homepage": "./",
@@ -9,6 +9,7 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.21.0",
     "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@napi-rs/canvas": "^1.0.9",
     "axios": "^1.6.0",
     "cors": "^2.8.6",
     "ffprobe-static": "^3.1.0",
@@ -35,7 +36,7 @@
     "react-build": "react-scripts build",
     "serve:build": "npx -y serve -s build",
     "test": "react-scripts test",
-    "test:server": "node --test server/tests/lyricsParser.test.js server/tests/cinematicFilters.test.js server/tests/renderPipeline.test.js",
+    "test:server": "node --test server/tests/lyricsParser.test.js server/tests/cinematicFilters.test.js server/tests/renderPipeline.test.js server/tests/originalEngine.test.js server/tests/opusAgent.test.js",
     "test:all": "npm test && npm run test:server",
     "lint": "eslint src/**/*.js",
     "test:e2e": "cypress run",

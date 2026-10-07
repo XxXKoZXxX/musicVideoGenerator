@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Clapperboard,
+  Wand2,
+  Home as HomeIcon,
   LayoutTemplate,
   HardDrive,
   Mic,
@@ -10,20 +12,18 @@ import {
   Bot,
   Palette,
   Share2,
-  Compass,
   Menu,
   X,
   Check,
   Loader2,
   Radio,
   Music4,
-  Sparkles,
-  Flame,
-  ChevronRight,
-  Plus,
 } from 'lucide-react';
 
 import VideoStudioView from './components/views/VideoStudioView';
+import AIDirectorView from './components/views/AIDirectorView';
+import HomeView from './components/views/HomeView';
+import AgentWorkspaceView from './components/views/AgentWorkspaceView';
 import ModernStudioWorkstation from './components/studio/ModernStudioWorkstation';
 import VoiceClonerStudioView from './components/views/VoiceClonerStudioView';
 import CharacterStudioView from './components/views/CharacterStudioView';
@@ -33,8 +33,6 @@ import RendersGalleryView from './components/views/RendersGalleryView';
 import ShareModal from './components/share/ShareModal';
 import ThemeCustomizerModal from './components/theme/ThemeCustomizerModal';
 import OpusAgentAssistantDrawer from './components/common/OpusAgentAssistantDrawer';
-import FreebeatAutoDirectorModal from './components/common/FreebeatAutoDirectorModal';
-import FeatureStudioModal from './components/studio/FeatureStudioModal';
 import { loadSavedTheme } from './utils/themeEngine';
 import {
   renderVideoOnServer,
@@ -43,34 +41,18 @@ import {
 import './styles/StandaloneMusicVideoApp.css';
 
 const STORAGE_KEY = 'musicvid_project_v2';
-const RECENTS_KEY = 'musicvid_recents_v1';
-const MAX_RECENTS = 6;
-
-function loadRecents() {
-  try {
-    const raw = localStorage.getItem(RECENTS_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (_) {
-    return [];
-  }
-}
-
-function saveRecents(list) {
-  try {
-    localStorage.setItem(RECENTS_KEY, JSON.stringify(list.slice(0, MAX_RECENTS)));
-  } catch (_) {}
-}
-
-/** Sidebar navigation definition (OPUS-agent style). */
+/** Sidebar navigation — Opus Pro-style grouped rail. */
 const NAV_ITEMS = [
-  { id: 'wizard', label: 'Create Video', icon: Clapperboard, tag: '4-Step Studio' },
-  { id: 'studio', label: 'Timeline DAW', icon: LayoutTemplate, tag: 'Multi-Track' },
-  { id: 'renders', label: 'Render Library', icon: HardDrive, tag: 'MP4 Masters' },
-  { id: 'vocal-cloner', label: 'Voice Cloner', icon: Mic, tag: 'AI Vocals' },
-  { id: 'character-creator', label: 'Character Studio', icon: User, tag: 'Face Lock' },
-  { id: 'clip-gap-filler', label: 'Gap Filler & Stitcher', icon: Zap, tag: 'Inbetweening' },
-  { id: 'model-hub', label: 'Model Hub', icon: Cpu, tag: 'Engines & $0 Tier' },
+  { id: 'home', label: 'Home', icon: HomeIcon, group: 'main' },
+  { id: 'ai-director', label: 'Create Original', icon: Wand2, group: 'main' },
+  { id: 'agent', label: 'AI Agent', icon: Bot, group: 'main' },
+  { id: 'renders', label: 'Library', icon: HardDrive, group: 'main' },
+  { id: 'wizard', label: '4-Step Studio', icon: Clapperboard, group: 'pro' },
+  { id: 'studio', label: 'Timeline DAW', icon: LayoutTemplate, group: 'pro' },
+  { id: 'vocal-cloner', label: 'Voice Cloner', icon: Mic, group: 'pro' },
+  { id: 'character-creator', label: 'Character Studio', icon: User, group: 'pro' },
+  { id: 'clip-gap-filler', label: 'Gap Filler', icon: Zap, group: 'pro' },
+  { id: 'model-hub', label: 'Model Hub', icon: Cpu, group: 'pro' },
 ];
 
 function stripHeavyFields(project) {
@@ -104,14 +86,11 @@ export default function StandaloneMusicVideoApp() {
   }
   const savedProject = savedProjectRef.current;
 
-  const [currentMode, setCurrentMode] = useState('wizard');
+  const [currentMode, setCurrentMode] = useState('home');
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isThemeModalOpen, setIsThemeModalOpen] = useState(false);
   const [isAssistantOpen, setIsAssistantOpen] = useState(false);
-  const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
-  const [autoModalMode, setAutoModalMode] = useState(undefined);
-  const [isFeatureModalOpen, setIsFeatureModalOpen] = useState(false);
 
   const [project, setProject] = useState(() => ({
     artistName: 'Astraea Cosmic',
@@ -141,7 +120,6 @@ export default function StandaloneMusicVideoApp() {
 
   const [savedAt, setSavedAt] = useState(null);
   const [serverOnline, setServerOnline] = useState(null);
-  const [recents, setRecents] = useState(() => loadRecents());
 
   // Quick-render state (floating progress card)
   const [quickRender, setQuickRender] = useState({
@@ -154,6 +132,7 @@ export default function StandaloneMusicVideoApp() {
     error: null,
   });
   const [highlightJobId, setHighlightJobId] = useState(null);
+  const [seedForDirector, setSeedForDirector] = useState(0);
 
   useEffect(() => {
     loadSavedTheme();
@@ -182,49 +161,33 @@ export default function StandaloneMusicVideoApp() {
         const snapshot = stripHeavyFields(project);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
         setSavedAt(new Date());
-
-        const key = `${(project.audioTitle || 'Untitled').trim()}::${(project.artistName || '').trim()}`;
-        const stamp = Date.now();
-        setRecents((prev) => {
-          const others = prev.filter((r) => r.key !== key);
-          const next = [{ key, title: project.audioTitle || 'Untitled', artist: project.artistName || 'Unknown Artist', at: stamp, snapshot }, ...others];
-          saveRecents(next);
-          return next;
-        });
       } catch (_) {}
     }, 800);
     return () => clearTimeout(t);
   }, [project]);
 
-  const handleLoadRecent = (entry) => {
-    if (!entry || !entry.snapshot) return;
-    setProject((prev) => ({ ...prev, ...entry.snapshot }));
-    handleNavigate('wizard');
-  };
-
-  const handleDeleteRecent = (key) => {
-    setRecents((prev) => {
-      const next = prev.filter((r) => r.key !== key);
-      saveRecents(next);
-      return next;
-    });
-  };
-
-  const handleNewProject = () => {
+  const handleCreateFromLyrics = useCallback(({ lyrics, genre, aspectRatio } = {}) => {
     setProject((prev) => ({
       ...prev,
-      audioTitle: '',
-      artistName: prev.artistName || 'Astraea Cosmic',
-      lyrics: '',
-      images: [],
-      needsAudioReattach: true,
+      ...(lyrics ? { lyrics } : {}),
+      ...(genre ? { genre } : {}),
+      ...(aspectRatio ? { aspectRatio } : {}),
     }));
-    handleNavigate('wizard');
-  };
+    setSeedForDirector((s) => s + 1);
+    setSidebarOpen(false);
+    setCurrentMode('ai-director');
+    window.scrollTo({ top: 0 });
+  }, []);
 
   const handleNavigate = useCallback((target) => {
     setSidebarOpen(false);
-    if (target === 'characterStudio' || target === 'character') {
+    if (target === 'home' || target === 'dashboard') {
+      setCurrentMode('home');
+    } else if (target === 'agent' || target === 'opus-agent') {
+      setCurrentMode('agent');
+    } else if (target === 'ai-director' || target === 'director' || target === 'original') {
+      setCurrentMode('ai-director');
+    } else if (target === 'characterStudio' || target === 'character') {
       setCurrentMode('character-creator');
     } else if (target === 'vocal' || target === 'vocal-cloner') {
       setCurrentMode('vocal-cloner');
@@ -243,13 +206,6 @@ export default function StandaloneMusicVideoApp() {
     }
     window.scrollTo({ top: 0 });
   }, []);
-
-  const handleSwitchToCosmicStudio = () => {
-    localStorage.setItem('app_mode', 'cosmic');
-    const url = new URL(window.location.href);
-    url.searchParams.set('app', 'cosmic');
-    window.location.href = url.toString();
-  };
 
   // ---- Quick "Render Master" (server-side MP4 with burned-in lyrics) ----
   const handleQuickRender = async () => {
@@ -333,14 +289,10 @@ export default function StandaloneMusicVideoApp() {
   return (
     <div className="opus-app">
       {/* ============ LEFT SIDEBAR (OPUS-style) ============ */}
-      <aside className={`opus-sidebar ${sidebarOpen ? 'open' : ''}`}>
-        <div className="opus-sidebar-brand" onClick={() => handleNavigate('wizard')}>
+      <aside className={`opus-sidebar slim ${sidebarOpen ? 'open' : ''}`}>
+        <div className="opus-sidebar-brand">
           <div className="brand-mark">
-            <Clapperboard size={17} />
-          </div>
-          <div className="brand-text">
-            <span className="brand-name">MusicVid Pro</span>
-            <span className="brand-sub">AI CINEMA · 4K · v2.6</span>
+            <Clapperboard size={18} />
           </div>
           <button
             type="button"
@@ -352,66 +304,42 @@ export default function StandaloneMusicVideoApp() {
           </button>
         </div>
 
-        <nav className="opus-sidebar-nav">
-          <div className="nav-section-label">Studio</div>
-          {NAV_ITEMS.map((item) => {
+        <nav className="opus-sidebar-nav slim">
+          {NAV_ITEMS.filter((item) => item.group === 'main').map((item) => {
             const Icon = item.icon;
             const isActive = currentMode === item.id;
             return (
               <button
                 key={item.id}
                 type="button"
-                className={`nav-item ${isActive ? 'active' : ''}`}
+                className={`nav-item slim ${isActive ? 'active' : ''}`}
                 onClick={() => handleNavigate(item.id)}
+                title={item.label}
               >
-                <Icon size={17} className="nav-icon" />
+                <Icon size={19} className="nav-icon" />
                 <span className="nav-label">{item.label}</span>
-                {isActive && <ChevronRight size={14} className="nav-caret" />}
               </button>
             );
           })}
 
-          <div className="nav-section-label" style={{ marginTop: 18 }}>
-            Assist
-          </div>
+          <div className="nav-divider" />
 
-          <button
-            type="button"
-            className={`nav-item ${isAssistantOpen ? 'active' : ''}`}
-            onClick={() => setIsAssistantOpen((v) => !v)}
-          >
-            <Bot size={17} className="nav-icon" />
-            <span className="nav-label">Opus Director Agent</span>
-          </button>
-
-          <button
-            type="button"
-            className="nav-item"
-            onClick={() => {
-              setAutoModalMode('singing');
-              setIsAutoModalOpen(true);
-            }}
-          >
-            <Sparkles size={17} className="nav-icon" />
-            <span className="nav-label">⚡ Auto Singing Cut</span>
-          </button>
-
-          <button
-            type="button"
-            className="nav-item"
-            onClick={() => {
-              setAutoModalMode('storytelling');
-              setIsAutoModalOpen(true);
-            }}
-          >
-            <Sparkles size={17} className="nav-icon" />
-            <span className="nav-label">⚡ Auto Story Cut</span>
-          </button>
-
-          <button type="button" className="nav-item" onClick={() => setIsFeatureModalOpen(true)}>
-            <Flame size={17} className="nav-icon" />
-            <span className="nav-label">🔥 AI Features</span>
-          </button>
+          {NAV_ITEMS.filter((item) => item.group === 'pro').map((item) => {
+            const Icon = item.icon;
+            const isActive = currentMode === item.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                className={`nav-item slim ${isActive ? 'active' : ''}`}
+                onClick={() => handleNavigate(item.id)}
+                title={item.label}
+              >
+                <Icon size={17} className="nav-icon" />
+                <span className="nav-label">{item.label}</span>
+              </button>
+            );
+          })}
         </nav>
 
         <div className="opus-sidebar-footer">
@@ -420,17 +348,13 @@ export default function StandaloneMusicVideoApp() {
             <span>{serverOnline ? 'Render server online' : serverOnline === false ? 'Render server offline' : 'Checking server…'}</span>
           </div>
 
-          <button type="button" className="nav-item" onClick={() => setIsThemeModalOpen(true)}>
-            <Palette size={17} className="nav-icon" />
-            <span className="nav-label">Theme & Aesthetics</span>
+          <button type="button" className="nav-item slim" onClick={() => setIsThemeModalOpen(true)} title="Theme & Aesthetics">
+            <Palette size={16} className="nav-icon" />
+            <span className="nav-label">Theme</span>
           </button>
-          <button type="button" className="nav-item" onClick={() => setIsShareModalOpen(true)}>
-            <Share2 size={17} className="nav-icon" />
-            <span className="nav-label">Share App</span>
-          </button>
-          <button type="button" className="nav-item" onClick={handleSwitchToCosmicStudio}>
-            <Compass size={17} className="nav-icon" />
-            <span className="nav-label">Astraea Cosmic Suite</span>
+          <button type="button" className="nav-item slim" onClick={() => setIsShareModalOpen(true)} title="Share App">
+            <Share2 size={16} className="nav-icon" />
+            <span className="nav-label">Share</span>
           </button>
         </div>
       </aside>
@@ -515,6 +439,44 @@ export default function StandaloneMusicVideoApp() {
                 Reset
               </button>
             </div>
+          )}
+
+          {currentMode === 'home' && (
+            <HomeView
+              project={project}
+              serverOnline={serverOnline}
+              onNavigate={handleNavigate}
+              onCreateFromLyrics={handleCreateFromLyrics}
+            />
+          )}
+
+          {currentMode === 'agent' && (
+            <AgentWorkspaceView
+              project={project}
+              onUpdateProject={(updates) => setProject((prev) => ({ ...prev, ...updates }))}
+              onApplyScenes={(scenes) => {
+                setProject((prev) => ({
+                  ...prev,
+                  screenplay: {
+                    title: prev.audioTitle || 'Opus Scene Plan',
+                    duration: prev.duration || 32,
+                    bpm: prev.bpm || 128,
+                    scenesCount: scenes.length,
+                    scenes,
+                  },
+                }));
+              }}
+              onNavigate={handleNavigate}
+            />
+          )}
+
+          {currentMode === 'ai-director' && (
+            <AIDirectorView
+              key={seedForDirector}
+              project={project}
+              onNavigate={handleNavigate}
+              onApplyToProject={(updates) => setProject((prev) => ({ ...prev, ...updates }))}
+            />
           )}
 
           {currentMode === 'wizard' && (
@@ -631,20 +593,6 @@ export default function StandaloneMusicVideoApp() {
       )}
 
       {/* ============ MODALS & DRAWERS ============ */}
-      {isFeatureModalOpen && (
-        <FeatureStudioModal
-          isOpen={isFeatureModalOpen}
-          onClose={() => setIsFeatureModalOpen(false)}
-          project={project}
-          onUpdateProject={(updates) => setProject((prev) => ({ ...prev, ...updates }))}
-          onAddScene={(newScene) => {
-            setProject((prev) => ({
-              ...prev,
-              images: [...(prev.images || []), newScene.imageUrl || newScene],
-            }));
-          }}
-        />
-      )}
       {isShareModalOpen && (
         <ShareModal
           isOpen={isShareModalOpen}
@@ -658,21 +606,10 @@ export default function StandaloneMusicVideoApp() {
           onClose={() => setIsThemeModalOpen(false)}
         />
       )}
-      {isAutoModalOpen && (
-        <FreebeatAutoDirectorModal
-          isOpen={isAutoModalOpen}
-          onClose={() => setIsAutoModalOpen(false)}
-          initialVideoMode={autoModalMode}
-          onAutoGenerateComplete={(autoProject) => {
-            setProject(autoProject);
-            setCurrentMode('wizard');
-          }}
-          project={project}
-        />
-      )}
       <OpusAgentAssistantDrawer
         isOpen={isAssistantOpen}
         onClose={() => setIsAssistantOpen(false)}
+        onNavigate={handleNavigate}
         project={project}
         onUpdateProject={(updates) => setProject((prev) => ({ ...prev, ...updates }))}
         onApplyScenes={(scenes) => {

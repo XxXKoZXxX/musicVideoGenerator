@@ -18,6 +18,13 @@ const {
   getClipGapFillingJobStatus,
   extractKeyframesForClips,
 } = require('./clipInbetweenerEngine');
+const {
+  createAgentJob,
+  getAgentJob,
+  listAgentJobs,
+  cancelAgentJob,
+} = require('./agentVideoEngine');
+const opusAgent = require('./opusAgent');
 
 const app = express();
 const PORT = process.env.VIDEO_PORT || 4000;
@@ -293,6 +300,7 @@ async function falSubmitGeneration(falKey, modelEndpoint, prompt, options = {}) 
   };
 
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(12000),
     method: 'POST',
     headers: {
       'Authorization': `Key ${falKey}`,
@@ -763,6 +771,106 @@ app.post('/api/server-render/gif', (req, res) => {
   }
 });
 
+// ============================================================
+// AI DIRECTOR — ORIGINAL VIDEO FROM LYRICS (generative engine)
+// ============================================================
+
+// Launch a fully-original lyrics→video render (auto soundtrack + painted visuals)
+app.post('/api/agent-video/create', (req, res) => {
+  try {
+    const request = req.body || {};
+    if (!request.lyrics || !String(request.lyrics).trim()) {
+      return res.status(400).json({ success: false, error: 'Lyrics are required.' });
+    }
+    const job = createAgentJob(request);
+    console.log(`[AIDirector] New original-video job ${job.id} — ${String(request.lyrics).split('\n').length} lyric lines`);
+    res.json({ success: true, jobId: job.id, status: job.status, videoUrl: job.videoUrl });
+  } catch (err) {
+    console.error('[AIDirector] create failed:', err);
+    res.status(500).json({ success: false, error: err.message || 'Failed to start agent render' });
+  }
+});
+
+// Poll agent job status + live director log
+app.get('/api/agent-video/status/:jobId', (req, res) => {
+  const job = getAgentJob(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Agent job not found.' });
+  res.json({ success: true, job });
+});
+
+// Recent agent renders (for the library view)
+app.get('/api/agent-video/list', (req, res) => {
+  res.json({ success: true, jobs: listAgentJobs(Number(req.query.limit) || 24) });
+});
+
+app.post('/api/agent-video/cancel/:jobId', (req, res) => {
+  const ok = cancelAgentJob(req.params.jobId);
+  res.json({ success: ok, error: ok ? undefined : 'Job not found' });
+});
+
+app.get('/api/agent-video/download/:filename', (req, res) => {
+  const safe = path.basename(req.params.filename);
+  const filePath = path.join(RENDERS_DIR, safe);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'File not found' });
+  res.download(filePath);
+});
+
+// Quick preview of what the generative engine will paint (no render commit)
+app.post('/api/agent-video/preview', async (req, res) => {
+  try {
+    const request = req.body || {};
+    const lyrics = String(request.lyrics || '').trim();
+    if (!lyrics) return res.status(400).json({ success: false, error: 'Lyrics are required.' });
+    const { analyzeLyrics } = require('./lyricsAnalysis');
+    const analysis = analyzeLyrics(lyrics, { genre: request.genre, mood: request.mood, duration: request.duration || 60 });
+    res.json({
+      success: true,
+      analysis: {
+        genre: analysis.genre,
+        bpm: analysis.bpm,
+        mood: analysis.summary.mood,
+        lineCount: analysis.summary.lineCount,
+        chorusLines: analysis.summary.chorusCount,
+        worlds: analysis.summary.topEnvs,
+        palette: analysis.palette,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// OPUS AGENT — real autonomous runtime (tools + live transcript)
+// ============================================================
+
+// Start (or continue) an agent session turn. Returns immediately; client
+// polls the session transcript for live thinking/tool/result events.
+app.post('/api/opus/agent', (req, res) => {
+  try {
+    const { message, sessionId } = req.body || {};
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ success: false, error: 'Message is required.' });
+    }
+    const session = opusAgent.startAgentTurn(String(message).trim(), sessionId);
+    res.json({ success: true, sessionId: session.id });
+  } catch (err) {
+    console.error('[OpusAgent] start failed:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Full session transcript (thinking, tool calls, artifacts, replies)
+app.get('/api/opus/agent/session/:id', (req, res) => {
+  const session = opusAgent.getSession(req.params.id);
+  if (!session) return res.status(404).json({ success: false, error: 'Session not found.' });
+  res.json({ success: true, session: opusAgent.sessionView(session) });
+});
+
+app.get('/api/opus/agent/sessions', (req, res) => {
+  res.json({ success: true, sessions: opusAgent.listSessions() });
+});
+
 // FFmpeg runtime diagnostics (UI health chip uses this)
 app.get('/api/ffmpeg-status', (req, res) => {
   const info = require('./ffmpegPaths').probe();
@@ -1156,24 +1264,20 @@ app.post('/api/opus-agent/chat', async (req, res) => {
     }
   }
 
-  // Interactive Opus Agent Chat Simulation Fallback
-  setTimeout(() => {
-    let reply = `🎬 **[Claude 3 Opus Agent Response]**\n\nI have analyzed your request regarding "${message}". Here is my directorial proposal:\n\n1. **Visual Direction**: Combine high-contrast volumetric laser fog with anamorphic 2.39:1 camera framing.\n2. **Camera Steering**: Set your Higgsfield DoP steering to **"360° Subject Orbit"** for smooth rotational depth.\n3. **Prompt Enhancer**: Add *"photorealistic cinema render, volumetric lighting, 8k resolution, award-winning cinematography"* to your prompt.\n\nWould you like me to automatically update your current scene prompts with this direction?`;
-    
-    const msgLower = message.toLowerCase();
-    if (msgLower.includes('prompt') || msgLower.includes('scene')) {
-      reply = `🎬 **[Claude 3 Opus Scene Prompt Specialist]**\n\nHere are 3 refined prompt variations optimized for Sora & Runway Gen-3 based on your directive:\n\n- **Option A (Cinematic Noir)**: *"Rain-slicked asphalt reflecting vibrant cyan neon signs, ultra-low angle slow dolly shot, 35mm film grain, 4k cinematic"* \n- **Option B (Hyper-Energy Drop)**: *"Explosive burst of cyan and magenta strobe light particles in dark void, bullet-time slow motion 120 FPS, photorealistic 8k"*\n- **Option C (Ethereal Dream)**: *"Soft volumetric fog illuminated by golden hour sunbeams, slow 360-degree orbital camera pan around subject, 70mm IMAX feel"*\n\nWhich style would you like to apply to your project timeline?`;
-    } else if (msgLower.includes('camera') || msgLower.includes('higgsfield')) {
-      reply = `🎥 **[Claude 3 Opus DoP Camera Steering]**\n\nFor optimal visual pacing with a 128 BPM track, I recommend configuring Higgsfield Cinema DoP with:\n- **Intro**: 360° Subject Orbit (smooth focal rotation)\n- **Pre-Chorus**: Hollywood Tracking Dolly (lateral movement)\n- **THE DROP**: Crash Zoom Transient snapped to the kick drum!\n\nShall I apply these camera paths to your project configuration?`;
-    }
-
+  // Real agent brain (fully offline — actual tools, no canned text)
+  try {
+    const result = await opusAgent.runTurnSync(String(message), req.body.sessionId);
     res.json({
       success: true,
-      reply,
-      agent: 'Claude 3 Opus Autonomous Director',
-      mode: 'opus-agent-engine'
+      reply: result.reply,
+      sessionId: result.sessionId,
+      agent: 'Opus Autonomous Director',
+      mode: 'agent-runtime'
     });
-  }, 500);
+  } catch (err) {
+    console.error('[OpusChat] agent runtime failed:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Register ChatGPT Custom GPT Actions, OpenAPI 3.1.0 & Generator endpoints
