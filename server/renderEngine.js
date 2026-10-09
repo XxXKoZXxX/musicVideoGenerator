@@ -288,43 +288,6 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       }
     }
 
-    // ---- Procedural fallback: guarantee a real render with zero network ----
-    // If no stock/uploaded asset could be fetched (offline sandbox, dead CDN,
-    // expired links), paint original scene stills with the generative engine.
-    if (downloadedAssets.length === 0) {
-      job.stage = 'Painting original generative scenes (no external assets needed)';
-      job.progress = 12;
-      try {
-        const {
-          analyzeLyrics,
-        } = require('./lyricsAnalysis');
-        const { renderPosterFrame } = require('./originalVideoEngine');
-        const lyricsText = (typeof projectData.lyrics === 'string' && projectData.lyrics.trim())
-          || `${projectData.audioTitle || 'Original'} ${projectData.artistName || ''} neon city stars ocean fire storm dream`.trim();
-        const analysis = analyzeLyrics(lyricsText, { duration: projectData.duration || 30 });
-        const want = Math.max(3, Math.min(8, Number(projectData.duration) > 90 ? 8 : 5));
-        const { resolveDims } = require('./originalVideoEngine');
-        const dims = resolveDims(projectData.aspectRatio || '16:9', 'standard');
-        for (let i = 0; i < want; i++) {
-          const png = renderPosterFrame(
-            analysis,
-            { duration: projectData.duration || 30, beats: [], sections: null, bpm: analysis.bpm },
-            { aspectRatio: projectData.aspectRatio || '16:9', captions: 'off', filmGrain: true },
-            2.2 + i * 3.7,
-            dims
-          );
-          const p = path.join(jobTempDir, `procedural_${i}.png`);
-          fs.writeFileSync(p, png);
-          downloadedAssets.push({ path: p, isVideo: false, procedural: true });
-        }
-        job.usedProceduralScenes = true;
-        console.log(`[ServerRenderEngine] Using ${want} procedurally painted scenes (offline mode)`);
-      } catch (e) {
-        console.error('[ServerRenderEngine] Procedural fallback failed:', e);
-        throw new Error('No visual assets could be prepared for rendering (downloads failed and procedural engine unavailable).');
-      }
-    }
-
     // Prepare audio asset if provided
     let localAudioPath = null;
     const rawAudio = projectData.audioDataUrl || projectData.audioBlobUrl || projectData.audioUrl;
@@ -343,6 +306,16 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
       } catch (e) {
         console.warn('[ServerRenderEngine] Audio download skipped/failed:', e.message);
       }
+    }
+
+    // ---- Original-engine fallback: a FULL music video, not a slideshow ----
+    // With zero downloadable assets we render through the original engine:
+    // designed cast, story scenes, lip-sync from the real vocal, and burned
+    // karaoke captions. Optional wizard looks are applied in one extra pass.
+    if (downloadedAssets.length === 0) {
+      await renderWithOriginalEngine({
+        jobId, job, projectData, jobTempDir, outputPath, localAudioPath,
+      });
     }
 
     job.progress = 30;
@@ -412,7 +385,10 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
     // Check if FFmpeg is available on the system
     const hasFFmpeg = isFFmpegAvailable ?? await checkFFmpeg();
 
-    if (hasFFmpeg) {
+    if (downloadedAssets.length === 0) {
+      // Already master-rendered by the original engine above — fall through
+      // to the shared thumbnail / finalize steps.
+    } else if (hasFFmpeg) {
       // ----------------------------------------------------
       // HIGH QUALITY FFMPEG COMPOSITING PIPELINE
       // ----------------------------------------------------
@@ -693,6 +669,218 @@ async function executeRenderJob(jobId, projectData, options, jobTempDir, outputP
     } catch (_) {}
   }
 }
+
+
+/**
+ * Full original-engine render (used when no external visual assets exist).
+ * Characters, story scenes, lip-sync from the real vocal, burned karaoke
+ * captions, composed-or-uploaded soundtrack — then one optional ffmpeg pass
+ * for the wizard's cinematic looks (grade/vignette/fades/watermark/timecode),
+ * chapters and loudness normalization.
+ */
+const HAIR_STYLE_MAP = {
+  'cyber-ponytail': 'ponytail',
+  'cosmic-afro': 'curly',
+  'lunar-waves': 'long',
+  'neo-pixie': 'crop',
+  'dread-crown': 'long',
+};
+function leadActorOverride(leadActor) {
+  if (!leadActor || typeof leadActor !== 'object') return null;
+  const o = {};
+  if (leadActor.name) o.name = String(leadActor.name).slice(0, 24);
+  if (typeof leadActor.skinTone === 'string' && /^#[0-9a-f]{6}$/i.test(leadActor.skinTone)) o.skin = leadActor.skinTone;
+  if (typeof leadActor.hairColor === 'string' && /^#[0-9a-f]{6}$/i.test(leadActor.hairColor)) o.hairColor = leadActor.hairColor;
+  if (leadActor.hairStyle && HAIR_STYLE_MAP[leadActor.hairStyle]) o.hairStyle = HAIR_STYLE_MAP[leadActor.hairStyle];
+  if (typeof leadActor.auraColor === 'string' && /^#[0-9a-f]{6}$/i.test(leadActor.auraColor)) o.auraColor = leadActor.auraColor;
+  if (Array.isArray(leadActor.accessories)) {
+    if (leadActor.accessories.includes('holo-visor')) o.accessory = 'glasses';
+  }
+  return Object.keys(o).length ? o : null;
+}
+
+async function renderWithOriginalEngine({ jobId, job, projectData, jobTempDir, outputPath, localAudioPath }) {
+  const { analyzeLyrics } = require('./lyricsAnalysis');
+  const { renderOriginalVideo } = require('./originalVideoEngine');
+  const { composeTrack } = require('./musicGenerator');
+  const { analyzeAudio } = require('./beatGrid');
+
+  job.stage = 'Rendering with the original engine (cast · story · lip-sync)';
+  job.progress = 14;
+  job.usedFullEngine = true;
+  job.usedProceduralScenes = true;
+
+  const lyricsText = (typeof projectData.lyrics === 'string' && projectData.lyrics.trim())
+    || `${projectData.audioTitle || 'Original'} ${projectData.artistName || ''} neon city stars ocean fire storm dream`.trim();
+  const analysis = analyzeLyrics(lyricsText, {
+    duration: projectData.duration || 30,
+    genre: projectData.genre,
+    mood: projectData.mood,
+    bpm: projectData.bpm,
+  });
+  console.log(`[ServerRenderEngine] Original engine: ${analysis.summary.lineCount} lyric lines, mood ${analysis.summary.mood}`);
+
+  // ---- audio: uploaded (beat grid + vocal envelope for lip-sync) or composed ----
+  let audioInfo;
+  if (localAudioPath && fs.existsSync(localAudioPath)) {
+    job.stage = 'Analyzing your track (beat grid + vocal envelope)';
+    try {
+      const info = analyzeAudio(localAudioPath, ffmpegPath);
+      audioInfo = {
+        duration: info.duration, beats: info.beats, sections: info.sections,
+        energy: info.energy, vocal: info.vocal, path: localAudioPath, bpm: info.bpm,
+      };
+    } catch (e) {
+      console.warn('[ServerRenderEngine] Audio analysis unavailable:', e.message);
+      const dur = projectData.duration || 30;
+      audioInfo = { duration: dur, beats: [], sections: null, path: localAudioPath, bpm: analysis.bpm };
+    }
+  } else {
+    job.stage = 'Composing an original soundtrack';
+    const track = composeTrack({
+      seed: analysis.seed,
+      genre: projectData.genre || analysis.genre,
+      bpm: analysis.bpm,
+      duration: Math.max(15, Math.min(180, projectData.duration || analysis.lines.length * 3.4)),
+      valence: analysis.avgValence,
+      energy: analysis.avgEnergy,
+    });
+    const wavPath = path.join(jobTempDir, 'original_score.wav');
+    fs.writeFileSync(wavPath, track.wav);
+    audioInfo = {
+      duration: track.duration, beats: track.beats, sections: track.sections,
+      energy: track.energy, vocal: track.vocal, path: wavPath, bpm: track.bpm, original: true,
+    };
+  }
+  analysis.duration = audioInfo.duration;
+
+  // ---- lyric timing: honor LRC timestamps, else even distribution ----
+  const LRC_TS = /\[\d{1,3}:\d{2}(?:\.\d{1,3})?\]/;
+  if (LRC_TS.test(projectData.lyrics || '')) {
+    try {
+      const timed = parseLyrics(projectData.lyrics, audioInfo.duration);
+      if (timed.length) {
+        analysis.lines = timed.map((tl, i) => ({
+          text: tl.text,
+          words: tl.words,
+          time: tl.time,
+          duration: tl.duration,
+          section: (analysis.lines[i] && analysis.lines[i].section) || 'verse',
+        }));
+      }
+    } catch (_) { /* fall through to even timing */ }
+  }
+  if (!LRC_TS.test(projectData.lyrics || '') && analysis.lines.length && analysis.lines[0].time == null) {
+    const startAt = Math.min(4.2, audioInfo.duration * 0.07);
+    const span = Math.max(0.001, audioInfo.duration - startAt);
+    const lineDur = span / analysis.lines.length;
+    analysis.lines = analysis.lines.map((l, i) => ({
+      ...l,
+      time: startAt + i * lineDur,
+      duration: lineDur,
+      words: (l.text || '').split(/\s+/).filter(Boolean),
+    }));
+  }
+
+  // ---- render with the full engine into the job temp dir ----
+  const quality = ['4k', '2160p', 'master'].includes(String(job.resolution)) ? 'master'
+    : ['1080p', '1080'].includes(String(job.resolution)) ? 'standard' : 'draft';
+  const engineFileName = `engine_${jobId}.mp4`;
+  const engineJob = {
+    outputFileName: engineFileName,
+    agentLog: [],
+    scenePlan: null,
+    get progress() { return job.progress; },
+    set progress(v) { job.progress = Math.min(80, 14 + Math.round((Number(v) || 0) * 0.64)); },
+  };
+  await renderOriginalVideo(analysis, audioInfo, {
+    aspectRatio: job.aspectRatio || '16:9',
+    quality,
+    captions: job.lyricsVisible ? 'on' : 'off',
+    captionStyle: job.lyricsVisible ? (job.lyricsStyle === 'off' ? 'karaoke' : (job.lyricsStyle || 'karaoke')) : 'off',
+    storyMode: 'story',
+    castSize: 'auto',
+    castOverride: leadActorOverride(projectData.leadActor),
+    filmGrain: job.useGrain !== false,
+    encoderPreset: 'fast',
+  }, engineJob, jobTempDir);
+
+  const engineMaster = path.join(jobTempDir, engineFileName);
+  if (!fs.existsSync(engineMaster)) throw new Error('Original engine produced no output');
+
+  // ---- sidecars + lyric metadata (same contract as the asset pipeline) ----
+  let parsedLyrics = [];
+  if (job.lyricsVisible && typeof projectData.lyrics === 'string' && projectData.lyrics.trim()) {
+    try {
+      parsedLyrics = parseLyrics(projectData.lyrics, audioInfo.duration);
+    } catch (_) { /* sidecars optional */ }
+  }
+  job.lyricLines = parsedLyrics.length;
+  if (parsedLyrics.length > 0) {
+    const baseName = job.outputFileName.replace(/\.(mp4|webm)$/, '');
+    try {
+      fs.writeFileSync(path.join(SIDECAR_DIR, `${baseName}_lyrics.srt`), toSrt(parsedLyrics));
+      fs.writeFileSync(path.join(SIDECAR_DIR, `${baseName}_lyrics.lrc`), toLrc(parsedLyrics));
+      job.srtUrl = `/renders/subtitles/${baseName}_lyrics.srt`;
+      job.lrcUrl = `/renders/subtitles/${baseName}_lyrics.lrc`;
+    } catch (e) {
+      console.warn('[ServerRenderEngine] Sidecar write failed:', e.message);
+    }
+  }
+
+  // ---- single post-pass: cinematic look · vignette · fades · watermark · timecode · loudness · chapters ----
+  const extraVideo = [
+    buildLookFilter(job.colorLook),
+    job.useVignette ? buildVignetteFilter() : '',
+    job.transitions === 'fade' ? buildFadeFilter(audioInfo.duration, 0.5) : '',
+  ].filter(Boolean);
+  const overlayFont = (job.watermarkText || job.useTimecode) ? (findFontfile() || '') : '';
+  if (job.watermarkText && overlayFont) extraVideo.push(buildWatermarkFilter(job.watermarkText, overlayFont));
+  if (job.useTimecode && overlayFont) extraVideo.push(buildTimecodeFilter(overlayFont));
+
+  const sections = Array.isArray(projectData.songStructure?.sections) ? projectData.songStructure.sections : [];
+  const needsChapters = job.chapters && sections.length > 0;
+  const needsPass = extraVideo.length > 0 || job.loudnessNormalize || needsChapters;
+
+  if (needsPass) {
+    job.stage = 'Applying cinematic grade & finalizing master';
+    job.progress = 84;
+    let command = ffmpeg().input(engineMaster);
+    let chaptersInputIndex = -1;
+    if (needsChapters) {
+      const meta = buildChaptersMeta(sections, audioInfo.duration);
+      if (meta) {
+        const chaptersMetaPath = path.join(jobTempDir, 'chapters.ffmeta');
+        fs.writeFileSync(chaptersMetaPath, meta);
+        command = command.input(chaptersMetaPath).inputOptions(['-f', 'ffmetadata']);
+        chaptersInputIndex = 1;
+      }
+    }
+    command.videoFilters([...extraVideo, 'format=yuv420p']);
+    if (job.loudnessNormalize) {
+      command.audioFilters(['loudnorm=I=-14:TP=-1.5:LRA=11']).outputOptions(['-c:a', 'aac', '-b:a', '256k']);
+    } else {
+      command.outputOptions(['-c:a', 'copy']);
+    }
+    if (chaptersInputIndex >= 0) command.outputOptions(['-map_chapters', String(chaptersInputIndex)]);
+    await new Promise((resolve, reject) => {
+      command
+        .output(outputPath)
+        .on('progress', (pr) => {
+          if (pr.percent) job.progress = Math.min(98, 84 + Math.round((pr.percent / 100) * 14));
+        })
+        .on('end', () => {
+          console.log(`[ServerRenderEngine] Original-engine master finalized -> ${outputPath}`);
+          resolve();
+        })
+        .on('error', (err) => reject(new Error(`Post-grade pass failed: ${err.message}`)))
+        .run();
+    });
+  } else {
+    fs.copyFileSync(engineMaster, outputPath);
+  }
+}
+
 
 /**
  * Returns the status of a specific render job.

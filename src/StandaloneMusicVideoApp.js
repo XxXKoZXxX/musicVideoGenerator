@@ -3,12 +3,9 @@ import {
   Clapperboard,
   Wand2,
   Home as HomeIcon,
-  LayoutTemplate,
   HardDrive,
-  Mic,
   User,
   Zap,
-  Cpu,
   Bot,
   Palette,
   Share2,
@@ -44,15 +41,11 @@ const STORAGE_KEY = 'musicvid_project_v2';
 /** Sidebar navigation — Opus Pro-style grouped rail. */
 const NAV_ITEMS = [
   { id: 'home', label: 'Home', icon: HomeIcon, group: 'main' },
-  { id: 'ai-director', label: 'Create Original', icon: Wand2, group: 'main' },
+  { id: 'ai-director', label: 'Create Video', icon: Wand2, group: 'main' },
   { id: 'agent', label: 'AI Agent', icon: Bot, group: 'main' },
   { id: 'renders', label: 'Library', icon: HardDrive, group: 'main' },
-  { id: 'wizard', label: '4-Step Studio', icon: Clapperboard, group: 'pro' },
-  { id: 'studio', label: 'Timeline DAW', icon: LayoutTemplate, group: 'pro' },
-  { id: 'vocal-cloner', label: 'Voice Cloner', icon: Mic, group: 'pro' },
-  { id: 'character-creator', label: 'Character Studio', icon: User, group: 'pro' },
-  { id: 'clip-gap-filler', label: 'Gap Filler', icon: Zap, group: 'pro' },
-  { id: 'model-hub', label: 'Model Hub', icon: Cpu, group: 'pro' },
+  { id: 'character-creator', label: 'Cast Designer', icon: User, group: 'tools' },
+  { id: 'clip-gap-filler', label: 'Clip Bridge', icon: Zap, group: 'tools' },
 ];
 
 function stripHeavyFields(project) {
@@ -185,26 +178,18 @@ export default function StandaloneMusicVideoApp() {
       setCurrentMode('home');
     } else if (target === 'agent' || target === 'opus-agent') {
       setCurrentMode('agent');
-    } else if (target === 'ai-director' || target === 'director' || target === 'original') {
+    } else if (target === 'ai-director' || target === 'director' || target === 'original' || target === 'wizard' || target === 'video' || target === 'create' || target === 'vocal' || target === 'vocal-cloner' || target === 'studio' || target === 'daw' || target === 'timeline' || target === 'models' || target === 'hub' || target === 'model-hub') {
+      // Legacy studio targets all route to the one Create Video flow.
       setCurrentMode('ai-director');
-    } else if (target === 'characterStudio' || target === 'character') {
+    } else if (target === 'characterStudio' || target === 'character' || target === 'character-creator') {
       setCurrentMode('character-creator');
-    } else if (target === 'vocal' || target === 'vocal-cloner') {
-      setCurrentMode('vocal-cloner');
-    } else if (target === 'wizard' || target === 'video' || target === 'create') {
-      setCurrentMode('wizard');
     } else if (target === 'inbetweener' || target === 'gap-filler' || target === 'clip-inbetweener' || target === 'clip-gap-filler') {
       setCurrentMode('clip-gap-filler');
-    } else if (target === 'models' || target === 'hub') {
-      setCurrentMode('model-hub');
     } else if (target === 'renders' || target === 'library' || target === 'render-library') {
       setCurrentMode('renders');
-    } else if (target === 'studio' || target === 'daw' || target === 'timeline') {
-      setCurrentMode('studio');
     } else {
-      setCurrentMode('studio');
+      setCurrentMode('home');
     }
-    window.scrollTo({ top: 0 });
   }, []);
 
   // ---- Quick "Render Master" (server-side MP4 with burned-in lyrics) ----
@@ -324,7 +309,7 @@ export default function StandaloneMusicVideoApp() {
 
           <div className="nav-divider" />
 
-          {NAV_ITEMS.filter((item) => item.group === 'pro').map((item) => {
+          {NAV_ITEMS.filter((item) => item.group === 'tools').map((item) => {
             const Icon = item.icon;
             const isActive = currentMode === item.id;
             return (

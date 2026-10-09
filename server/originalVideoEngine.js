@@ -1386,7 +1386,12 @@ function createFramePainter(analysis, audioInfo, scenes, opts, dims) {
     : [{ type: 'song', start: 0, end: audioInfo.duration || opts.duration || 60, energy: 60, isDrop: false }]);
   const story = storyMode === 'visuals-only'
     ? null
-    : buildStoryline(analysis, sectionsForStory, { castSize: opts.castSize, mood: analysis.summary.mood });
+    : buildStoryline(analysis, sectionsForStory, {
+      castSize: opts.castSize,
+      mood: analysis.summary.mood,
+      overrides: opts.castOverride || null,
+      overrides2: opts.castOverride2 || null,
+    });
   if (story && storyMode === 'performance') {
     // artist-performance mode: every section after the intro is a singing shot
     let perfN = 0;
@@ -1551,7 +1556,7 @@ function createFramePainter(analysis, audioInfo, scenes, opts, dims) {
         ctx.fillRect(0, 0, W, H);
       }
 
-      const rim = analysis.palette.glow;
+      const rim = (story.cast[0] && story.cast[0].auraColor) || analysis.palette.glow;
       const mood = analysis.summary.mood === 'uplifting' ? 'happy' : analysis.summary.mood === 'melancholy' ? 'sad' : 'fierce';
       const amp = singing ? 1 : 0.16;
 

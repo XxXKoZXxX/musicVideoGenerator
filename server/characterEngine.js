@@ -30,6 +30,33 @@ const HAIR_STYLES = ['crop', 'long', 'curly', 'ponytail', 'buzz', 'hood'];
 const ACCESSORIES = ['none', 'none', 'glasses', 'earrings', 'cap', 'headphones', 'chain'];
 const OUTFIT_STYLES = ['jacket', 'hoodie', 'tee', 'dress'];
 
+// Character Studio (leadActor) field mapping -> puppet engine styles
+const HAIR_STYLE_MAP = {
+  'cyber-ponytail': 'ponytail',
+  'cosmic-afro': 'curly',
+  'lunar-waves': 'long',
+  'neo-pixie': 'crop',
+  'dread-crown': 'long',
+  // direct engine styles pass through
+  crop: 'crop', long: 'long', curly: 'curly', ponytail: 'ponytail', buzz: 'buzz', hood: 'hood',
+};
+const ACCESSORY_MAP = { 'holo-visor': 'glasses', glasses: 'glasses', cap: 'cap', headphones: 'headphones', chain: 'chain', earrings: 'earrings', none: 'none' };
+
+function applyOverrides(ch, o) {
+  if (!o) return ch;
+  if (o.name) ch.name = String(o.name).slice(0, 24);
+  if (o.gender === 'f' || o.gender === 'm') ch.gender = o.gender;
+  if (o.role) ch.role = String(o.role).slice(0, 24);
+  if (typeof o.skin === 'string' && /^#[0-9a-f]{6}$/i.test(o.skin)) ch.skin = o.skin;
+  const hc = {};
+  if (typeof o.hairColor === 'string' && /^#[0-9a-f]{6}$/i.test(o.hairColor)) hc.color = o.hairColor;
+  if (o.hairStyle && HAIR_STYLE_MAP[o.hairStyle]) hc.style = HAIR_STYLE_MAP[o.hairStyle];
+  if (hc.color || hc.style) ch.hair = { ...ch.hair, ...hc };
+  if (o.accessory != null && ACCESSORY_MAP[o.accessory] !== undefined) ch.accessory = ACCESSORY_MAP[o.accessory];
+  if (typeof o.auraColor === 'string' && /^#[0-9a-f]{6}$/i.test(o.auraColor)) ch.auraColor = o.auraColor;
+  return ch;
+}
+
 function createCast(seed, opts = {}) {
   const size = Math.max(1, Math.min(2, Number(opts.size) || 1));
   const rng = makeRng((seed ^ 0x5f3759df) >>> 0);
@@ -58,6 +85,9 @@ function createCast(seed, opts = {}) {
       phase: rng() * Math.PI * 2,
     });
   }
+  // Character Studio lead design overrides the lead role
+  if (opts.overrides) applyOverrides(cast[0], opts.overrides);
+  if (opts.overrides2) applyOverrides(cast[1], opts.overrides2);
   return cast;
 }
 
@@ -541,4 +571,4 @@ function blinkAt(t, phase) {
   return local < 0.14 ? Math.sin((local / 0.14) * Math.PI) : 0;
 }
 
-module.exports = { createCast, paintCharacter, paintMouth, createMouthDriver, blinkAt };
+module.exports = { createCast, paintCharacter, paintMouth, createMouthDriver, blinkAt, applyOverrides };

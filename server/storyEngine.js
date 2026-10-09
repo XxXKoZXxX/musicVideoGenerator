@@ -65,7 +65,7 @@ function buildStoryline(analysis, sections, opts = {}) {
     const hits = loveWords.filter((w) => text.includes(w)).length;
     castSize = hits >= 3 ? 2 : 1;
   }
-  const cast = createCast(seed, { size: castSize, mood });
+  const cast = createCast(seed, { size: castSize, mood, overrides: opts.overrides || null, overrides2: opts.overrides2 || null });
 
   // ---- beats per section ----
   const safeSections = (sections && sections.length ? sections : [{ type: 'song', start: 0, end: analysis.duration || 60, energy: 60 }]);

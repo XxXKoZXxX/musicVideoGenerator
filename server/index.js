@@ -243,20 +243,12 @@ app.post('/api/generate', async (req, res) => {
   const targetRenderer = renderer || (payload && payload.renderer) || 'ai-neural';
   console.log(`[VideoServer] Generation request for renderer: "${targetRenderer}" | prompt: "${prompt || query || 'N/A'}"`);
 
-  const sample = SAMPLE_VIDEOS[targetRenderer] || SAMPLE_VIDEOS.default;
-
-  setTimeout(() => {
-    res.json({
-      success: true,
-      message: `Video generated successfully using ${targetRenderer}`,
-      renderer: targetRenderer,
-      videoUrl: sample.url,
-      thumbnail: sample.thumbnail,
-      title: `${targetRenderer.toUpperCase()} — ${sample.title}`,
-      duration: 15,
-      resolution: '1080p',
-    });
-  }, 800);
+  return res.status(400).json({
+    success: false,
+    error: `Renderer "${targetRenderer}" requires external services that are not configured.`,
+    hint: 'Use the Original engine — POST /api/agent-video/create renders a full music video (cast, story, lip-sync) with no keys or network.',
+    useInstead: '/api/agent-video/create',
+  });
 });
 
 // ============================================================
@@ -350,22 +342,14 @@ app.post('/api/ai-video/generate', async (req, res) => {
 
   console.log(`[AI-Video] Generate request | model: ${model || 'kling_ai'} | prompt: "${prompt.substring(0, 80)}..."`);
 
-  // If no API key, return sample video fallback
   if (!falKey) {
-    console.log('[AI-Video] No FAL_KEY set — returning sample video fallback');
-    const sampleKey = model && SAMPLE_VIDEOS[model.replace('_ai', '').replace('_gen3', '')] ? model.replace('_ai', '').replace('_gen3', '') : 'default';
-    const sample = SAMPLE_VIDEOS[sampleKey] || SAMPLE_VIDEOS.default;
-    return setTimeout(() => {
-      res.json({
-        success: true,
-        mode: 'fallback',
-        videoUrl: sample.url,
-        thumbnailUrl: sample.thumbnail,
-        duration: 5,
-        model: model || 'kling_ai',
-        message: 'Using sample video (no FAL_KEY configured). Add FAL_KEY to .env for real AI generation.',
-      });
-    }, 1200);
+    console.log('[AI-Video] No FAL_KEY set — failing honestly, pointing at the Original engine');
+    return res.status(400).json({
+      success: false,
+      error: 'No FAL_KEY configured for external AI models (fal.ai is unreachable offline).',
+      hint: 'Use the Original engine instead — POST /api/agent-video/create renders a full music video (cast, story, lip-sync) with no keys or network.',
+      useInstead: '/api/agent-video/create',
+    });
   }
 
   // Real fal.ai generation
@@ -396,16 +380,12 @@ app.post('/api/ai-video/generate', async (req, res) => {
     });
   } catch (err) {
     console.error('[AI-Video] fal.ai submission error:', err.message);
-    // Fallback to sample on error
-    const sample = SAMPLE_VIDEOS.default;
-    res.json({
-      success: true,
-      mode: 'fallback',
-      videoUrl: sample.url,
-      thumbnailUrl: sample.thumbnail,
-      duration: 5,
+    res.status(502).json({
+      success: false,
+      error: `fal.ai generation failed: ${err.message}`,
+      hint: 'External AI models are unreachable from this network. The Original engine always works: POST /api/agent-video/create.',
+      useInstead: '/api/agent-video/create',
       model: model || 'kling_ai',
-      error: err.message,
       message: 'fal.ai API error — falling back to sample video.',
     });
   }
@@ -482,26 +462,15 @@ app.post('/api/ai-video/generate-scenes', async (req, res) => {
 
   console.log(`[AI-Video] Batch generation | ${scenes.length} scenes | model: ${model || 'kling_ai'}`);
 
-  // Fallback mode
+  // No-key: fail honestly
   if (!falKey) {
-    console.log('[AI-Video] No FAL_KEY — returning sample videos for all scenes');
-    const sampleKeys = Object.keys(SAMPLE_VIDEOS).filter(k => k !== 'default');
-    const results = scenes.map((scene, idx) => {
-      const sk = sampleKeys[idx % sampleKeys.length];
-      const sample = SAMPLE_VIDEOS[sk];
-      return {
-        sceneIndex: idx,
-        prompt: typeof scene === 'string' ? scene : scene.prompt,
-        mode: 'fallback',
-        videoUrl: sample.url,
-        thumbnailUrl: sample.thumbnail,
-        duration: 5,
-      };
+    console.log('[AI-Video] No FAL_KEY — failing honestly, pointing at the Original engine');
+    return res.status(400).json({
+      success: false,
+      error: 'No FAL_KEY configured for external AI models (fal.ai is unreachable offline).',
+      hint: 'Use the Original engine instead — POST /api/agent-video/create renders a full music video (cast, story, lip-sync) with no keys or network.',
+      useInstead: '/api/agent-video/create',
     });
-
-    return setTimeout(() => {
-      res.json({ success: true, mode: 'fallback', results, message: 'Sample videos (no FAL_KEY).' });
-    }, 800);
   }
 
   // Real batch generation
@@ -564,26 +533,15 @@ app.post('/api/video/generate', async (req, res) => {
   const selectedModel = model || 'kling_ai';
   console.log(`[Video-Endpoint] Custom generation request | model: ${selectedModel} | ratio: ${mergedOptions.aspectRatio || '16:9'} | duration: ${mergedOptions.duration || '5'}s | prompt: "${prompt.substring(0, 60)}..."`);
 
-  // Fallback if no FAL_KEY provided
+  // No FAL_KEY: do NOT hand back dead external sample URLs — fail honestly
+  // and point at the engines that always work.
   if (!falKey) {
-    console.log('[Video-Endpoint] No FAL_KEY provided — responding with high-fidelity sample fallback');
-    const sampleKey = selectedModel && SAMPLE_VIDEOS[selectedModel.replace('_ai', '').replace('_gen3', '')]
-      ? selectedModel.replace('_ai', '').replace('_gen3', '')
-      : 'default';
-    const sample = SAMPLE_VIDEOS[sampleKey] || SAMPLE_VIDEOS.default;
-    return setTimeout(() => {
-      res.json({
-        success: true,
-        mode: 'fallback',
-        jobId: `job_${Date.now()}_sample`,
-        videoUrl: sample.url,
-        thumbnailUrl: sample.thumbnail,
-        duration: parseInt(mergedOptions.duration, 10) || 5,
-        aspectRatio: mergedOptions.aspectRatio || '16:9',
-        model: selectedModel,
-        message: 'Using simulated fallback video (no FAL_KEY configured). Add FAL_KEY to .env for real AI video generation.',
-      });
-    }, 1000);
+    return res.status(400).json({
+      success: false,
+      error: 'No FAL_KEY configured for external AI models (fal.ai is not reachable offline).',
+      hint: 'Use POST /api/agent-video/create (AI Director / Original engine) for fully working renders — characters, story, lip-sync, no keys needed. Add FAL_KEY to .env to enable fal.ai models here.',
+      useInstead: '/api/agent-video/create',
+    });
   }
 
   const endpoint = FAL_MODEL_ENDPOINTS[selectedModel] || FAL_MODEL_ENDPOINTS['kling_ai'];
@@ -616,18 +574,11 @@ app.post('/api/video/generate', async (req, res) => {
     });
   } catch (err) {
     console.error('[Video-Endpoint] fal.ai submission error:', err.message);
-    const sample = SAMPLE_VIDEOS.default;
-    res.json({
-      success: true,
-      mode: 'fallback',
-      jobId: `job_${Date.now()}_err_fallback`,
-      videoUrl: sample.url,
-      thumbnailUrl: sample.thumbnail,
-      duration: parseInt(mergedOptions.duration, 10) || 5,
-      aspectRatio: mergedOptions.aspectRatio || '16:9',
-      model: selectedModel,
-      error: err.message,
-      message: 'fal.ai API error — falling back to sample video asset.',
+    res.status(502).json({
+      success: false,
+      error: `fal.ai generation failed: ${err.message}`,
+      hint: 'External AI models are unreachable from this network. The Original engine always works: POST /api/agent-video/create.',
+      useInstead: '/api/agent-video/create',
     });
   }
 });
