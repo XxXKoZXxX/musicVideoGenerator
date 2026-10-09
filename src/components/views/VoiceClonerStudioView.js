@@ -3,17 +3,12 @@ import {
   Mic,
   Square,
   Play,
-  Pause,
   Upload,
   Sparkles,
   Volume2,
   Sliders,
-  Download,
-  CheckCircle,
   RefreshCw,
-  Wand2,
   Film,
-  Music,
   Activity,
   Layers,
   Zap,
@@ -43,10 +38,10 @@ export default function VoiceClonerStudioView({
     vocalClonerEngine.clonedProfile
   );
   const [pitchShift, setPitchShift] = useState(0);
-  const [vocalSpeed, setVocalSpeed] = useState(1.0);
+  const [vocalSpeed] = useState(1.0);
   const [vocalVibrato, setVocalVibrato] = useState(5.5);
   const [vocalBrightness, setVocalBrightness] = useState(1.2);
-  const [audioUrl, setAudioUrl] = useState(null);
+  const [, setAudioUrl] = useState(null);
   const [statusMessage, setStatusMessage] = useState('');
 
   const recordIntervalRef = useRef(null);

@@ -1,18 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Cpu,
   Key,
-  DollarSign,
-  ShieldCheck,
-  Zap,
   Sparkles,
-  Layers,
   CheckCircle,
-  ExternalLink,
-  Flame,
-  Info,
 } from 'lucide-react';
-import { AI_VIDEO_MODELS, AI_STORYLINE_GENERATORS } from '../../data/aiModels';
+import { AI_VIDEO_MODELS } from '../../data/aiModels';
 
 export default function ModelHubView({ project = {}, onUpdateProject = () => {} }) {
   const [apiKeys, setApiKeys] = useState(() => ({

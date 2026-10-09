@@ -1,7 +1,6 @@
 import React from 'react';
 import { 
-  Sparkles, Compass, BookOpen, Radio, Zap, Eye, Headphones, Calculator, Film,
-  MessageSquare, Key, Heart, FileText, Moon, Flame, User
+  Sparkles, Compass, BookOpen, Radio, Zap, Eye, Headphones, Calculator, MessageSquare, Key, Heart, FileText, Moon, Flame, User
 } from 'lucide-react';
 
 export default function FloatingCosmicDock({ currentView, onNavigate }) {

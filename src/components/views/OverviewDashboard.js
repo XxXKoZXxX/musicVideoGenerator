@@ -4,7 +4,7 @@ import { calculateLifePath } from '../../utils/numerologyEngine';
 import { getSecretLanguageProfile } from '../../data/secretLanguageData';
 import { 
   Sparkles, Compass, HeartHandshake, 
-  Radio, Film, MessageSquare, Headphones, Zap, Key, BookOpen, 
+  Radio, MessageSquare, Headphones, Zap, Key, BookOpen, 
   Share2, Smartphone, Copy, Check, Eye, Calculator, FileText, ArrowRight, Palette,
   Edit3, UserPlus, MapPin, Calendar, Clock, User, Flame, Moon, Wand2
 } from 'lucide-react';

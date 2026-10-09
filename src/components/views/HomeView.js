@@ -13,7 +13,6 @@ import {
   Zap,
   Clock,
   AlertTriangle,
-  RefreshCw,
   Music4,
   Type,
   Ratio,
