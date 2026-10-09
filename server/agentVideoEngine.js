@@ -181,6 +181,7 @@ async function runJob(job) {
     letterbox: Boolean(req.letterbox),
     storyMode: req.storyMode || 'story', // 'story' | 'performance' | 'visuals-only'
     castSize: req.castSize, // 'auto' | 'solo' | 'duo'
+    aiModel: req.aiModel || 'procedural', // 'procedural' | 'happyhorse'
     duration: audioInfo.duration,
   };
   if (opts.storyMode !== 'visuals-only') {
@@ -189,6 +190,52 @@ async function runJob(job) {
 
   // ---- render --------------------------------------------------------------
   job.status = 'RENDERING';
+
+  // Optional AI-video engine: HappyHorse CLI (real AI-model footage). Any
+  // failure or absence falls back to the always-works procedural engine.
+  if (opts.aiModel === 'happyhorse') {
+    const hh = require('./happyhorseEngine');
+    const status = await hh.getStatus(true);
+    if (status.available) {
+      log(job, `AI engine detected — HappyHorse CLI (${status.version}) — generating real AI footage per song section…`);
+      try {
+        const hhResult = await hh.renderHappyHorseVideo(analysis, audioInfo, opts, job, RENDERS_DIR, { onLog: (m) => log(job, m) });
+        job.status = 'ENCODING';
+        job.progress = 97;
+        log(job, `AI master assembled — ${hhResult.scenes.length} HappyHorse clip(s) @ ${hhResult.W}×${hhResult.H}${hhResult.lyricsBurned ? ', lyrics burned' : ''}`);
+        try {
+          const { toSrt, toLrc } = require('./lyricsParser');
+          const subDir = path.join(RENDERS_DIR, 'subtitles');
+          fs.mkdirSync(subDir, { recursive: true });
+          const baseName = job.outputFileName.replace(/\.mp4$/, '');
+          fs.writeFileSync(path.join(subDir, `${baseName}_lyrics.srt`), toSrt(analysis.lines));
+          fs.writeFileSync(path.join(subDir, `${baseName}_lyrics.lrc`), toLrc(analysis.lines));
+          job.srtUrl = `/renders/subtitles/${baseName}_lyrics.srt`;
+          job.lrcUrl = `/renders/subtitles/${baseName}_lyrics.lrc`;
+        } catch (_) { /* sidecars best-effort */ }
+        job.status = 'COMPLETED';
+        job.progress = 100;
+        job.completedAt = new Date().toISOString();
+        job.stage = 'HappyHorse AI music video complete';
+        log(job, '★ That’s a wrap — AI-generated video with your original soundtrack.');
+        job.stats = {
+          frames: hhResult.totalFrames,
+          resolution: `${hhResult.W}×${hhResult.H}`,
+          fps: hhResult.fps,
+          bpm: audioInfo.bpm,
+          originalTrack: Boolean(audioInfo.original),
+          scenes: hhResult.scenes.length,
+          engine: 'happyhorse',
+        };
+        return;
+      } catch (e) {
+        log(job, `HappyHorse render failed (${String(e.message).slice(0, 160)}) — falling back to the procedural engine`);
+      }
+    } else {
+      log(job, 'HappyHorse CLI not found on this machine — using the procedural engine (see README “HappyHorse AI engine” to enable)');
+    }
+  }
+
   log(job, 'Rolling cameras — painting original frames in real time…');
   const result = await renderOriginalVideo(analysis, audioInfo, opts, job, RENDERS_DIR);
   job.status = 'ENCODING';

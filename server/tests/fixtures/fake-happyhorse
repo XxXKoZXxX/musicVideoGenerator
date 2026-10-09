@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+# Mock HappyHorse CLI for integration tests: accepts the documented generate
+# template and writes a real mp4 (ffmpeg testsrc) to --output.
+if [[ "$1" == "--version" ]]; then
+  echo "happyhorse mock 1.0.0"
+  exit 0
+fi
+MODE=""
+OUT=""; DUR="10"; RES="720p"; PROMPT=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    generate) MODE="generate";;
+    --output) OUT="$2"; shift;;
+    --duration) DUR="$2"; shift;;
+    --resolution) RES="$2"; shift;;
+    --prompt) PROMPT="$2"; shift;;
+  esac
+  shift
+done
+if [[ "$MODE" == "generate" ]]; then
+  FF="${FAKE_HH_FFMPEG:-ffmpeg}"
+  D="$(awk -v d="$DUR" 'BEGIN{printf "%d", (d<2?2:d)}')"
+  "$FF" -y -loglevel error -f lavfi -i "testsrc=size=640x360:rate=30:duration=$D" \
+    -f lavfi -i "sine=frequency=440:duration=$D" -shortest -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac "$OUT" \
+    || exit 3
+  echo "clip written: $OUT"
+  exit 0
+fi
+echo "unknown command" >&2
+exit 1

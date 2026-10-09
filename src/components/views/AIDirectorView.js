@@ -40,6 +40,11 @@ const CAPTION_STYLES = [
   { id: 'off', label: 'No Lyrics' },
 ];
 
+const AI_MODELS = [
+  { id: 'procedural', label: 'Original engine', hint: 'offline, always works' },
+  { id: 'happyhorse', label: 'HappyHorse AI video', hint: 'real AI footage · needs CLI' },
+];
+
 const STORY_MODES = [
   { id: 'story', label: 'Story + lip-sync', hint: 'cast & narrative' },
   { id: 'performance', label: 'Performance', hint: 'artist closeups' },
@@ -100,12 +105,21 @@ const DEFAULT_PROJECT = {
   captionStyle: 'karaoke',
   storyMode: 'story',
   castSize: 'auto',
+  aiModel: 'procedural',
   autoTrack: true,
   audioFile: null,
   audioName: '',
   duration: 60,
   filmGrain: true,
 };
+
+let _hhCache;
+async function fetchHappyHorseStatus() {
+  if (!_hhCache) {
+    _hhCache = fetch('/api/happyhorse/status').then((r) => r.json()).catch(() => ({ available: false }));
+  }
+  return _hhCache;
+}
 
 export default function AIDirectorView({ project, onNavigate, onApplyToProject }) {
   const [form, setForm] = useState(() => ({
@@ -116,6 +130,7 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
   }));
   const [analysis, setAnalysis] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [hhAvailable, setHhAvailable] = useState(null); // null = unknown
   const [job, setJob] = useState(null);
   const [error, setError] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -124,6 +139,13 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
   const audioInputRef = useRef(null);
 
   const update = (patch) => setForm((f) => ({ ...f, ...patch }));
+
+  // One-shot HappyHorse CLI detection for the Engine control hint
+  useEffect(() => {
+    let alive = true;
+    fetchHappyHorseStatus().then((s) => { if (alive) setHhAvailable(Boolean(s.available)); });
+    return () => { alive = false; };
+  }, []);
 
   // Debounced live analysis preview
   useEffect(() => {
@@ -194,6 +216,7 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
         captionStyle: form.captionStyle,
         storyMode: form.storyMode,
         castSize: form.castSize,
+        aiModel: form.aiModel,
         filmGrain: form.filmGrain,
         duration: form.audioFile ? undefined : Number(form.duration) || undefined,
         audioDataUrl: form.audioFile || undefined,
@@ -312,6 +335,15 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
               <select value={form.quality} onChange={(e) => update({ quality: e.target.value })}>
                 {QUALITIES.map((q) => <option key={q.id} value={q.id}>{q.label} · {q.hint}</option>)}
               </select>
+            </label>
+            <label className="ctl">
+              <span><Sparkles size={11} /> Engine</span>
+              <select value={form.aiModel} onChange={(e) => update({ aiModel: e.target.value })}>
+                {AI_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label} · {m.hint}</option>)}
+              </select>
+              {form.aiModel === 'happyhorse' && hhAvailable === false && (
+                <span className="ctl-hint warn">HappyHorse CLI not detected — renders fall back to the original engine.</span>
+              )}
             </label>
             <label className="ctl">
               <span><Users size={11} /> Video style</span>

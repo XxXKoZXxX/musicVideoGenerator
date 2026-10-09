@@ -105,6 +105,10 @@ function extractParams(message, session) {
   if (/\bduo\b|\bduet\b|two (characters|singers|artists|people)|both (singers|artists)/.test(t)) p.castSize = 'duo';
   else if (/\bsolo\b|one (character|singer|artist|person)|single (character|singer|artist)/.test(t)) p.castSize = 'solo';
 
+  // AI video engine preference (HappyHorse = real AI-model footage)
+  if (/happy ?horse|ai (video|footage|clips?)|(real |actual )?ai (video )?model/.test(t)) p.aiModel = 'happyhorse';
+  else if (/procedural|cartoon engine|animated engine|vector (engine|style)/.test(t)) p.aiModel = 'procedural';
+
   const dur = t.match(/(\d+)\s*(seconds?|secs?|s\b|minutes?|mins?|m\b)/);
   if (dur) {
     const n = parseInt(dur[1], 10);
@@ -208,6 +212,7 @@ function planFromMessage(message, session) {
         duration: p.duration || session.context.duration || undefined,
         storyMode: p.storyMode || session.context.storyMode || undefined,
         castSize: p.castSize || session.context.castSize || undefined,
+        aiModel: p.aiModel || session.context.aiModel || undefined,
       },
     });
     plan.push({ tool: 'monitor_render', args: {} });
@@ -314,11 +319,13 @@ const TOOLS = {
       duration: args.duration || ctx.duration || undefined,
       storyMode: args.storyMode || ctx.storyMode || 'story',
       castSize: args.castSize || ctx.castSize || 'auto',
+      aiModel: args.aiModel || ctx.aiModel || 'procedural',
       autoTrack: true,
     };
     if (args.genre) ctx.genre = args.genre;
     if (args.storyMode) ctx.storyMode = args.storyMode;
     if (args.castSize) ctx.castSize = args.castSize;
+    if (args.aiModel) ctx.aiModel = args.aiModel;
     if (args.captionStyle) ctx.captionStyle = args.captionStyle;
     if (args.aspectRatio) ctx.aspectRatio = args.aspectRatio;
     if (args.quality) ctx.quality = args.quality;

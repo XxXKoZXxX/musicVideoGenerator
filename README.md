@@ -175,3 +175,37 @@ Persist projects, video assets, and user presets seamlessly to Cloud Firestore w
 ---
 
 © 2026 Astraea Cosmic Studios. All rights reserved.
+
+## HappyHorse AI engine (optional real AI footage)
+
+Beyond the built-in procedural engine (original characters, storylines,
+lip-sync — works fully offline), the app can render videos from **real
+AI-model footage** using the [HappyHorse CLI](https://github.com/wonderwhy-er/DesktopCommanderMCP)
+(Alibaba HappyHorse 1.0 — text/image-to-video with native synchronized audio).
+
+**Install (Windows, on your own machine):**
+
+```powershell
+irm https://happyhorse-cli-releases.oss-accelerate.aliyuncs.com/happyhorse-cli/install.ps1 | iex
+```
+
+or run `scripts/install-happyhorse.ps1` from this repo. The installer verifies
+SHA256SUMS + Authenticode signatures before installing. Then run `happyhorse login`
+once. Linux/macOS users: place the binary on PATH or point `HH_CLI_PATH` at it.
+
+**Use it:** in the AI Director pick *Engine → HappyHorse AI video* (the UI warns
+if the CLI isn't detected), or tell the agent *"use happyhorse"*. The engine
+generates one AI clip per song section (2–15s each, cap by quality: draft 4 /
+standard 6 / master 8 clips), muxes your original or uploaded soundtrack,
+burns the lyrics, and writes the same poster + SRT/LRC sidecars as the
+procedural engine. If the CLI is missing or a clip fails, the render
+automatically falls back to the procedural engine — the job always completes.
+
+**Configuration:**
+
+| Env var | Purpose |
+|---|---|
+| `HH_CLI_PATH` | Full path to the CLI if not on PATH |
+| `HH_GEN_ARGS` | Override the generate command template (`{prompt} {duration} {resolution} {output}` placeholders) if your CLI version uses different flags |
+
+Status check: `GET /api/happyhorse/status` → `{available, version, path}`.

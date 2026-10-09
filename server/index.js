@@ -776,6 +776,15 @@ app.post('/api/server-render/gif', (req, res) => {
 // ============================================================
 
 // Launch a fully-original lyrics→video render (auto soundtrack + painted visuals)
+app.get('/api/happyhorse/status', async (req, res) => {
+  try {
+    const hh = require('./happyhorseEngine');
+    res.json({ success: true, ...await hh.getStatus(true) });
+  } catch (e) {
+    res.json({ success: false, available: false, error: e.message });
+  }
+});
+
 app.post('/api/agent-video/create', (req, res) => {
   try {
     const request = req.body || {};

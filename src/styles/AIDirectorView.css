@@ -270,3 +270,15 @@
 
 .spin-icon { animation: aid-spin 1s linear infinite; }
 @keyframes aid-spin { to { transform: rotate(360deg); } }
+
+/* HappyHorse engine hint */
+.ctl .ctl-hint {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  opacity: 0.65;
+}
+.ctl .ctl-hint.warn {
+  color: #ffb86b;
+  opacity: 0.95;
+}
