@@ -4,8 +4,21 @@
 
 import React, { useEffect, useState } from 'react';
 import {
-  Sparkles, Wand2, ArrowRight, Play, Bot, Film, Mic2, Zap, Clock,
-  AlertTriangle, RefreshCw, Music4, Type, Ratio, Loader2,
+  Sparkles,
+  Wand2,
+  ArrowRight,
+  Play,
+  Bot,
+  Film,
+  Zap,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Music4,
+  Type,
+  Ratio,
+  Loader2,
+  User,
 } from 'lucide-react';
 import { listServerVideos } from '../../services/LocalServerRenderService';
 import '../../styles/HomeView.css';
@@ -197,14 +210,14 @@ export default function HomeView({ project, onNavigate, onCreateFromLyrics, serv
             <div><h4>AI Director</h4><p>Full control: quality, captions, format, upload your own track.</p></div>
             <ArrowRight size={15} />
           </button>
-          <button type="button" className="tool-card" onClick={() => onNavigate('wizard')}>
-            <Film size={20} />
-            <div><h4>4-Step Studio</h4><p>Classic wizard: visuals, audio & beats, storylines, live render.</p></div>
+          <button type="button" className="tool-card" onClick={() => onNavigate('character-creator')}>
+            <User size={20} />
+            <div><h4>Cast Designer</h4><p>Design your artist — they star in every video with storylines & lip-sync.</p></div>
             <ArrowRight size={15} />
           </button>
-          <button type="button" className="tool-card" onClick={() => onNavigate('vocal-cloner')}>
-            <Mic2 size={20} />
-            <div><h4>Voice Cloner</h4><p>Clone a vocal timbre from your mic and synthesize singing lines.</p></div>
+          <button type="button" className="tool-card" onClick={() => onNavigate('clip-gap-filler')}>
+            <Zap size={20} />
+            <div><h4>Clip Bridge</h4><p>Stitch your own clips with generated transition bridges & grading.</p></div>
             <ArrowRight size={15} />
           </button>
         </div>

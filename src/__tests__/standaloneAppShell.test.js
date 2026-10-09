@@ -3,6 +3,9 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 
+import StandaloneMusicVideoApp from '../StandaloneMusicVideoApp';
+import { renderVideoOnServer } from '../services/LocalServerRenderService';
+
 // Mock the heavy studio views — the shell's navigation/state is what we test here.
 // (JSX is not allowed inside jest.mock factories in this CRA setup, so we use createElement.)
 jest.mock('../components/views/VideoStudioView', () => {
@@ -79,9 +82,6 @@ jest.mock('../services/LocalServerRenderService', () => ({
   checkVideoServerHealth: jest.fn(() => Promise.resolve(true)),
 }));
 
-import StandaloneMusicVideoApp from '../StandaloneMusicVideoApp';
-import { renderVideoOnServer } from '../services/LocalServerRenderService';
-
 function localStorageClear() {
   window.localStorage.clear();
 }
@@ -92,20 +92,22 @@ describe('StandaloneMusicVideoApp (OPUS shell)', () => {
     jest.clearAllMocks();
   });
 
-  test('renders the sidebar navigation with all studio sections', () => {
+  test('renders the simplified sidebar navigation', () => {
     render(<StandaloneMusicVideoApp />);
     [
+      'Home',
       'Create Video',
-      'Timeline DAW',
-      'Render Library',
-      'Voice Cloner',
-      'Character Studio',
-      'Gap Filler & Stitcher',
-      'Model Hub',
-      'Opus Director Agent',
+      'AI Agent',
+      'Library',
+      'Cast Designer',
+      'Clip Bridge',
     ].forEach((label) => {
       // Nav item + topbar crumb may both carry the label — at least one must exist
       expect(screen.getAllByText(label).length).toBeGreaterThanOrEqual(1);
+    });
+    // Removed toys must NOT be advertised anywhere in the shell
+    ['Timeline DAW', 'Voice Cloner', 'Model Hub', '4-Step Studio'].forEach((label) => {
+      expect(screen.queryByText(label)).not.toBeInTheDocument();
     });
     // Server status chip
     expect(screen.getAllByText(/Render server online|Checking server/).length).toBeGreaterThanOrEqual(1);
@@ -113,32 +115,32 @@ describe('StandaloneMusicVideoApp (OPUS shell)', () => {
 
   test('sidebar navigation switches the active view', async () => {
     render(<StandaloneMusicVideoApp />);
-    expect(screen.getByTestId('wizard-view')).toBeInTheDocument();
+    // Home is the default view (hero + recent masters wall)
+    expect(screen.getByText(/original music video/i)).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText('Render Library'));
+    fireEvent.click(screen.getByText('AI Agent'));
+    // The agent workspace console opens with hint chips + the message console
+    expect(await screen.findByText(/write a synthwave song about neon rain/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getAllByText('Library')[0]);
     expect(await screen.findByTestId('renders-view')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Voice Cloner'));
-    expect(await screen.findByTestId('vocal-view')).toBeInTheDocument();
-
-    fireEvent.click(screen.getByText('Timeline DAW'));
-    expect(await screen.findByTestId('studio-view')).toBeInTheDocument();
   });
 
   test('opening the Opus Director Agent drawer shows the assistant', async () => {
     render(<StandaloneMusicVideoApp />);
     expect(screen.queryByTestId('opus-drawer')).not.toBeInTheDocument();
-    fireEvent.click(screen.getByText('Opus Director Agent'));
+    fireEvent.click(screen.getByText('Director Agent'));
     expect(await screen.findByTestId('opus-drawer')).toBeInTheDocument();
   });
 
-  test('top bar project title input updates the shared project (wizard sees it)', () => {
+  test('top bar project title input updates the shared project', async () => {
     render(<StandaloneMusicVideoApp />);
     const input = screen.getByDisplayValue('Cyberpunk 2077 Night Drive');
     fireEvent.change(input, { target: { value: 'My Own Anthem' } });
-    // The wizard view receives the updated shared project
-    const wizard = screen.getByTestId('wizard-view');
-    expect(wizard).toHaveAttribute('data-title', 'My Own Anthem');
+    // The autosave persists the new title into the shared project
+    await waitFor(() => {
+      expect(window.localStorage.getItem('musicvid_project_v2')).toContain('My Own Anthem');
+    }, { timeout: 4000 });
   });
 
   test('quick "Render Master" without lyrics warns and does not call the server', async () => {
