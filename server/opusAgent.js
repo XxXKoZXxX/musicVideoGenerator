@@ -305,7 +305,7 @@ const TOOLS = {
     // Vercel/serverless deployments host the web companion only — rendering
     // needs ffmpeg, a writable disk and minutes of CPU. Say so plainly.
     if (process.env.VERCEL) {
-      say(session, '🎬 I can write, analyze and plan here — but **rendering runs on the render engine**, which needs ffmpeg, real disk and minutes of CPU that a Vercel deployment doesn\'t have.\n\nRun the studio locally (`npm start`) or use the desktop app, then ask me to *render it* — I\'ll film the full video with cast, storylines and lip-sync.');
+      say(session, '🎬 Here on Vercel I can write, analyze and plan — and **short 16s drafts** render right here: open **Create Video** and hit create (the finished clip comes straight back).\n\nFor full-length masters with a render library, run the studio locally (`npm start`) — there I\'ll film the complete video with cast, storylines and lip-sync.');
       return { ok: false };
     }
     let lyrics = args.lyrics;

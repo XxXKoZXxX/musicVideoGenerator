@@ -206,7 +206,7 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
       agentLog: [], videoUrl: null, posterUrl: null,
     });
     try {
-      const { jobId } = await createOriginalVideo({
+      const started = await createOriginalVideo({
         lyrics,
         title: form.title,
         artistName: form.artistName,
@@ -222,6 +222,14 @@ export default function AIDirectorView({ project, onNavigate, onApplyToProject }
         audioDataUrl: form.audioFile || undefined,
         autoTrack: !form.audioFile,
       });
+      // Vercel/serverless renders finish inside the create call and ship the
+      // finished video in the response — no polling needed.
+      if (started && started.status === 'COMPLETED') {
+        setJob(started);
+        setBusy(false);
+        return;
+      }
+      const { jobId } = started;
       if (unsubRef.current) unsubRef.current();
       unsubRef.current = subscribeToJob(jobId, (j) => {
         setJob(j);

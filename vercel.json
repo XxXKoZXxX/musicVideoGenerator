@@ -2,6 +2,15 @@
   "buildCommand": "npm run react-build",
   "outputDirectory": "build",
   "rewrites": [
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "functions": {
+    "api/**": {
+      "maxDuration": 60,
+      "memory": 3009
+    }
+  }
 }

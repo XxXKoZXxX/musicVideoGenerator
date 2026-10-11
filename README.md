@@ -210,14 +210,16 @@ automatically falls back to the procedural engine — the job always completes.
 
 Status check: `GET /api/happyhorse/status` → `{available, version, path}`.
 
-## Vercel deployment (web companion)
+## Vercel deployment (web studio)
 
-The repo deploys to Vercel as the **web companion**: the full UI, live lyrics
-analysis, and the Opus agent in write/analyze/plan mode (serverless functions
-in `api/`). **Video rendering does not run on Vercel** — it needs ffmpeg, a
-writable disk and minutes of CPU — so render requests answer with clear
-pointers to the real engine. For the complete experience (renders, library,
-lip-sync videos), run the studio locally or as the desktop app:
+The Vercel deployment runs the **full web studio**: the complete UI, live
+lyrics analysis, the Opus agent (write/analyze/plan + short renders), and
+**real video rendering** — the original engine (cast, storylines, lip-sync,
+composed soundtrack, burned karaoke captions) executes inside the
+`/api/agent-video/create` serverless function (60s / 3GB config) and returns
+the finished master as a data URL. Serverless caps apply: **max 16s, 480p
+draft**. For full-length masters, a persistent render library and progress
+streaming, run the studio locally or as the desktop app:
 
 ```bash
 npm install
@@ -225,7 +227,8 @@ npm start        # web on :3220, render server on :4000
 ```
 
 `vercel.json` builds the CRA bundle with `npm run react-build` (no Electron
-packaging) and rewrites all routes to the SPA. Serverless functions cover:
-`/health`, `/api/server-status`, `/api/ffmpeg-status`-equivalents,
-`/api/agent-video/preview` (analysis), `/api/opus/agent` (sync agent turns,
-sessions per warm instance), plus honest 501s for render endpoints.
+packaging), rewrites all routes to the SPA, and runs functions at 60s/3GB.
+Serverless functions: `/health`, `/api/server-status`,
+`/api/happyhorse/status`, `/api/agent-video/preview` (analysis),
+`/api/agent-video/create` (**full synchronous render**), agent turns +
+session reads, and a tolerant status endpoint (results ship with create).
