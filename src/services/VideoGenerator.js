@@ -66,140 +66,6 @@ export const COLOR_LUTS = {
 // Global Memory Cache for Instant Canvas Drawing & Zero-Lag Playback
 const GLOBAL_IMAGE_CACHE = new Map();
 
-// Pre-rendered offscreen noise and scanline patterns to eliminate hundreds of fillRect calls per frame
-let cachedNoiseCanvas = null;
-let cachedScanlineCanvas = null;
-
-export function getNoisePattern(ctx) {
-  if (typeof document === 'undefined') return null;
-  if (!cachedNoiseCanvas) {
-    try {
-      const size = 128;
-      const c = document.createElement('canvas');
-      c.width = size;
-      c.height = size;
-      const cCtx = c.getContext('2d');
-      if (cCtx) {
-        const imgData = cCtx.createImageData(size, size);
-        const data = imgData.data;
-        for (let i = 0; i < data.length; i += 4) {
-          const val = Math.random() > 0.5 ? 255 : 0;
-          data[i] = val;
-          data[i + 1] = val;
-          data[i + 2] = val;
-          data[i + 3] = Math.floor(Math.random() * 55) + 15;
-        }
-        cCtx.putImageData(imgData, 0, 0);
-        cachedNoiseCanvas = c;
-      }
-    } catch (e) {
-      return null;
-    }
-  }
-  if (cachedNoiseCanvas && ctx && typeof ctx.createPattern === 'function') {
-    try {
-      return ctx.createPattern(cachedNoiseCanvas, 'repeat');
-    } catch (e) {
-      return null;
-    }
-  }
-  return null;
-}
-
-export function getScanlinePattern(ctx) {
-  if (typeof document === 'undefined') return null;
-  if (!cachedScanlineCanvas) {
-    try {
-      const c = document.createElement('canvas');
-      c.width = 4;
-      c.height = 4;
-      const cCtx = c.getContext('2d');
-      if (cCtx) {
-        cCtx.fillStyle = '#000000';
-        cCtx.fillRect(0, 0, 4, 2);
-        cachedScanlineCanvas = c;
-      }
-    } catch (e) {
-      return null;
-    }
-  }
-  if (cachedScanlineCanvas && ctx && typeof ctx.createPattern === 'function') {
-    try {
-      return ctx.createPattern(cachedScanlineCanvas, 'repeat');
-    } catch (e) {
-      return null;
-    }
-  }
-  return null;
-}
-
-// Procedural fallback canvas generator to guarantee same-origin visual scenes and prevent canvas tainting
-export function createProceduralFallbackCanvas(label = 'SCENE', width = 1280, height = 720) {
-  if (typeof document === 'undefined') return null;
-  const c = document.createElement('canvas');
-  c.width = width;
-  c.height = height;
-  const ctx = c.getContext('2d');
-  if (!ctx) return c;
-
-  try {
-    // Cinematic sci-fi gradient background
-    if (typeof ctx.createLinearGradient === 'function' && typeof ctx.fillRect === 'function') {
-      const grad = ctx.createLinearGradient(0, 0, width, height);
-      grad.addColorStop(0, '#030712');
-      grad.addColorStop(0.35, '#0f172a');
-      grad.addColorStop(0.7, '#1e1b4b');
-      grad.addColorStop(1, '#0c4a6e');
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, width, height);
-    }
-
-    // High-tech circular portal glow
-    const cx = width / 2;
-    const cy = height * 0.48;
-    if (typeof ctx.createRadialGradient === 'function' && typeof ctx.arc === 'function') {
-      const radGrad = ctx.createRadialGradient(cx, cy, 10, cx, cy, Math.min(width, height) * 0.45);
-      radGrad.addColorStop(0, 'rgba(6, 182, 212, 0.45)');
-      radGrad.addColorStop(0.5, 'rgba(236, 72, 153, 0.2)');
-      radGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
-      ctx.fillStyle = radGrad;
-      ctx.beginPath();
-      ctx.arc(cx, cy, Math.min(width, height) * 0.45, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // Perspective Grid Lines
-    if (typeof ctx.beginPath === 'function' && typeof ctx.moveTo === 'function' && typeof ctx.lineTo === 'function' && typeof ctx.stroke === 'function') {
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
-      ctx.lineWidth = 1.5;
-      const horizon = height * 0.6;
-      for (let y = horizon; y < height; y += (y - horizon + 16) * 0.4) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-      }
-      for (let x = -width * 0.2; x <= width * 1.2; x += width * 0.12) {
-        ctx.beginPath();
-        ctx.moveTo(cx, horizon);
-        ctx.lineTo(x, height);
-        ctx.stroke();
-      }
-    }
-
-    // Neon bounding frame
-    if (typeof ctx.strokeRect === 'function') {
-      ctx.strokeStyle = 'rgba(6, 182, 212, 0.4)';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(30, 30, width - 60, height - 60);
-    }
-  } catch (err) {
-    // Graceful in headless / jsdom mock environments
-  }
-
-  return c;
-}
-
 export function getCachedImage(source) {
   if (!source) return null;
   if (typeof source !== 'string') return source;
@@ -217,27 +83,11 @@ export function getCachedImage(source) {
     GLOBAL_IMAGE_CACHE.set(source, img);
   };
   img.onerror = () => {
-    // Attempt blob fetch to bypass strict image element CORS if possible,
-    // otherwise fallback to same-origin procedural canvas to prevent canvas tainting
-    if (typeof fetch === 'function' && source.startsWith('http')) {
-      fetch(source, { mode: 'cors' })
-        .then((res) => (res.ok ? res.blob() : null))
-        .then((blob) => {
-          if (blob) {
-            const blobUrl = URL.createObjectURL(blob);
-            const blobImg = new Image();
-            blobImg.onload = () => GLOBAL_IMAGE_CACHE.set(source, blobImg);
-            blobImg.src = blobUrl;
-          } else {
-            GLOBAL_IMAGE_CACHE.set(source, createProceduralFallbackCanvas(source));
-          }
-        })
-        .catch(() => {
-          GLOBAL_IMAGE_CACHE.set(source, createProceduralFallbackCanvas(source));
-        });
-    } else {
-      GLOBAL_IMAGE_CACHE.set(source, createProceduralFallbackCanvas(source));
-    }
+    const fallbackImg = new Image();
+    fallbackImg.onload = () => {
+      GLOBAL_IMAGE_CACHE.set(source, fallbackImg);
+    };
+    fallbackImg.src = source;
   };
   img.src = source;
   GLOBAL_IMAGE_CACHE.set(source, img);
@@ -391,19 +241,6 @@ export class VideoGenerator {
   }
 
   initParticles(count = 300) {
-    if (this.particles && this.particles.length === count) {
-      for (let i = 0; i < count; i++) {
-        const p = this.particles[i];
-        p.x = Math.random();
-        p.y = Math.random();
-        p.vx = (Math.random() - 0.5) * 0.004;
-        p.vy = (Math.random() - 0.5) * 0.004;
-        p.size = Math.random() * 3 + 1;
-        p.color = Math.random() > 0.5 ? '#06b6d4' : '#ec4899';
-        p.alpha = Math.random() * 0.7 + 0.3;
-      }
-      return;
-    }
     this.particles = [];
     for (let i = 0; i < count; i++) {
       this.particles.push({
@@ -485,13 +322,10 @@ export class VideoGenerator {
     try {
       this.singerImage = await this.loadMedia(singerUrl);
     } catch {
-      this.singerImage = loaded[0] || createProceduralFallbackCanvas('SINGER');
-    }
-    if (!this.singerImage) {
-      this.singerImage = loaded[0] || createProceduralFallbackCanvas('SINGER');
+      this.singerImage = loaded[0];
     }
 
-    return loaded.length > 0 ? loaded : [this.singerImage || createProceduralFallbackCanvas('SCENE')];
+    return loaded.length > 0 ? loaded : [this.singerImage];
   }
 
   async loadMedia(source) {
@@ -512,41 +346,12 @@ export class VideoGenerator {
       }
     }
 
-    let isVideo =
-      src.includes('.mp4') ||
-      src.includes('.webm') ||
-      src.includes('.mov') ||
-      src.includes('.m4v') ||
-      src.includes('.mkv') ||
-      src.startsWith('data:video') ||
-      src.includes('/renders/samples/') ||
-      Boolean(source && (source.isVideo || (source.type && source.type.startsWith('video/'))));
-
-    // If source is a blob: URL without an explicit video extension, probe if it is a playable video
-    if (!isVideo && typeof src === 'string' && src.startsWith('blob:')) {
-      if (source && (source.type?.startsWith('video/') || source.name?.match(/\.(mp4|webm|mov|m4v|mkv)$/i))) {
-        isVideo = true;
-      } else {
-        try {
-          const isPlayable = await new Promise((resolve) => {
-            const v = document.createElement('video');
-            v.preload = 'metadata';
-            v.onloadedmetadata = () => resolve(true);
-            v.onerror = () => resolve(false);
-            v.src = src;
-            setTimeout(() => resolve(false), 500);
-          });
-          if (isPlayable) isVideo = true;
-        } catch (_) {}
-      }
-    }
+    const isVideo = src.includes('.mp4') || src.includes('.webm') || src.includes('.mov') || src.startsWith('data:video') || (source && source.type && source.type.startsWith('video/'));
 
     if (isVideo) {
       return new Promise((resolve) => {
         const video = document.createElement('video');
-        if (typeof src === 'string' && !src.startsWith('blob:') && !src.startsWith('data:')) {
-          video.crossOrigin = 'anonymous';
-        }
+        video.crossOrigin = 'anonymous';
         video.muted = true;
         video.playsInline = true;
         video.loop = true;
@@ -574,17 +379,12 @@ export class VideoGenerator {
   }
 
   loadImage(source) {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       if (GLOBAL_IMAGE_CACHE.has(source)) {
         const cached = GLOBAL_IMAGE_CACHE.get(source);
         if (cached && (cached.naturalWidth || cached.width)) {
           return resolve(cached);
         }
-      }
-
-      if (typeof Image === 'undefined') {
-        const fallback = createProceduralFallbackCanvas(source);
-        return resolve(fallback);
       }
 
       const img = new Image();
@@ -594,39 +394,13 @@ export class VideoGenerator {
         resolve(img);
       };
       img.onerror = () => {
-        if (typeof fetch === 'function' && typeof source === 'string' && source.startsWith('http')) {
-          fetch(source, { mode: 'cors' })
-            .then((r) => (r.ok ? r.blob() : null))
-            .then((blob) => {
-              if (blob) {
-                const blobUrl = URL.createObjectURL(blob);
-                const blobImg = new Image();
-                blobImg.onload = () => {
-                  GLOBAL_IMAGE_CACHE.set(source, blobImg);
-                  resolve(blobImg);
-                };
-                blobImg.onerror = () => {
-                  const fallback = createProceduralFallbackCanvas(source);
-                  GLOBAL_IMAGE_CACHE.set(source, fallback);
-                  resolve(fallback);
-                };
-                blobImg.src = blobUrl;
-              } else {
-                const fallback = createProceduralFallbackCanvas(source);
-                GLOBAL_IMAGE_CACHE.set(source, fallback);
-                resolve(fallback);
-              }
-            })
-            .catch(() => {
-              const fallback = createProceduralFallbackCanvas(source);
-              GLOBAL_IMAGE_CACHE.set(source, fallback);
-              resolve(fallback);
-            });
-        } else {
-          const fallback = createProceduralFallbackCanvas(source);
-          GLOBAL_IMAGE_CACHE.set(source, fallback);
-          resolve(fallback);
-        }
+        const fallbackImg = new Image();
+        fallbackImg.onload = () => {
+          GLOBAL_IMAGE_CACHE.set(source, fallbackImg);
+          resolve(fallbackImg);
+        };
+        fallbackImg.onerror = () => reject(new Error(`Failed to load image: ${source}`));
+        fallbackImg.src = source;
       };
       img.src = source;
     });
@@ -678,14 +452,9 @@ export class VideoGenerator {
   async generate() {
     const images = await this.loadImages();
     const audio = await this.loadAudio();
-    const duration = (audio && Number.isFinite(audio.duration) && audio.duration > 0)
-      ? audio.duration
-      : (Number.isFinite(this.project?.duration) && this.project.duration > 0
-          ? this.project.duration
-          : (images.length * 4));
     const lyrics = LyricsEngine.parseLyrics(
       this.project.lyrics || '',
-      duration
+      audio ? audio.duration : images.length * 4
     );
 
     return this.recordVideo(images, audio, lyrics);
@@ -703,7 +472,7 @@ export class VideoGenerator {
     };
 
     const result = await this.generate();
-    if (onComplete) onComplete(result.url, result);
+    if (onComplete) onComplete(result.url);
     return result;
   }
 
@@ -711,11 +480,7 @@ export class VideoGenerator {
   recordVideo(images, audio, lyrics) {
     const { width, height } = this.getFrameSize();
     const fps = this.settings.fps || 30;
-    const duration = (audio && Number.isFinite(audio.duration) && audio.duration > 0)
-      ? audio.duration
-      : (Number.isFinite(this.project?.duration) && this.project.duration > 0
-          ? this.project.duration
-          : Math.max(12, images.length * (3.5 / (this.settings.speed || 1.0))));
+    const duration = audio ? audio.duration : Math.max(12, images.length * (3.5 / this.settings.speed));
     const secondsPerImage = duration / images.length;
 
     const canvas = document.createElement('canvas');
@@ -724,19 +489,6 @@ export class VideoGenerator {
     const ctx = canvas.getContext('2d');
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = 'high';
-
-    // Pre-render initial frame 0 before captureStream so the canvas is non-empty
-    this.renderCompositedFrame(
-      ctx,
-      images,
-      lyrics,
-      0,
-      duration,
-      secondsPerImage,
-      { masterEnergy: 0, subBass: 0, mids: 0, isKick: false, spectrum: new Uint8Array(64) },
-      width,
-      height
-    );
 
     const stream = canvas.captureStream(fps);
     let audioContext = null;
@@ -749,6 +501,9 @@ export class VideoGenerator {
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         audioContext = new AudioCtx();
+        if (audioContext.state === 'suspended') {
+          audioContext.resume();
+        }
 
         const gain = audioContext.createGain();
         gain.gain.value = (this.settings.audioBoost || 100) / 100;
@@ -799,31 +554,18 @@ export class VideoGenerator {
       }
     }
 
-    const isMp4Preferred = (this.settings.format || 'mp4').toLowerCase() === 'mp4';
-    const mimeCandidates = isMp4Preferred
-      ? [
-          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-          'video/mp4;codecs=avc1,mp4a.40.2',
-          'video/mp4;codecs=avc1',
-          'video/mp4',
-          'video/webm;codecs=vp9,opus',
-          'video/webm;codecs=vp8,opus',
-          'video/webm',
-        ]
-      : [
-          'video/webm;codecs=vp9,opus',
-          'video/webm;codecs=vp8,opus',
-          'video/webm',
-          'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
-          'video/mp4;codecs=avc1,mp4a.40.2',
-          'video/mp4;codecs=avc1',
-          'video/mp4',
-        ];
+    const mimeCandidates = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4;codecs=avc1.42E01E,mp4a.40.2',
+      'video/mp4',
+    ];
     let selectedMime = '';
-    let ext = isMp4Preferred ? 'mp4' : 'webm';
+    let ext = 'webm';
 
     for (const cand of mimeCandidates) {
-      if (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(cand)) {
+      if (MediaRecorder.isTypeSupported(cand)) {
         selectedMime = cand;
         ext = cand.includes('mp4') ? 'mp4' : 'webm';
         break;
@@ -837,15 +579,10 @@ export class VideoGenerator {
         ? 10_000_000
         : 5_000_000;
 
-    let recorder;
-    try {
-      recorder = new MediaRecorder(stream, {
-        ...(selectedMime ? { mimeType: selectedMime } : {}),
-        videoBitsPerSecond: bitrate,
-      });
-    } catch {
-      recorder = new MediaRecorder(stream);
-    }
+    const recorder = new MediaRecorder(stream, {
+      ...(selectedMime ? { mimeType: selectedMime } : {}),
+      videoBitsPerSecond: bitrate,
+    });
     this.recorder = recorder;
 
     const chunks = [];
@@ -857,6 +594,7 @@ export class VideoGenerator {
       const spectrum = analyser ? new Uint8Array(analyser.frequencyBinCount) : new Uint8Array(64);
       const bassData = bassAnalyser ? new Uint8Array(bassAnalyser.frequencyBinCount) : new Uint8Array(32);
       const midsData = midsAnalyser ? new Uint8Array(midsAnalyser.frequencyBinCount) : new Uint8Array(32);
+      let startTime = 0;
       let frameHandle = null;
 
       const cleanup = () => {
@@ -911,7 +649,7 @@ export class VideoGenerator {
           reject(new Error('Cancelled'));
           return;
         }
-        const blob = new Blob(chunks, { type: selectedMime || (ext === 'mp4' ? 'video/mp4' : 'video/webm') });
+        const blob = new Blob(chunks, { type: selectedMime || 'video/webm' });
         this.progressCallback(100);
         resolve({
           blob,
@@ -924,35 +662,13 @@ export class VideoGenerator {
         });
       };
 
-      let audioStartTime = 0;
-      let lastRecordedTime = 0;
-      let lastWallTime = 0;
-
       const drawLoop = () => {
         if (this.cancelled) {
           if (recorder.state === 'recording') recorder.stop();
           return;
         }
 
-        const now = performance.now();
-        if (lastWallTime === 0) lastWallTime = now;
-        const wallDelta = (now - lastWallTime) / 1000;
-        lastWallTime = now;
-
-        // Deterministic stepping synchronized with audio clock where available;
-        // prevents multi-second frame skips or video freezes if tab is throttled
-        let elapsed = 0;
-        if (audio && audio.element && !audio.element.paused) {
-          elapsed = Math.max(0, audio.element.currentTime);
-        } else if (audioContext && audioContext.state === 'running' && bufferSource) {
-          elapsed = Math.max(0, audioContext.currentTime - audioStartTime);
-        } else {
-          const frameStep = 1 / fps;
-          const maxStep = frameStep * 1.5;
-          const dt = Math.min(Math.max(frameStep, wallDelta), maxStep);
-          elapsed = Math.min(duration, lastRecordedTime + dt);
-        }
-        lastRecordedTime = elapsed;
+        const elapsed = (performance.now() - startTime) / 1000;
 
         let masterEnergy = 0;
         let subBass = 0;
@@ -1000,14 +716,8 @@ export class VideoGenerator {
         scheduleNextFrame();
       };
 
-      const startRecording = async () => {
-        if (audioContext) {
-          if (audioContext.state === 'suspended') {
-            try { await audioContext.resume(); } catch (e) {}
-          }
-          audioStartTime = audioContext.currentTime;
-        }
-        lastWallTime = performance.now();
+      const startRecording = () => {
+        startTime = performance.now();
         if (bufferSource) {
           try { bufferSource.start(0); } catch (e) {}
         }
@@ -1451,22 +1161,13 @@ export class VideoGenerator {
 
     // SHADER D: Lo-Fi Textured Watercolor Paper Grain
     if (styleId === 'lofi_art' || renderStyleObj.hasPaperGrain) {
-      const pattern = getNoisePattern(ctx);
-      if (pattern) {
-        ctx.save();
-        ctx.globalAlpha = 0.04;
-        ctx.fillStyle = pattern;
-        ctx.fillRect(0, 0, width, height);
-        ctx.restore();
-      } else {
-        ctx.save();
-        ctx.globalAlpha = 0.04;
-        ctx.fillStyle = '#fef3c7';
-        for (let i = 0; i < 40; i++) {
-          ctx.fillRect(Math.random() * width, Math.random() * height, 3, 3);
-        }
-        ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = 0.04;
+      ctx.fillStyle = '#fef3c7';
+      for (let i = 0; i < 300; i++) {
+        ctx.fillRect(Math.random() * width, Math.random() * height, 3, 3);
       }
+      ctx.restore();
     }
 
     // SHADER E: 3D CGI Volumetric Bloom
@@ -1631,10 +1332,9 @@ export class VideoGenerator {
     if (rotation !== 0) ctx.rotate(rotation);
     ctx.translate(-centerX, -centerY);
 
-    // If media is a video element, trigger play to update frames safely
+    // If media is a video element, trigger play to update frames
     if (mediaItem instanceof HTMLVideoElement && mediaItem.duration) {
-      mediaItem.muted = true;
-      if (mediaItem.paused && !mediaItem.seeking && mediaItem.readyState >= 2) {
+      if (mediaItem.paused) {
         mediaItem.play().catch(() => {});
       }
     }
@@ -1797,8 +1497,6 @@ export class VideoGenerator {
       ctx.stroke();
     } else if (style === 'particles') {
       const burst = subBass > 0.65 ? subBass * 0.025 : 0.002;
-      ctx.save();
-      ctx.globalCompositeOperation = 'screen';
 
       for (const p of this.particles) {
         p.x += p.vx * (1 + burst * 20);
@@ -1809,24 +1507,21 @@ export class VideoGenerator {
         if (p.y < 0) p.y = 1;
         if (p.y > 1) p.y = 0;
 
-        const currentAlpha = p.alpha * (0.4 + subBass * 0.6);
-        const radius = p.size * (1 + subBass * 1.5);
-        const px = p.x * width;
-        const py = p.y * height;
-
-        // Screen-blended dual-arc particle glow (avoids CPU-bound Gaussian shadowBlur bottlenecks)
         ctx.fillStyle = p.color;
-        ctx.globalAlpha = currentAlpha * 0.35;
-        ctx.beginPath();
-        ctx.arc(px, py, radius * 2.2, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.shadowColor = p.color;
+        ctx.shadowBlur = 8 * intensity;
+        ctx.globalAlpha = p.alpha * (0.4 + subBass * 0.6);
 
-        ctx.globalAlpha = currentAlpha;
         ctx.beginPath();
-        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.arc(
+          p.x * width,
+          p.y * height,
+          p.size * (1 + subBass * 1.5),
+          0,
+          Math.PI * 2
+        );
         ctx.fill();
       }
-      ctx.restore();
     } else if (style === 'bars') {
       const numBars = 48;
       const barWidth = (width / numBars) * 0.7;
@@ -1909,19 +1604,10 @@ export class VideoGenerator {
 
     // 3. VHS 90s MTV Effects
     if (lut === 'vhs' || styleId === 'vhs_retro') {
-      const scanPattern = getScanlinePattern(ctx);
-      if (scanPattern) {
-        ctx.save();
-        ctx.globalAlpha = 0.12;
-        ctx.fillStyle = scanPattern;
-        ctx.fillRect(0, 0, width, height);
-        ctx.restore();
-      } else {
-        ctx.globalAlpha = 0.12;
-        ctx.fillStyle = '#000000';
-        for (let y = 0; y < height; y += 4) {
-          ctx.fillRect(0, y, width, 2);
-        }
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = '#000000';
+      for (let y = 0; y < height; y += 4) {
+        ctx.fillRect(0, y, width, 2);
       }
 
       ctx.globalAlpha = 0.08;
@@ -1946,22 +1632,10 @@ export class VideoGenerator {
 
     // 5. Film Grain
     if (lut === 'vhs' || lut === 'cinema35' || lut === 'noir' || styleId === 'photoreal' || styleId === 'gothic_noir') {
-      const grainPattern = getNoisePattern(ctx);
-      if (grainPattern) {
-        ctx.save();
-        ctx.globalAlpha = 0.04;
-        const jitterX = Math.floor((Math.sin(elapsed * 43) + 1) * 32);
-        const jitterY = Math.floor((Math.cos(elapsed * 57) + 1) * 32);
-        ctx.translate(jitterX, jitterY);
-        ctx.fillStyle = grainPattern;
-        ctx.fillRect(-jitterX, -jitterY, width + 64, height + 64);
-        ctx.restore();
-      } else {
-        ctx.globalAlpha = 0.04;
-        for (let i = 0; i < 40; i++) {
-          ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
-          ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
-        }
+      ctx.globalAlpha = 0.04;
+      for (let i = 0; i < 350; i++) {
+        ctx.fillStyle = Math.random() > 0.5 ? '#ffffff' : '#000000';
+        ctx.fillRect(Math.random() * width, Math.random() * height, 2, 2);
       }
     }
 

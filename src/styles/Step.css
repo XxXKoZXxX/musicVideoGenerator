@@ -3003,3 +3003,294 @@ input[type="range"]::-webkit-slider-runnable-track {
 }
 
 
+
+/* ============ SERVER MP4 MASTER CARD (StepFour) ============ */
+.server-master-card {
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  background: linear-gradient(180deg, rgba(6, 78, 59, 0.18), rgba(15, 23, 42, 0.55));
+  border-radius: 18px;
+  padding: 16px 18px;
+}
+
+.smc-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.smc-header h4 {
+  margin: 0 0 3px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #f1f5f9;
+}
+
+.smc-header p {
+  margin: 0;
+  font-size: 11.5px;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.smc-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.smc-progress-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.smc-stage {
+  font-size: 11.5px;
+  color: #cbd5e1;
+}
+
+.smc-bar {
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.15);
+  overflow: hidden;
+}
+
+.smc-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #34d399, #22d3ee);
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.smc-pct {
+  font-size: 11px;
+  color: #34d399;
+}
+
+.smc-done-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #34d399;
+  margin-bottom: 10px;
+}
+
+.smc-preview-video {
+  width: 100%;
+  max-height: 320px;
+  border-radius: 12px;
+  background: #000;
+  margin-bottom: 12px;
+}
+
+.smc-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.smc-cta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.smc-sub {
+  font-size: 11px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.smc-err {
+  color: #fb7185;
+}
+
+/* ============ LRC UPLOAD + SYNC PREVIEW (StepThree lyrics tab) ============ */
+.lyrics-toolbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.lyrics-sync-preview {
+  margin-top: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  border-radius: 12px;
+  background: rgba(2, 6, 23, 0.5);
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 10px 14px;
+}
+
+.lyrics-sync-line {
+  display: flex;
+  gap: 12px;
+  font-size: 12px;
+  padding: 4px 0;
+  color: #cbd5e1;
+  border-bottom: 1px dashed rgba(148, 163, 184, 0.08);
+}
+
+.lyrics-sync-line:last-child {
+  border-bottom: none;
+}
+
+.lyrics-sync-time {
+  font-family: 'JetBrains Mono', monospace;
+  color: #22d3ee;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+/* ============ CINEMATIC MASTER CONTROLS (StepFour server card) ============ */
+.smc-header {
+  position: relative;
+}
+
+.smc-collapse-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  white-space: nowrap;
+}
+
+.cine-controls {
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  margin-top: 12px;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cine-section-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+
+.cine-pill-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cine-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: inherit;
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.07);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 999px;
+  padding: 5px 10px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+
+.cine-pill:hover {
+  border-color: rgba(6, 182, 212, 0.5);
+  color: #f1f5f9;
+}
+
+.cine-pill.active {
+  border-color: rgba(6, 182, 212, 0.8);
+  background: rgba(6, 182, 212, 0.14);
+  color: #67e8f9;
+}
+
+.cine-pill-spec {
+  font-size: 9px;
+  color: #64748b;
+}
+
+.cine-pill.active .cine-pill-spec {
+  color: #22d3ee;
+}
+
+.cine-look-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.cine-look-select {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  color: #f1f5f9;
+  border-radius: 9px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.cine-toggle-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 6px 14px;
+}
+
+.cine-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #cbd5e1;
+  cursor: pointer;
+  user-select: none;
+}
+
+.cine-toggle input[type='checkbox'] {
+  accent-color: #06b6d4;
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.cine-watermark-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cine-watermark-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.cine-watermark-input {
+  flex: 1;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  border-radius: 9px;
+  padding: 7px 10px;
+  font-size: 12px;
+  color: #f1f5f9;
+  font-family: inherit;
+}
+
+.cine-watermark-input:focus {
+  outline: none;
+  border-color: rgba(6, 182, 212, 0.6);
+}

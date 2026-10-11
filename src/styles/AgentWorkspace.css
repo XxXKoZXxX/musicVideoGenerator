@@ -1,0 +1,57 @@
+/* AgentWorkspace.css — full-page agent console */
+
+.agent-workspace {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 8px clamp(14px, 3vw, 36px) 60px;
+}
+.aw-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 20px; flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.aw-title { display: flex; gap: 14px; align-items: center; }
+.aw-orb {
+  width: 46px; height: 46px; border-radius: 15px;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, #7c6cf2, #ff2d95);
+  box-shadow: 0 10px 30px rgba(160,80,255,0.4);
+}
+.aw-title h2 { margin: 0 0 4px; font-size: 24px; letter-spacing: -0.3px; }
+.aw-title h2 em {
+  font-style: normal;
+  background: linear-gradient(92deg, #9d8cff, #ff2d95);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.aw-title p {
+  margin: 0; font-size: 12.5px; color: rgba(233,228,255,0.6);
+  display: flex; align-items: center; gap: 6px; max-width: 560px; line-height: 1.6;
+}
+.aw-hints { display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.aw-hints span {
+  font-size: 11px; font-family: 'SF Mono', Consolas, monospace;
+  color: rgba(207,199,255,0.55);
+  border: 1px dashed rgba(139,124,246,0.35);
+  padding: 5px 10px; border-radius: 999px;
+}
+@media (max-width: 760px) { .aw-hints { display: none; } }
+
+.aw-console-wrap {
+  border: 1px solid rgba(139,124,246,0.22);
+  border-radius: 20px;
+  background: rgba(10, 8, 24, 0.6);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.35);
+  overflow: hidden;
+}
+
+/* page variant overrides for the shared console */
+.oa-drawer.oa-page {
+  position: static;
+  width: 100%;
+  height: min(72vh, 760px);
+  border-left: none;
+  box-shadow: none;
+  animation: none;
+  border-radius: 20px;
+  background: transparent;
+}

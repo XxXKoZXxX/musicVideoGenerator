@@ -1,18 +1,18 @@
 {
   "name": "astraea-cosmic-studio",
   "version": "1.0.0",
-  "description": "Astraea — Sovereign Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire, Tarot & Numerology Studio",
+  "description": "Astraea \u2014 Sovereign Secret Language of Birthdays, Astrology Birth Chart, Occult Grimoire, Tarot & Numerology Studio",
   "author": "Astraea Cosmic Studios <support@astraea.app>",
   "main": "public/electron.js",
-  "bin": {
-    "freebeat": "./bin/freebeat.js"
-  },
   "homepage": "./",
   "private": true,
   "dependencies": {
     "@anthropic-ai/sdk": "^0.21.0",
+    "@ffmpeg-installer/ffmpeg": "^1.1.0",
+    "@napi-rs/canvas": "^1.0.9",
     "axios": "^1.6.0",
     "cors": "^2.8.6",
+    "ffprobe-static": "^3.1.0",
     "firebase": "^12.18.0",
     "fluent-ffmpeg": "^2.1.3",
     "lucide-react": "^0.292.0",
@@ -21,6 +21,8 @@
     "react-scripts": "5.0.1"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^14.3.1",
     "concurrently": "^8.2.0",
     "cross-env": "^10.1.0",
     "electron": "^27.0.0",
@@ -30,13 +32,12 @@
     "wait-on": "^7.1.0"
   },
   "scripts": {
-    "freebeat": "node bin/freebeat.js",
-    "vercel-build": "react-scripts build",
-    "deploy:vercel": "npx -y vercel --prod",
     "react-start": "react-scripts start",
     "react-build": "react-scripts build",
     "serve:build": "npx -y serve -s build",
     "test": "react-scripts test",
+    "test:server": "node --test server/tests/lyricsParser.test.js server/tests/cinematicFilters.test.js server/tests/renderPipeline.test.js server/tests/originalEngine.test.js server/tests/opusAgent.test.js server/tests/story.test.js server/tests/happyhorse.test.js",
+    "test:all": "npm test && npm run test:server",
     "lint": "eslint src/**/*.js",
     "test:e2e": "cypress run",
     "electron-start": "wait-on http://localhost:3220 && electron . --dev",

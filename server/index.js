@@ -9,6 +9,8 @@ const {
   getJobStatus,
   listCompletedRenders,
   deleteRenderJob,
+  deleteRenderFile,
+  createGifFromRender,
   RENDERS_DIR,
 } = require('./renderEngine');
 const {
@@ -16,12 +18,13 @@ const {
   getClipGapFillingJobStatus,
   extractKeyframesForClips,
 } = require('./clipInbetweenerEngine');
-const { ensureSampleClips } = require('./ensureSampleClips');
-
-// Pre-generate guaranteed local sample clips on startup
-try {
-  ensureSampleClips();
-} catch (_) {}
+const {
+  createAgentJob,
+  getAgentJob,
+  listAgentJobs,
+  cancelAgentJob,
+} = require('./agentVideoEngine');
+const opusAgent = require('./opusAgent');
 
 const app = express();
 const PORT = process.env.VIDEO_PORT || 4000;
@@ -30,8 +33,8 @@ const PORT = process.env.VIDEO_PORT || 4000;
 const activeJobs = new Map();
 
 app.use(cors());
-app.use(express.json({ limit: '200mb' }));
-app.use(express.urlencoded({ limit: '200mb', extended: true }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 
 // Serve locally generated video masters with full CORS and Range streaming support
 app.use('/renders', express.static(RENDERS_DIR, {
@@ -137,42 +140,42 @@ const GENERATORS = [
 
 const SAMPLE_VIDEOS = {
   'higgsfield-dop': {
-    url: '/renders/samples/cyber_city.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80',
     title: 'Higgsfield Cinema DoP 6-Axis Motion Sequence',
   },
   'higgsfield_dop': {
-    url: '/renders/samples/cyber_city.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=600&auto=format&fit=crop&q=80',
     title: 'Higgsfield Cinema DoP 6-Axis Motion Sequence',
   },
   'ai-neural': {
-    url: '/renders/samples/cyber_city.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
     title: 'AI Neural Motion Sequence',
   },
   'runway': {
-    url: '/renders/samples/sunset_horizon.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
     title: 'Runway Gen-3 Cinematic Motion',
   },
   'sora': {
-    url: '/renders/samples/cyber_city.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
     title: 'Sora Hyper-Realistic Render',
   },
   'kling': {
-    url: '/renders/samples/cosmic_nebula.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
     title: 'Kling 1.5 Dynamic Video',
   },
   'stable-diffusion': {
-    url: '/renders/samples/sunset_horizon.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&auto=format&fit=crop&q=80',
     title: 'SVD Neural Diffusion',
   },
   'default': {
-    url: '/renders/samples/sunset_horizon.mp4',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
     thumbnail: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=600&auto=format&fit=crop&q=80',
     title: 'HD Cinematic Video Stream',
   }
@@ -196,6 +199,7 @@ app.get('/', (req, res) => {
       '/api/server-render/status/:jobId',
       '/api/server-render/list',
       '/api/server-render/download/:filename',
+      '/api/server-render/gif',
       '/api/ai-video/generate',
       '/api/ai-video/generate-scenes',
       '/api/ai-video/status/:id',
@@ -239,20 +243,12 @@ app.post('/api/generate', async (req, res) => {
   const targetRenderer = renderer || (payload && payload.renderer) || 'ai-neural';
   console.log(`[VideoServer] Generation request for renderer: "${targetRenderer}" | prompt: "${prompt || query || 'N/A'}"`);
 
-  const sample = SAMPLE_VIDEOS[targetRenderer] || SAMPLE_VIDEOS.default;
-
-  setTimeout(() => {
-    res.json({
-      success: true,
-      message: `Video generated successfully using ${targetRenderer}`,
-      renderer: targetRenderer,
-      videoUrl: sample.url,
-      thumbnail: sample.thumbnail,
-      title: `${targetRenderer.toUpperCase()} — ${sample.title}`,
-      duration: 15,
-      resolution: '1080p',
-    });
-  }, 800);
+  return res.status(400).json({
+    success: false,
+    error: `Renderer "${targetRenderer}" requires external services that are not configured.`,
+    hint: 'Use the Original engine — POST /api/agent-video/create renders a full music video (cast, story, lip-sync) with no keys or network.',
+    useInstead: '/api/agent-video/create',
+  });
 });
 
 // ============================================================
@@ -296,6 +292,7 @@ async function falSubmitGeneration(falKey, modelEndpoint, prompt, options = {}) 
   };
 
   const response = await fetch(url, {
+    signal: AbortSignal.timeout(12000),
     method: 'POST',
     headers: {
       'Authorization': `Key ${falKey}`,
@@ -345,22 +342,14 @@ app.post('/api/ai-video/generate', async (req, res) => {
 
   console.log(`[AI-Video] Generate request | model: ${model || 'kling_ai'} | prompt: "${prompt.substring(0, 80)}..."`);
 
-  // If no API key, return sample video fallback
   if (!falKey) {
-    console.log('[AI-Video] No FAL_KEY set — returning sample video fallback');
-    const sampleKey = model && SAMPLE_VIDEOS[model.replace('_ai', '').replace('_gen3', '')] ? model.replace('_ai', '').replace('_gen3', '') : 'default';
-    const sample = SAMPLE_VIDEOS[sampleKey] || SAMPLE_VIDEOS.default;
-    return setTimeout(() => {
-      res.json({
-        success: true,
-        mode: 'fallback',
-        videoUrl: sample.url,
-        thumbnailUrl: sample.thumbnail,
-        duration: 5,
-        model: model || 'kling_ai',
-        message: 'Using sample video (no FAL_KEY configured). Add FAL_KEY to .env for real AI generation.',
-      });
-    }, 1200);
+    console.log('[AI-Video] No FAL_KEY set — failing honestly, pointing at the Original engine');
+    return res.status(400).json({
+      success: false,
+      error: 'No FAL_KEY configured for external AI models (fal.ai is unreachable offline).',
+      hint: 'Use the Original engine instead — POST /api/agent-video/create renders a full music video (cast, story, lip-sync) with no keys or network.',
+      useInstead: '/api/agent-video/create',
+    });
   }
 
   // Real fal.ai generation
@@ -391,16 +380,12 @@ app.post('/api/ai-video/generate', async (req, res) => {
     });
   } catch (err) {
     console.error('[AI-Video] fal.ai submission error:', err.message);
-    // Fallback to sample on error
-    const sample = SAMPLE_VIDEOS.default;
-    res.json({
-      success: true,
-      mode: 'fallback',
-      videoUrl: sample.url,
-      thumbnailUrl: sample.thumbnail,
-      duration: 5,
+    res.status(502).json({
+      success: false,
+      error: `fal.ai generation failed: ${err.message}`,
+      hint: 'External AI models are unreachable from this network. The Original engine always works: POST /api/agent-video/create.',
+      useInstead: '/api/agent-video/create',
       model: model || 'kling_ai',
-      error: err.message,
       message: 'fal.ai API error — falling back to sample video.',
     });
   }
@@ -477,26 +462,15 @@ app.post('/api/ai-video/generate-scenes', async (req, res) => {
 
   console.log(`[AI-Video] Batch generation | ${scenes.length} scenes | model: ${model || 'kling_ai'}`);
 
-  // Fallback mode
+  // No-key: fail honestly
   if (!falKey) {
-    console.log('[AI-Video] No FAL_KEY — returning sample videos for all scenes');
-    const sampleKeys = Object.keys(SAMPLE_VIDEOS).filter(k => k !== 'default');
-    const results = scenes.map((scene, idx) => {
-      const sk = sampleKeys[idx % sampleKeys.length];
-      const sample = SAMPLE_VIDEOS[sk];
-      return {
-        sceneIndex: idx,
-        prompt: typeof scene === 'string' ? scene : scene.prompt,
-        mode: 'fallback',
-        videoUrl: sample.url,
-        thumbnailUrl: sample.thumbnail,
-        duration: 5,
-      };
+    console.log('[AI-Video] No FAL_KEY — failing honestly, pointing at the Original engine');
+    return res.status(400).json({
+      success: false,
+      error: 'No FAL_KEY configured for external AI models (fal.ai is unreachable offline).',
+      hint: 'Use the Original engine instead — POST /api/agent-video/create renders a full music video (cast, story, lip-sync) with no keys or network.',
+      useInstead: '/api/agent-video/create',
     });
-
-    return setTimeout(() => {
-      res.json({ success: true, mode: 'fallback', results, message: 'Sample videos (no FAL_KEY).' });
-    }, 800);
   }
 
   // Real batch generation
@@ -559,26 +533,15 @@ app.post('/api/video/generate', async (req, res) => {
   const selectedModel = model || 'kling_ai';
   console.log(`[Video-Endpoint] Custom generation request | model: ${selectedModel} | ratio: ${mergedOptions.aspectRatio || '16:9'} | duration: ${mergedOptions.duration || '5'}s | prompt: "${prompt.substring(0, 60)}..."`);
 
-  // Fallback if no FAL_KEY provided
+  // No FAL_KEY: do NOT hand back dead external sample URLs — fail honestly
+  // and point at the engines that always work.
   if (!falKey) {
-    console.log('[Video-Endpoint] No FAL_KEY provided — responding with high-fidelity sample fallback');
-    const sampleKey = selectedModel && SAMPLE_VIDEOS[selectedModel.replace('_ai', '').replace('_gen3', '')]
-      ? selectedModel.replace('_ai', '').replace('_gen3', '')
-      : 'default';
-    const sample = SAMPLE_VIDEOS[sampleKey] || SAMPLE_VIDEOS.default;
-    return setTimeout(() => {
-      res.json({
-        success: true,
-        mode: 'fallback',
-        jobId: `job_${Date.now()}_sample`,
-        videoUrl: sample.url,
-        thumbnailUrl: sample.thumbnail,
-        duration: parseInt(mergedOptions.duration, 10) || 5,
-        aspectRatio: mergedOptions.aspectRatio || '16:9',
-        model: selectedModel,
-        message: 'Using simulated fallback video (no FAL_KEY configured). Add FAL_KEY to .env for real AI video generation.',
-      });
-    }, 1000);
+    return res.status(400).json({
+      success: false,
+      error: 'No FAL_KEY configured for external AI models (fal.ai is not reachable offline).',
+      hint: 'Use POST /api/agent-video/create (AI Director / Original engine) for fully working renders — characters, story, lip-sync, no keys needed. Add FAL_KEY to .env to enable fal.ai models here.',
+      useInstead: '/api/agent-video/create',
+    });
   }
 
   const endpoint = FAL_MODEL_ENDPOINTS[selectedModel] || FAL_MODEL_ENDPOINTS['kling_ai'];
@@ -611,18 +574,11 @@ app.post('/api/video/generate', async (req, res) => {
     });
   } catch (err) {
     console.error('[Video-Endpoint] fal.ai submission error:', err.message);
-    const sample = SAMPLE_VIDEOS.default;
-    res.json({
-      success: true,
-      mode: 'fallback',
-      jobId: `job_${Date.now()}_err_fallback`,
-      videoUrl: sample.url,
-      thumbnailUrl: sample.thumbnail,
-      duration: parseInt(mergedOptions.duration, 10) || 5,
-      aspectRatio: mergedOptions.aspectRatio || '16:9',
-      model: selectedModel,
-      error: err.message,
-      message: 'fal.ai API error — falling back to sample video asset.',
+    res.status(502).json({
+      success: false,
+      error: `fal.ai generation failed: ${err.message}`,
+      hint: 'External AI models are unreachable from this network. The Original engine always works: POST /api/agent-video/create.',
+      useInstead: '/api/agent-video/create',
     });
   }
 });
@@ -742,6 +698,279 @@ app.delete('/api/server-render/:jobId', (req, res) => {
   res.json({ success: deleted, message: deleted ? 'Job deleted' : 'Job not found' });
 });
 
+// Delete a rendered video file (plus thumbnail & subtitle sidecars) by filename
+app.delete('/api/server-render/file/:filename', (req, res) => {
+  const { filename } = req.params;
+  const deleted = deleteRenderFile(filename);
+  res.json({ success: deleted, message: deleted ? 'Render deleted' : 'File not found' });
+});
+
+// Convert a completed render into a shareable animated GIF preview
+app.post('/api/server-render/gif', (req, res) => {
+  const { fileName, maxSeconds, width, fps } = req.body || {};
+  if (!fileName || typeof fileName !== 'string') {
+    return res.status(400).json({ success: false, error: 'fileName is required' });
+  }
+  try {
+    const result = createGifFromRender(fileName, { maxSeconds, width, fps });
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json({ success: true, ...result, videoUrl: `/renders/${fileName}` });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// AI DIRECTOR — ORIGINAL VIDEO FROM LYRICS (generative engine)
+// ============================================================
+
+// Launch a fully-original lyrics→video render (auto soundtrack + painted visuals)
+app.get('/api/happyhorse/status', async (req, res) => {
+  try {
+    const hh = require('./happyhorseEngine');
+    res.json({ success: true, ...await hh.getStatus(true) });
+  } catch (e) {
+    res.json({ success: false, available: false, error: e.message });
+  }
+});
+
+app.post('/api/agent-video/create', (req, res) => {
+  try {
+    const request = req.body || {};
+    if (!request.lyrics || !String(request.lyrics).trim()) {
+      return res.status(400).json({ success: false, error: 'Lyrics are required.' });
+    }
+    const job = createAgentJob(request);
+    console.log(`[AIDirector] New original-video job ${job.id} — ${String(request.lyrics).split('\n').length} lyric lines`);
+    res.json({ success: true, jobId: job.id, status: job.status, videoUrl: job.videoUrl });
+  } catch (err) {
+    console.error('[AIDirector] create failed:', err);
+    res.status(500).json({ success: false, error: err.message || 'Failed to start agent render' });
+  }
+});
+
+// Poll agent job status + live director log
+app.get('/api/agent-video/status/:jobId', (req, res) => {
+  const job = getAgentJob(req.params.jobId);
+  if (!job) return res.status(404).json({ success: false, error: 'Agent job not found.' });
+  res.json({ success: true, job });
+});
+
+// Recent agent renders (for the library view)
+app.get('/api/agent-video/list', (req, res) => {
+  res.json({ success: true, jobs: listAgentJobs(Number(req.query.limit) || 24) });
+});
+
+app.post('/api/agent-video/cancel/:jobId', (req, res) => {
+  const ok = cancelAgentJob(req.params.jobId);
+  res.json({ success: ok, error: ok ? undefined : 'Job not found' });
+});
+
+app.get('/api/agent-video/download/:filename', (req, res) => {
+  const safe = path.basename(req.params.filename);
+  const filePath = path.join(RENDERS_DIR, safe);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ success: false, error: 'File not found' });
+  res.download(filePath);
+});
+
+// Quick preview of what the generative engine will paint (no render commit)
+app.post('/api/agent-video/preview', async (req, res) => {
+  try {
+    const request = req.body || {};
+    const lyrics = String(request.lyrics || '').trim();
+    if (!lyrics) return res.status(400).json({ success: false, error: 'Lyrics are required.' });
+    const { analyzeLyrics } = require('./lyricsAnalysis');
+    const analysis = analyzeLyrics(lyrics, { genre: request.genre, mood: request.mood, duration: request.duration || 60 });
+    res.json({
+      success: true,
+      analysis: {
+        genre: analysis.genre,
+        bpm: analysis.bpm,
+        mood: analysis.summary.mood,
+        lineCount: analysis.summary.lineCount,
+        chorusLines: analysis.summary.chorusCount,
+        worlds: analysis.summary.topEnvs,
+        palette: analysis.palette,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// ============================================================
+// OPUS AGENT — real autonomous runtime (tools + live transcript)
+// ============================================================
+
+// Start (or continue) an agent session turn. Returns immediately; client
+// polls the session transcript for live thinking/tool/result events.
+app.post('/api/opus/agent', (req, res) => {
+  try {
+    const { message, sessionId } = req.body || {};
+    if (!message || !String(message).trim()) {
+      return res.status(400).json({ success: false, error: 'Message is required.' });
+    }
+    const session = opusAgent.startAgentTurn(String(message).trim(), sessionId);
+    res.json({ success: true, sessionId: session.id });
+  } catch (err) {
+    console.error('[OpusAgent] start failed:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Full session transcript (thinking, tool calls, artifacts, replies)
+app.get('/api/opus/agent/session/:id', (req, res) => {
+  const session = opusAgent.getSession(req.params.id);
+  if (!session) return res.status(404).json({ success: false, error: 'Session not found.' });
+  res.json({ success: true, session: opusAgent.sessionView(session) });
+});
+
+app.get('/api/opus/agent/sessions', (req, res) => {
+  res.json({ success: true, sessions: opusAgent.listSessions() });
+});
+
+// FFmpeg runtime diagnostics (UI health chip uses this)
+app.get('/api/ffmpeg-status', (req, res) => {
+  const info = require('./ffmpegPaths').probe();
+  res.json({
+    available: info.available,
+    source: info.source,
+    ffmpeg: info.ffmpeg ? 'detected' : 'missing',
+    ffprobe: info.ffprobe ? 'detected' : 'missing',
+  });
+});
+
+// ============================================================
+// AI SCENE IMAGE GENERATION via fal.ai (lyrics → cinematic frames)
+// ============================================================
+
+const FAL_IMAGE_ENDPOINTS = {
+  flux: 'fal-ai/flux/dev',
+  fast_sdxl: 'fal-ai/fast-sdxl',
+  turbo: 'fal-ai/fast-sdxl',
+  sdxl: 'fal-ai/fast-sdxl',
+};
+
+const IMAGE_ASPECT_MAP = {
+  '16:9': { image_size: 'landscape_16_9' },
+  '9:16': { image_size: 'portrait_16_9' },
+  '1:1': { image_size: 'square_hd' },
+  '4:5': { image_size: 'portrait_4_5' },
+  '21:9': { image_size: 'ultrawide_21_9' },
+};
+
+// Offline fallback pool — curated cinematic Unsplash frames
+const STOCK_IMAGE_POOL = [
+  'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1478760329108-5c3ed9d495a0?w=1200&auto=format&fit=crop&q=80',
+  'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=1200&auto=format&fit=crop&q=80',
+];
+
+function stockImageForPrompt(prompt) {
+  let hash = 0;
+  for (let i = 0; i < prompt.length; i++) hash = (hash * 31 + prompt.charCodeAt(i)) >>> 0;
+  return STOCK_IMAGE_POOL[hash % STOCK_IMAGE_POOL.length];
+}
+
+// POST /api/ai-image/generate — text-to-image scene frame generation
+app.post('/api/ai-image/generate', async (req, res) => {
+  const { prompt, model, aspectRatio, apiKey, options } = req.body;
+  const falKey = getFalKey(apiKey);
+
+  if (!prompt) {
+    return res.status(400).json({ success: false, error: 'Missing prompt' });
+  }
+
+  const endpoint = FAL_IMAGE_ENDPOINTS[model] || FAL_IMAGE_ENDPOINTS.fast_sdxl;
+  const sizeCfg = IMAGE_ASPECT_MAP[aspectRatio] || { image_size: 'landscape_16_9' };
+
+  console.log(`[AI-Image] Scene frame request | model: ${model || 'fast_sdxl'} | ratio: ${aspectRatio || '16:9'} | prompt: "${String(prompt).substring(0, 80)}..."`);
+
+  // Offline fallback — deterministic stock pick keeps the feature fully usable
+  if (!falKey) {
+    const url = stockImageForPrompt(prompt);
+    return res.json({
+      success: true,
+      mode: 'fallback',
+      imageUrl: url,
+      prompt,
+      message: 'Using curated stock frame (no FAL_KEY configured).',
+    });
+  }
+
+  try {
+    const body = {
+      prompt,
+      ...sizeCfg,
+      ...(options && Object.keys(options).length ? options : {}),
+    };
+
+    const submission = await fetch(`https://queue.fal.run/${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Key ${falKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!submission.ok) {
+      throw new Error(`fal.ai image submit failed (${submission.status}): ${await submission.text()}`);
+    }
+
+    const sub = await submission.json();
+    const requestId = sub.request_id;
+    const statusUrl = sub.status_url;
+    const responseUrl = sub.response_url;
+
+    // Poll (fast-sdxl usually completes in < 20s)
+    let result = null;
+    for (let i = 0; i < 30; i++) {
+      await new Promise((r) => setTimeout(r, 2000));
+      const statusRes = await fetch(statusUrl, { headers: { 'Authorization': `Key ${falKey}` } });
+      const status = await statusRes.json();
+      if (status.status === 'COMPLETED') {
+        const resultRes = await fetch(responseUrl, { headers: { 'Authorization': `Key ${falKey}` } });
+        result = await resultRes.json();
+        break;
+      }
+      if (status.status === 'FAILED') {
+        throw new Error(status.error || 'fal.ai image generation failed');
+      }
+    }
+
+    if (!result) throw new Error('fal.ai image generation timed out');
+
+    const imageUrl = result.images?.[0]?.url || result.url || '';
+    if (!imageUrl) throw new Error('fal.ai returned no image URL');
+
+    return res.json({
+      success: true,
+      mode: 'ai',
+      imageUrl,
+      prompt,
+      requestId,
+    });
+  } catch (err) {
+    console.error('[AI-Image] generation error:', err.message);
+    return res.json({
+      success: true,
+      mode: 'fallback',
+      imageUrl: stockImageForPrompt(prompt),
+      prompt,
+      error: err.message,
+      message: 'fal.ai image API error — using curated stock frame fallback.',
+    });
+  }
+});
+
 // ============================================================
 // AI CLIP GAP FILLER & SEAMLESS VIDEO INBETWEENING ENDPOINTS
 // ============================================================
@@ -749,7 +978,7 @@ app.delete('/api/server-render/:jobId', (req, res) => {
 // Initiate clip gap filling & seamless stitching
 app.post('/api/clips/fill-gaps', async (req, res) => {
   try {
-    const { clips, gapDuration, engine, colorGrade } = req.body;
+    const { clips, gapDuration, engine, colorGrade, transitionStyle, transitionPrompt, audioUrl, audioBlobUrl, resolution, aspectRatio, fps } = req.body;
     
     if (!clips || !Array.isArray(clips) || clips.length < 2) {
       return res.status(400).json({
@@ -823,76 +1052,6 @@ app.post('/api/clips/extract-keyframes', async (req, res) => {
     console.error('[ClipGapFiller] Keyframe extraction failed:', err);
     res.status(500).json({ success: false, error: err.message || 'Keyframe extraction failed' });
   }
-});
-
-// Dedicated video clip upload endpoint for large video files
-app.post('/api/clips/upload', (req, res) => {
-  const originalName = req.query.name || `clip_${Date.now()}.mp4`;
-  const safeName = originalName.replace(/[^\w.-]/g, '_');
-  const uploadDir = path.join(__dirname, 'temp', 'uploads');
-  if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-  const targetFile = path.join(uploadDir, `${Date.now()}_${safeName}`);
-  const writeStream = fs.createWriteStream(targetFile);
-
-  req.on('aborted', () => {
-    writeStream.destroy();
-    fs.unlink(targetFile, () => {});
-  });
-
-  req.on('error', (err) => {
-    writeStream.destroy();
-    fs.unlink(targetFile, () => {});
-    if (!res.headersSent) res.status(500).json({ success: false, error: err.message });
-  });
-
-  req.pipe(writeStream);
-
-  writeStream.on('finish', () => {
-    try {
-      const { execSync } = require('child_process');
-      const cmd = `ffprobe -v error -show_entries format=duration:stream=width,height -of json "${targetFile}"`;
-      const stdout = execSync(cmd, { timeout: 6000 }).toString();
-      const meta = JSON.parse(stdout);
-      const duration = Math.max(1, Math.round(parseFloat(meta.format?.duration || 5)));
-      const width = meta.streams?.[0]?.width || 1280;
-      const height = meta.streams?.[0]?.height || 720;
-
-      // Extract quick thumbnail
-      const thumbFile = path.join(uploadDir, `thumb_${Date.now()}.jpg`);
-      try {
-        execSync(`ffmpeg -ss 0.1 -i "${targetFile}" -vframes 1 -q:v 2 "${thumbFile}" -y`, { stdio: 'ignore', timeout: 5000 });
-      } catch (_) {}
-
-      let thumbnail = null;
-      if (fs.existsSync(thumbFile)) {
-        thumbnail = `data:image/jpeg;base64,${fs.readFileSync(thumbFile).toString('base64')}`;
-      }
-
-      res.json({
-        success: true,
-        path: targetFile,
-        duration,
-        width,
-        height,
-        thumbnail,
-        name: originalName,
-      });
-    } catch (err) {
-      res.json({
-        success: true,
-        path: targetFile,
-        duration: 5,
-        thumbnail: null,
-        name: originalName,
-      });
-    }
-  });
-
-  writeStream.on('error', (err) => {
-    console.error('[ClipUpload] Write error:', err);
-    res.status(500).json({ success: false, error: err.message });
-  });
 });
 
 // Helper to get Anthropic instance
@@ -1065,24 +1224,20 @@ app.post('/api/opus-agent/chat', async (req, res) => {
     }
   }
 
-  // Interactive Opus Agent Chat Simulation Fallback
-  setTimeout(() => {
-    let reply = `🎬 **[Claude 3 Opus Agent Response]**\n\nI have analyzed your request regarding "${message}". Here is my directorial proposal:\n\n1. **Visual Direction**: Combine high-contrast volumetric laser fog with anamorphic 2.39:1 camera framing.\n2. **Camera Steering**: Set your Higgsfield DoP steering to **"360° Subject Orbit"** for smooth rotational depth.\n3. **Prompt Enhancer**: Add *"photorealistic cinema render, volumetric lighting, 8k resolution, award-winning cinematography"* to your prompt.\n\nWould you like me to automatically update your current scene prompts with this direction?`;
-    
-    const msgLower = message.toLowerCase();
-    if (msgLower.includes('prompt') || msgLower.includes('scene')) {
-      reply = `🎬 **[Claude 3 Opus Scene Prompt Specialist]**\n\nHere are 3 refined prompt variations optimized for Sora & Runway Gen-3 based on your directive:\n\n- **Option A (Cinematic Noir)**: *"Rain-slicked asphalt reflecting vibrant cyan neon signs, ultra-low angle slow dolly shot, 35mm film grain, 4k cinematic"* \n- **Option B (Hyper-Energy Drop)**: *"Explosive burst of cyan and magenta strobe light particles in dark void, bullet-time slow motion 120 FPS, photorealistic 8k"*\n- **Option C (Ethereal Dream)**: *"Soft volumetric fog illuminated by golden hour sunbeams, slow 360-degree orbital camera pan around subject, 70mm IMAX feel"*\n\nWhich style would you like to apply to your project timeline?`;
-    } else if (msgLower.includes('camera') || msgLower.includes('higgsfield')) {
-      reply = `🎥 **[Claude 3 Opus DoP Camera Steering]**\n\nFor optimal visual pacing with a 128 BPM track, I recommend configuring Higgsfield Cinema DoP with:\n- **Intro**: 360° Subject Orbit (smooth focal rotation)\n- **Pre-Chorus**: Hollywood Tracking Dolly (lateral movement)\n- **THE DROP**: Crash Zoom Transient snapped to the kick drum!\n\nShall I apply these camera paths to your project configuration?`;
-    }
-
+  // Real agent brain (fully offline — actual tools, no canned text)
+  try {
+    const result = await opusAgent.runTurnSync(String(message), req.body.sessionId);
     res.json({
       success: true,
-      reply,
-      agent: 'Claude 3 Opus Autonomous Director',
-      mode: 'opus-agent-engine'
+      reply: result.reply,
+      sessionId: result.sessionId,
+      agent: 'Opus Autonomous Director',
+      mode: 'agent-runtime'
     });
-  }, 500);
+  } catch (err) {
+    console.error('[OpusChat] agent runtime failed:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
 });
 
 // Register ChatGPT Custom GPT Actions, OpenAPI 3.1.0 & Generator endpoints

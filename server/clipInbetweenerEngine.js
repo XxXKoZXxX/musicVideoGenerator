@@ -5,6 +5,9 @@ const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
 const { execSync, spawn } = require('child_process');
+const { ffmpegPath: FFMPEG_BIN, ffprobePath: FFPROBE_BIN } = require('./ffmpegPaths');
+const FFMPEG = FFMPEG_BIN || 'ffmpeg';
+const FFPROBE = FFPROBE_BIN || 'ffprobe';
 
 const RENDERS_DIR = path.join(__dirname, 'renders');
 const TEMP_DIR = path.join(__dirname, 'temp');
@@ -30,18 +33,46 @@ async function downloadOrSaveAsset(source, destPath) {
     return destPath;
   }
 
-  // Fallback for browser blob: URLs that reach the backend
-  if (typeof source === 'string' && source.startsWith('blob:')) {
-    console.warn(`[ClipInbetweener] Browser blob URL received on server: ${source}. Using guaranteed local sample video fallback.`);
-    const fallbackDir = path.join(RENDERS_DIR, 'samples');
-    if (fs.existsSync(fallbackDir)) {
-      const samples = fs.readdirSync(fallbackDir).filter(f => f.endsWith('.mp4'));
-      if (samples.length > 0) {
-        const picked = path.join(fallbackDir, samples[0]);
-        await fs.promises.copyFile(picked, destPath);
-        return destPath;
-      }
-    }
+  // HTTP / HTTPS URL
+  if (typeof source === 'string' && (source.startsWith('http://') || source.startsWith('https://'))) {
+    return new Promise((resolve, reject) => {
+      const client = source.startsWith('https:') ? https : http;
+      let isResolved = false;
+
+      const finishWithError = (err) => {
+        if (isResolved) return;
+        isResolved = true;
+        fs.unlink(destPath, () => {});
+        reject(err);
+      };
+
+      const req = client.get(source, { timeout: 20000 }, (res) => {
+        if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
+          const redirectUrl = new URL(res.headers.location, source).toString();
+          downloadOrSaveAsset(redirectUrl, destPath).then(resolve).catch(reject);
+          return;
+        }
+
+        if (res.statusCode !== 200) {
+          return finishWithError(new Error(`Asset download failed: HTTP ${res.statusCode}`));
+        }
+
+        const stream = fs.createWriteStream(destPath);
+        res.pipe(stream);
+        stream.on('finish', () => {
+          if (isResolved) return;
+          isResolved = true;
+          stream.close(() => resolve(destPath));
+        });
+        stream.on('error', finishWithError);
+      });
+
+      req.on('timeout', () => {
+        req.destroy();
+        finishWithError(new Error(`Download timeout: ${source}`));
+      });
+      req.on('error', finishWithError);
+    });
   }
 
   // Local filesystem path
@@ -52,79 +83,6 @@ async function downloadOrSaveAsset(source, destPath) {
     return destPath;
   }
 
-  // Relative or localhost /renders/ path
-  if (typeof source === 'string' && source.includes('/renders/')) {
-    const renderPart = source.substring(source.indexOf('/renders/'));
-    const relativeClean = renderPart.replace(/^\/?renders\//, '');
-    const localCandidate = path.join(RENDERS_DIR, relativeClean);
-    if (fs.existsSync(localCandidate)) {
-      if (path.resolve(localCandidate) !== path.resolve(destPath)) {
-        await fs.promises.copyFile(localCandidate, destPath);
-      }
-      return destPath;
-    }
-  }
-
-  // HTTP / HTTPS URL
-  if (typeof source === 'string' && (source.startsWith('http://') || source.startsWith('https://'))) {
-    try {
-      return await new Promise((resolve, reject) => {
-        const client = source.startsWith('https:') ? https : http;
-        let isResolved = false;
-
-        const finishWithError = (err) => {
-          if (isResolved) return;
-          isResolved = true;
-          fs.unlink(destPath, () => {});
-          reject(err);
-        };
-
-        const req = client.get(source, {
-          timeout: 20000,
-          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AstraeaVideoEngine/1.0' }
-        }, (res) => {
-          if ([301, 302, 303, 307, 308].includes(res.statusCode) && res.headers.location) {
-            const redirectUrl = new URL(res.headers.location, source).toString();
-            downloadOrSaveAsset(redirectUrl, destPath).then(resolve).catch(reject);
-            return;
-          }
-
-          if (res.statusCode !== 200) {
-            return finishWithError(new Error(`Asset download failed: HTTP ${res.statusCode}`));
-          }
-
-          const stream = fs.createWriteStream(destPath);
-          res.pipe(stream);
-          stream.on('finish', () => {
-            if (isResolved) return;
-            isResolved = true;
-            stream.close(() => resolve(destPath));
-          });
-          stream.on('error', finishWithError);
-        });
-
-        req.on('timeout', () => {
-          req.destroy();
-          finishWithError(new Error(`Download timeout: ${source}`));
-        });
-        req.on('error', finishWithError);
-      });
-    } catch (err) {
-      console.warn(`[ClipInbetweener] Download notice for (${source}): ${err.message}. Using guaranteed local fallback.`);
-      // Robust fallback to bundled sample video loops
-      const fallbackDir = path.join(RENDERS_DIR, 'samples');
-      if (fs.existsSync(fallbackDir)) {
-        const samples = fs.readdirSync(fallbackDir).filter(f => f.endsWith('.mp4'));
-        if (samples.length > 0) {
-          const picked = path.join(fallbackDir, samples[Math.floor(Math.random() * samples.length)]);
-          await fs.promises.copyFile(picked, destPath);
-          return destPath;
-        }
-      }
-      return null;
-    }
-  }
-
   return null;
 }
 
@@ -133,7 +91,7 @@ async function downloadOrSaveAsset(source, destPath) {
  */
 function probeVideoFile(filePath) {
   try {
-    const cmd = `ffprobe -v error -show_entries format=duration:stream=width,height,r_frame_rate,codec_name -of json "${filePath}"`;
+    const cmd = `${FFPROBE} -v error -show_entries format=duration:stream=width,height,r_frame_rate,codec_name -of json "${filePath}"`;
     const stdout = execSync(cmd, { timeout: 8000 }).toString();
     const data = JSON.parse(stdout);
     const duration = parseFloat(data.format?.duration || 0);
@@ -167,13 +125,13 @@ function extractBoundaryKeyframes(clipPath, outDir, clipIndex) {
 
   try {
     // First frame (head)
-    execSync(`ffmpeg -ss 0.05 -i "${clipPath}" -frames:v 1 -q:v 2 "${headFramePath}" -y`, {
+    execSync(`${FFMPEG} -ss 0.05 -i "${clipPath}" -frames:v 1 -q:v 2 "${headFramePath}" -y`, {
       stdio: 'ignore',
       timeout: 6000,
     });
   } catch (_) {
     try {
-      execSync(`ffmpeg -i "${clipPath}" -vframes 1 -q:v 2 "${headFramePath}" -y`, { stdio: 'ignore', timeout: 6000 });
+      execSync(`${FFMPEG} -i "${clipPath}" -vframes 1 -q:v 2 "${headFramePath}" -y`, { stdio: 'ignore', timeout: 6000 });
     } catch (e) {
       console.warn(`[ClipInbetweener] Failed to extract head frame for clip ${clipIndex}:`, e.message);
     }
@@ -181,7 +139,7 @@ function extractBoundaryKeyframes(clipPath, outDir, clipIndex) {
 
   try {
     // Last frame (tail)
-    execSync(`ffmpeg -sseof -0.15 -i "${clipPath}" -frames:v 1 -q:v 2 "${tailFramePath}" -y`, {
+    execSync(`${FFMPEG} -sseof -0.15 -i "${clipPath}" -frames:v 1 -q:v 2 "${tailFramePath}" -y`, {
       stdio: 'ignore',
       timeout: 6000,
     });
@@ -291,9 +249,9 @@ function generateLocalBridgeSegment({
 }) {
   return new Promise((resolve, reject) => {
     const bridgeDuration = Math.max(1, duration);
-    const xfadeDuration = Math.min(1.2, bridgeDuration * 0.4);
-    const halfDuration = (bridgeDuration / 2) + (xfadeDuration / 2) + 0.2;
+    const halfDuration = bridgeDuration / 2 + 0.5;
     const halfFrames = Math.max(1, Math.round(halfDuration * fps));
+    const xfadeDuration = Math.min(1.2, bridgeDuration * 0.5);
     const offset = Math.max(0.1, (bridgeDuration - xfadeDuration) / 2);
     const colorFilter = getColorGradingFilter(colorGrade);
 
@@ -326,7 +284,7 @@ function generateLocalBridgeSegment({
       '-y',
     ];
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     let stderr = '';
 
     proc.stderr.on('data', (d) => {
@@ -377,7 +335,7 @@ function fallbackGenerateBridgeSegment(tailPath, headPath, outputPath, duration,
       '-y',
     ];
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     proc.on('close', (code) => {
       if (code === 0 && fs.existsSync(outputPath)) resolve(outputPath);
       else reject(new Error(`Fallback bridge generation failed with code ${code}`));
@@ -411,7 +369,7 @@ function normalizeClipSegment(inputPath, outputPath, width, height, fps, colorGr
       '-y'
     ];
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     proc.on('close', (code) => {
       if (code === 0 && fs.existsSync(outputPath)) resolve(outputPath);
       else reject(new Error(`Clip normalization failed for ${inputPath} (code ${code})`));
@@ -426,7 +384,7 @@ function normalizeClipSegment(inputPath, outputPath, width, height, fps, colorGr
  */
 function stitchAllSegments(segmentPaths, audioPath, outputPath, fps = 30) {
   return new Promise((resolve, reject) => {
-    const concatListPath = path.join(path.dirname(outputPath), `concat_${Date.now()}_${crypto.randomBytes(4).toString('hex')}.txt`);
+    const concatListPath = path.join(path.dirname(outputPath), 'concat_list.txt');
     const fileContents = segmentPaths.map(p => `file '${p.replace(/\\/g, '/')}'`).join('\n');
     fs.writeFileSync(concatListPath, fileContents);
 
@@ -454,13 +412,11 @@ function stitchAllSegments(segmentPaths, audioPath, outputPath, fps = 30) {
       '-y'
     );
 
-    const proc = spawn('ffmpeg', args);
+    const proc = spawn(FFMPEG, args);
     let stderr = '';
     proc.stderr.on('data', d => stderr += d.toString());
 
     proc.on('close', (code) => {
-      // Clean up temporary concat list file
-      fs.unlink(concatListPath, () => {});
       if (code === 0 && fs.existsSync(outputPath)) {
         resolve(outputPath);
       } else {
@@ -468,10 +424,7 @@ function stitchAllSegments(segmentPaths, audioPath, outputPath, fps = 30) {
       }
     });
 
-    proc.on('error', (err) => {
-      fs.unlink(concatListPath, () => {});
-      reject(err);
-    });
+    proc.on('error', reject);
   });
 }
 
@@ -559,7 +512,7 @@ async function executeClipGapFilling(jobId, rawClips, payload, jobTempDir, outpu
 
     for (let i = 0; i < rawClips.length; i++) {
       const rawClip = rawClips[i];
-      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.path || rawClip.url || rawClip.videoUrl || rawClip.dataUri);
+      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.url || rawClip.videoUrl || rawClip.dataUri || rawClip.path);
       const destFile = path.join(jobTempDir, `source_clip_${i}.mp4`);
       
       const savedPath = await downloadOrSaveAsset(clipSource, destFile);
@@ -625,7 +578,7 @@ async function executeClipGapFilling(jobId, rawClips, payload, jobTempDir, outpu
       const bridgeThumbFile = path.join(jobTempDir, `bridge_thumb_${i}.jpg`);
       let bridgeThumbBase64 = null;
       try {
-        execSync(`ffmpeg -ss ${Math.max(0.1, job.gapDuration / 2)} -i "${bridgeFile}" -vframes 1 -q:v 2 "${bridgeThumbFile}" -y`, { stdio: 'ignore', timeout: 4000 });
+        execSync(`${FFMPEG} -ss ${Math.max(0.1, job.gapDuration / 2)} -i "${bridgeFile}" -vframes 1 -q:v 2 "${bridgeThumbFile}" -y`, { stdio: 'ignore', timeout: 4000 });
         if (fs.existsSync(bridgeThumbFile)) {
           bridgeThumbBase64 = `data:image/jpeg;base64,${fs.readFileSync(bridgeThumbFile).toString('base64')}`;
         }
@@ -686,13 +639,6 @@ async function executeClipGapFilling(jobId, rawClips, payload, jobTempDir, outpu
 
     await stitchAllSegments(sequenceInOrder, localAudioPath, outputPath, fps);
 
-    // Sync to public/renders so webpack dev server or static host can serve directly
-    const publicDest = path.join(__dirname, '..', 'public', 'renders', path.basename(outputPath));
-    try {
-      if (!fs.existsSync(path.dirname(publicDest))) fs.mkdirSync(path.dirname(publicDest), { recursive: true });
-      fs.copyFileSync(outputPath, publicDest);
-    } catch (_) {}
-
     // Probe final master
     const finalMeta = probeVideoFile(outputPath);
     job.totalDuration = Math.round(finalMeta.duration);
@@ -729,7 +675,7 @@ async function extractKeyframesForClips(rawClips = []) {
   try {
     for (let i = 0; i < rawClips.length; i++) {
       const rawClip = rawClips[i];
-      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.path || rawClip.url || rawClip.videoUrl || rawClip.dataUri);
+      const clipSource = typeof rawClip === 'string' ? rawClip : (rawClip.url || rawClip.videoUrl || rawClip.dataUri);
       const destFile = path.join(tempDir, `kf_clip_${i}.mp4`);
       const saved = await downloadOrSaveAsset(clipSource, destFile);
       if (saved) {

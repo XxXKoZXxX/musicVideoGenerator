@@ -1,11 +1,7 @@
 // src/services/LocalServerRenderService.js - Client for dedicated local backend video rendering server
 import { saveProjectToCloud } from '../firebase.config';
 
-const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || (
-  typeof window !== 'undefined' && (window.location.port === '3210' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'))
-    ? ''
-    : 'http://localhost:4000'
-);
+import BACKEND_URL from './backendUrl';
 
 
 /**
@@ -238,6 +234,20 @@ export async function listServerVideos() {
     console.warn('[LocalServerRenderService] Failed to list server renders:', err.message);
     return [];
   }
+}
+
+/**
+ * Deletes a rendered video file (and its thumbnail / subtitle sidecars) from the server.
+ */
+export async function deleteServerRenderFile(fileName) {
+  const res = await fetch(`${BACKEND_URL}/api/server-render/file/${encodeURIComponent(fileName)}`, {
+    method: 'DELETE',
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || `Delete failed: HTTP ${res.status}`);
+  }
+  return res.json();
 }
 
 /**

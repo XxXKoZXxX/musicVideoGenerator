@@ -1,4 +1,6 @@
 // AIService.js - Music Video AI Storyboard & Song-Specific Script Generator
+import BACKEND_URL_DEFAULT from './backendUrl';
+const BACKEND_URL = BACKEND_URL_DEFAULT;
 
 export const MUSIC_GENRES = [
   'Cyberpunk / Electro',
@@ -12,8 +14,6 @@ export const MUSIC_GENRES = [
   'Hyperpop / Glitchcore',
   'Cinematic Epic',
 ];
-
-const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || 'http://localhost:4000';
 
 // Generate or retrieve a bespoke storyline created specifically for any given song
 export async function generateStorylineFromAudio(audioInfo, genreOverride = null, model = 'claude_opus', userPrompt = '') {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Film, Wand2, User, Zap } from 'lucide-react';
 
 // 4-Step Professional Music Video Studio Components
@@ -9,10 +9,12 @@ import StepFour from '../StepFour';
 import { SINGER_PORTRAITS } from '../../services/StoryDirector';
 import '../../styles/Step.css';
 
-export default function VideoStudioView({ profile, onNavigate }) {
+export default function VideoStudioView({ profile, onNavigate, project: externalProject, onProjectChange }) {
   const [currentStep, setCurrentStep] = useState(1);
+  const skipNextPullRef = useRef(false);
 
   // Unified Project State across all 4 steps
+  // (seeded from the app-level shared project when provided)
   const [project, setProject] = useState(() => ({
     artistName: profile?.name || 'Astraea Cosmic',
     renderStyle: 'photoreal',
@@ -39,7 +41,46 @@ export default function VideoStudioView({ profile, onNavigate }) {
     resolution: '1080p',
     aspectRatio: '16:9',
     lyricsStyle: 'neon',
+    ...(externalProject ? {
+      artistName: externalProject.artistName,
+      audioTitle: externalProject.audioTitle,
+      bpm: externalProject.bpm,
+      duration: externalProject.duration,
+      resolution: externalProject.resolution,
+      aspectRatio: externalProject.aspectRatio,
+      lyricsStyle: externalProject.lyricsStyle,
+      selectedTrackId: externalProject.selectedTrackId,
+      ...(Array.isArray(externalProject.images) && externalProject.images.length
+        ? { images: externalProject.images }
+        : {}),
+      ...(externalProject.lyrics ? { lyrics: externalProject.lyrics } : {}),
+      ...(externalProject.songStructure ? { songStructure: externalProject.songStructure } : {}),
+      ...(externalProject.aiStoryboard ? { aiStoryboard: externalProject.aiStoryboard } : {}),
+      ...(externalProject.screenplay ? { screenplay: externalProject.screenplay } : {}),
+      ...(externalProject.singerImageUrl ? { singerImageUrl: externalProject.singerImageUrl } : {}),
+    } : {}),
   }));
+
+  // ---- Shared project sync (app-level source of truth) ----
+  // Push internal changes up so the top bar / quick render always see the latest.
+  useEffect(() => {
+    if (onProjectChange) onProjectChange(project);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [project]);
+
+  // Pull down edits made outside the wizard (e.g. title in the top bar).
+  useEffect(() => {
+    if (!externalProject || skipNextPullRef.current) {
+      skipNextPullRef.current = false;
+      return;
+    }
+    setProject((prev) =>
+      externalProject.audioTitle !== undefined && externalProject.audioTitle !== prev.audioTitle
+        ? { ...prev, audioTitle: externalProject.audioTitle }
+        : prev
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [externalProject?.audioTitle]);
 
   const handleStepOneNext = (data) => {
     setProject((prev) => ({ ...prev, ...data }));

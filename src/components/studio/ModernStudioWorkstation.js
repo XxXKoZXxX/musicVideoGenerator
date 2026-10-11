@@ -294,12 +294,11 @@ export default function ModernStudioWorkstation({
       await generatorRef.current.exportVideo(
         project.duration || 32,
         (progress) => setExportProgress(Math.round(progress * 100)),
-        (blobUrl, result) => {
+        (blobUrl) => {
           setIsExporting(false);
-          const ext = result?.extension || 'mp4';
           const a = document.createElement('a');
           a.href = blobUrl;
-          a.download = `${project.artistName.replace(/\s+/g, '_')}_Master_Music_Video_${project.aspectRatio}.${ext}`;
+          a.download = `${project.artistName.replace(/\s+/g, '_')}_Master_Music_Video_${project.aspectRatio}.webm`;
           a.click();
         }
       );
@@ -336,27 +335,8 @@ export default function ModernStudioWorkstation({
         }
       );
 
-      if (result) {
-        setServerRenderProgress({
-          status: 'COMPLETED',
-          progress: 100,
-          stage: 'Server Video Render Complete!',
-          videoUrl: result.videoUrl,
-          downloadUrl: result.downloadUrl,
-          error: null,
-        });
-
-        project.stitchedVideoUrl = result.videoUrl;
-        project.videoUrl = result.videoUrl;
-        if (Array.isArray(project.images)) {
-          project.images = [result.videoUrl, ...project.images.filter((img) => img !== result.videoUrl)];
-        }
-      }
-
-      if (result && result.downloadUrl) {
-        try {
-          triggerBrowserDownload(result.downloadUrl, `${(project.artistName || 'Astraea').replace(/\s+/g, '_')}_Server_Master.mp4`);
-        } catch (_) {}
+      if (result.downloadUrl) {
+        triggerBrowserDownload(result.downloadUrl, `${project.artistName.replace(/\s+/g, '_')}_Server_Master.mp4`);
       }
     } catch (err) {
       console.error('[ServerRender] Render error:', err);
@@ -730,8 +710,8 @@ export default function ModernStudioWorkstation({
             onClick={handleExportVideo}
             disabled={isExporting}
           >
-            <Download className={`w-3.5 h-3.5 ${isExporting ? 'animate-bounce text-cyan-400' : ''}`} />
-            <span>{isExporting ? `Exporting ${exportProgress}%...` : 'Export 4K Master'}</span>
+            <Download className="w-3.5 h-3.5" />
+            <span>Export 4K Master</span>
           </button>
         </div>
       </header>

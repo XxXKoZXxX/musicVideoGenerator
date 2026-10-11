@@ -26,7 +26,6 @@ import {
   startClipGapFilling,
   pollClipGapFillingStatus,
   extractClipKeyframes,
-  uploadClipFile,
 } from '../../services/ClipInbetweenerService';
 import '../../styles/ClipInbetweenerStudioView.css';
 
@@ -103,94 +102,25 @@ export default function ClipInbetweenerStudioView({
     }
   }, [clips]);
 
-  // Handle Video Clip Uploads with browser thumbnail/duration extraction and backend stream upload
-  const handleClipUpload = async (e) => {
+  // Handle Video Clip Uploads
+  const handleClipUpload = (e) => {
     const files = Array.from(e.target.files || []);
     if (files.length === 0) return;
 
-    const initialClips = files.map((file, idx) => {
+    const newClips = files.map((file, idx) => {
       const blobUrl = URL.createObjectURL(file);
       return {
         id: `custom_${Date.now()}_${idx}`,
         title: file.name.replace(/\.[^/.]+$/, ''),
         url: blobUrl,
         blob: file,
-        path: file.path || null,
         duration: 5,
         thumbnail: null,
-        isUploading: true,
       };
     });
 
-    setClips((prev) => [...prev, ...initialClips]);
+    setClips((prev) => [...prev, ...newClips]);
     setError(null);
-
-    // Concurrently extract accurate video metadata/thumbnails and upload to backend
-    initialClips.forEach(async (initialClip) => {
-      const file = initialClip.blob;
-      if (!file) return;
-
-      // Extract accurate duration and thumbnail in browser
-      try {
-        const v = document.createElement('video');
-        v.preload = 'metadata';
-        v.muted = true;
-        v.playsInline = true;
-        v.src = initialClip.url;
-
-        v.onloadedmetadata = () => {
-          const dur = Math.max(1, Math.round(v.duration || 5));
-          v.currentTime = Math.min(1.0, dur * 0.1);
-        };
-
-        v.onseeked = () => {
-          try {
-            const canvas = document.createElement('canvas');
-            canvas.width = Math.min(480, v.videoWidth || 480);
-            canvas.height = Math.round(canvas.width * ((v.videoHeight || 270) / (v.videoWidth || 480)));
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(v, 0, 0, canvas.width, canvas.height);
-            const thumb = canvas.toDataURL('image/jpeg', 0.7);
-
-            setClips((prev) =>
-              prev.map((c) =>
-                c.id === initialClip.id
-                  ? { ...c, duration: Math.max(1, Math.round(v.duration || c.duration)), thumbnail: thumb }
-                  : c
-              )
-            );
-          } catch (_) {}
-        };
-      } catch (_) {}
-
-      // Upload file directly to backend to get local server path
-      try {
-        const uploadRes = await uploadClipFile(file);
-        if (uploadRes && uploadRes.path) {
-          setClips((prev) =>
-            prev.map((c) =>
-              c.id === initialClip.id
-                ? {
-                    ...c,
-                    path: uploadRes.path,
-                    duration: uploadRes.duration || c.duration,
-                    thumbnail: c.thumbnail || uploadRes.thumbnail,
-                    isUploading: false,
-                  }
-                : c
-            )
-          );
-        } else {
-          setClips((prev) =>
-            prev.map((c) => (c.id === initialClip.id ? { ...c, isUploading: false } : c))
-          );
-        }
-      } catch (_) {
-        setClips((prev) =>
-          prev.map((c) => (c.id === initialClip.id ? { ...c, isUploading: false } : c))
-        );
-      }
-    });
   };
 
   // Handle Custom Audio Upload
@@ -287,10 +217,6 @@ export default function ClipInbetweenerStudioView({
       setProgressPercent(100);
       setProgressStage('Seamless Video Render Complete!');
 
-      setTimeout(() => {
-        masterVideoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }, 300);
-
       if (onApplyMasterToProject) {
         onApplyMasterToProject({
           stitchedVideoUrl: result.videoUrl,
@@ -345,45 +271,6 @@ export default function ClipInbetweenerStudioView({
           ))}
         </div>
       </header>
-
-      {/* COMPLETED MASTER BANNER */}
-      {renderedMaster && (
-        <div className="mb-6 p-4 rounded-2xl bg-emerald-950/70 border border-emerald-500/50 flex flex-wrap items-center justify-between gap-4 shadow-xl shadow-emerald-950/40 animate-in fade-in slide-in-from-top-2 duration-300">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 flex-shrink-0">
-              <CheckCircle className="w-6 h-6" />
-            </div>
-            <div>
-              <h4 className="text-sm font-black text-white flex items-center gap-2">
-                Seamless Master Video Ready!
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full font-mono">
-                  {renderedMaster.totalDuration || estimatedTotalMasterDuration.toFixed(0)}s MP4
-                </span>
-              </h4>
-              <p className="text-xs text-slate-300">
-                All video clips have been patched together and harmonized into one seamless master video.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs rounded-xl flex items-center gap-1.5 transition-all shadow-md shadow-emerald-500/20 cursor-pointer"
-              onClick={() => masterVideoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-            >
-              <Film className="w-3.5 h-3.5" /> Watch Video
-            </button>
-            <a
-              href={renderedMaster.downloadUrl || renderedMaster.videoUrl}
-              download="seamless_master.mp4"
-              className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-white/10 font-bold text-xs rounded-xl flex items-center gap-1.5 transition-all"
-              style={{ textDecoration: 'none' }}
-            >
-              <Download className="w-3.5 h-3.5 text-emerald-400" /> Download MP4
-            </a>
-          </div>
-        </div>
-      )}
 
       {/* ERROR NOTICE */}
       {error && (
@@ -608,17 +495,6 @@ export default function ClipInbetweenerStudioView({
                   autoPlay
                   loop
                   playsInline
-                  preload="auto"
-                  onError={(e) => {
-                    console.warn('[ClipInbetweenerStudio] Video player load notice:', e);
-                    if (e.target.src && !e.target.src.includes(':4000') && renderedMaster.videoUrl) {
-                      const cleanPath = renderedMaster.videoUrl.startsWith('/') ? renderedMaster.videoUrl : `/${renderedMaster.videoUrl}`;
-                      e.target.src = `http://localhost:4000${cleanPath}`;
-                    } else if (e.target.src && e.target.src.includes(':4000') && renderedMaster.videoUrl) {
-                      const filename = renderedMaster.videoUrl.split('/').pop();
-                      e.target.src = `/renders/${filename}`;
-                    }
-                  }}
                 />
               </div>
 
@@ -896,18 +772,6 @@ export default function ClipInbetweenerStudioView({
                 <span>{progressPercent}%</span>
               </div>
             </div>
-          )}
-
-          {/* VIEW MASTER BUTTON (WHEN READY) */}
-          {renderedMaster && !isProcessing && (
-            <button
-              type="button"
-              className="w-full py-3 mb-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition-all cursor-pointer"
-              onClick={() => masterVideoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
-            >
-              <Film className="w-4 h-4" />
-              <span>🎬 View Stitched Master ({renderedMaster.totalDuration || estimatedTotalMasterDuration.toFixed(0)}s)</span>
-            </button>
           )}
 
           {/* PRIMARY EXECUTION ACTION BUTTON */}

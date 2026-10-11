@@ -1,11 +1,7 @@
 // src/services/ClipInbetweenerService.js - Client Service for AI Clip Inbetweening & Gap Filling
 import { blobToDataUri } from './LocalServerRenderService';
 
-const BACKEND_URL = process.env.REACT_APP_VIDEO_SERVER_URL || (
-  typeof window !== 'undefined' && (window.location.port === '3210' || (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'))
-    ? ''
-    : 'http://localhost:4000'
-);
+import BACKEND_URL from './backendUrl';
 
 export const COLOR_GRADE_PRESETS = [
   {
@@ -109,15 +105,15 @@ export const SAMPLE_CLIP_SETS = [
     category: 'Sci-Fi / Action',
     clips: [
       {
-        title: 'Clip 1: Neon City Flythrough',
-        url: `${BACKEND_URL}/renders/samples/cyber_city.mp4`,
-        duration: 4,
+        title: 'Clip 1: Neon Skyscraper Flythrough',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+        duration: 15,
         thumbnail: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=600&auto=format&fit=crop&q=80',
       },
       {
-        title: 'Clip 2: Sunset Horizon Glide',
-        url: `${BACKEND_URL}/renders/samples/sunset_horizon.mp4`,
-        duration: 4,
+        title: 'Clip 2: Rooftop Drone Escape',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
+        duration: 15,
         thumbnail: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600&auto=format&fit=crop&q=80',
       },
     ],
@@ -128,45 +124,26 @@ export const SAMPLE_CLIP_SETS = [
     category: 'Hollywood Drama',
     clips: [
       {
-        title: 'Clip 1: Neon Matrix City',
-        url: `${BACKEND_URL}/renders/samples/cyber_city.mp4`,
-        duration: 4,
+        title: 'Clip 1: Sunset Awakening',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyBlazes.mp4',
+        duration: 15,
         thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=600&auto=format&fit=crop&q=80',
       },
       {
-        title: 'Clip 2: Sunset Radiance Horizon',
-        url: `${BACKEND_URL}/renders/samples/sunset_horizon.mp4`,
-        duration: 4,
+        title: 'Clip 2: Cybernetic Confrontation',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
+        duration: 15,
         thumbnail: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=600&auto=format&fit=crop&q=80',
       },
       {
-        title: 'Clip 3: Cosmic Deep Starfield',
-        url: `${BACKEND_URL}/renders/samples/cosmic_nebula.mp4`,
-        duration: 4,
+        title: 'Clip 3: Atmospheric Resolution',
+        url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
+        duration: 12,
         thumbnail: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?w=600&auto=format&fit=crop&q=80',
       },
     ],
   },
 ];
-
-/**
- * Directly uploads a video clip file as a stream to the local backend.
- */
-export async function uploadClipFile(file) {
-  if (!file) return null;
-  try {
-    const res = await fetch(`${BACKEND_URL}/api/clips/upload?name=${encodeURIComponent(file.name || 'clip.mp4')}`, {
-      method: 'POST',
-      body: file,
-    });
-    if (res.ok) {
-      return await res.json();
-    }
-  } catch (err) {
-    console.warn('[ClipInbetweenerService] Direct upload failed, will fallback to local data URI:', err.message);
-  }
-  return null;
-}
 
 /**
  * Prepares clip assets before submitting to backend (converting blob: URLs to data URIs if needed)
@@ -175,44 +152,6 @@ export async function prepareClipsForSubmission(clips) {
   if (!Array.isArray(clips)) return [];
   const processed = [];
   for (const clip of clips) {
-    // If the clip already has a server local filesystem path, send that directly
-    if (typeof clip === 'object' && clip.path) {
-      processed.push({
-        ...clip,
-        path: clip.path,
-        url: clip.path,
-        title: clip.title || 'Video Clip',
-        duration: clip.duration || 5,
-      });
-      continue;
-    }
-
-    // Direct binary stream upload for File or Blob objects
-    if (typeof clip === 'object' && (clip.blob || (typeof clip.url === 'string' && clip.url.startsWith('blob:')))) {
-      try {
-        let fileToUpload = clip.blob;
-        if (!fileToUpload && typeof clip.url === 'string') {
-          const fetched = await fetch(clip.url);
-          fileToUpload = await fetched.blob();
-        }
-        if (fileToUpload) {
-          const uploadRes = await uploadClipFile(fileToUpload);
-          if (uploadRes && uploadRes.path) {
-            processed.push({
-              ...clip,
-              path: uploadRes.path,
-              url: uploadRes.path,
-              title: clip.title || 'Video Clip',
-              duration: uploadRes.duration || clip.duration || 5,
-            });
-            continue;
-          }
-        }
-      } catch (uploadErr) {
-        console.warn('[ClipInbetweenerService] Stream upload fallback:', uploadErr.message);
-      }
-    }
-
     let sourceUrl = typeof clip === 'string' ? clip : (clip.url || clip.videoUrl || clip.dataUri);
     if (sourceUrl && sourceUrl.startsWith('blob:')) {
       sourceUrl = await blobToDataUri(sourceUrl);
@@ -252,26 +191,16 @@ export async function startClipGapFilling(payload) {
     });
 
     if (res.ok) {
-      const data = await res.json();
-      if (data.videoUrl && !data.videoUrl.startsWith('http')) {
-        data.videoUrl = `${BACKEND_URL}${data.videoUrl.startsWith('/') ? '' : '/'}${data.videoUrl}`;
-      }
-      if (data.downloadUrl && !data.downloadUrl.startsWith('http')) {
-        data.downloadUrl = `${BACKEND_URL}${data.downloadUrl.startsWith('/') ? '' : '/'}${data.downloadUrl}`;
-      }
-      return data;
+      return await res.json();
     }
     const errData = await res.json().catch(() => ({}));
     throw new Error(errData.error || `Server responded with status ${res.status}`);
   } catch (err) {
-    if (err.message && !err.message.includes('fetch') && !err.message.includes('Network') && !err.message.includes('offline')) {
-      throw err;
-    }
     console.warn('[ClipInbetweenerService] Backend request failed, falling back to simulated pipeline:', err.message);
 
     // Simulated fallback for offline or headless environments
     const mockJobId = `mock_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-    const sampleMaster = `${BACKEND_URL}/renders/samples/cyber_city.mp4`;
+    const sampleMaster = 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
     return {
       success: true,
       jobId: mockJobId,
@@ -311,8 +240,8 @@ export async function pollClipGapFillingStatus(jobId, onProgress = () => {}) {
       status: 'COMPLETED',
       progress: 100,
       stage: 'Seamless Master Video Render Complete!',
-      videoUrl: `${BACKEND_URL}/renders/samples/cyber_city.mp4`,
-      downloadUrl: `${BACKEND_URL}/renders/samples/cyber_city.mp4`,
+      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+      downloadUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
       totalDuration: 28,
       clipsCount: 2,
       gapsCount: 1,
@@ -330,23 +259,10 @@ export async function pollClipGapFillingStatus(jobId, onProgress = () => {}) {
       const data = await res.json();
       if (!data.success) continue;
 
-      const fullVideoUrl = data.videoUrl
-        ? (data.videoUrl.startsWith('http') ? data.videoUrl : `${BACKEND_URL}${data.videoUrl.startsWith('/') ? '' : '/'}${data.videoUrl}`)
-        : null;
-      const fullDownloadUrl = data.downloadUrl
-        ? (data.downloadUrl.startsWith('http') ? data.downloadUrl : `${BACKEND_URL}${data.downloadUrl.startsWith('/') ? '' : '/'}${data.downloadUrl}`)
-        : null;
-
-      const augmentedData = {
-        ...data,
-        videoUrl: fullVideoUrl || data.videoUrl,
-        downloadUrl: fullDownloadUrl || data.downloadUrl,
-      };
-
-      onProgress(augmentedData);
+      onProgress(data);
 
       if (data.status === 'COMPLETED') {
-        return augmentedData;
+        return data;
       }
 
       if (data.status === 'FAILED') {

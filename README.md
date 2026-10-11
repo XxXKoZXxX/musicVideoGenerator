@@ -4,6 +4,64 @@
 [![React](https://img.shields.io/badge/React-18.2.0-cyan.svg)](https://reactjs.org/)
 [![Status](https://img.shields.io/badge/Status-Live%20Production-emerald.svg)](http://localhost:3210)
 
+---
+
+## 🎬 AI DIRECTOR — 100% ORIGINAL VIDEO FROM LYRICS (new)
+
+The flagship **AI Director — Original** studio turns raw lyrics into a completely original
+music video — **no stock footage, no external AI APIs, nothing downloaded**:
+
+1. **Lyric intelligence** — structure ([Verse]/[Chorus] tags or automatic detection),
+   imagery→world mapping (12 generative environments), emotion/valence/energy arcs,
+   genre & BPM estimation, HSL palette synthesis.
+2. **Original soundtrack** — a royalty-free instrumental is *composed from scratch*
+   (kick/snare/hats, 808/sub bass, pads, arps, lead motif — genre templates for Pop, EDM,
+   Trap, Lo-Fi, Rock, Cinematic, Synthwave, R&B) in the song's key & BPM. Upload your own
+   track instead and the beat detector (onset autocorrelation) locks the grid for you.
+3. **Shot planning** — scenes are cut on section boundaries & beat drops; choruses get a
+   signature world so the hook feels iconic. Camera moves (push/drift/sway), beat-punch
+   zooms, shake, crossfades & drop flashes are all beat-reactive.
+4. **Frame-by-frame generation** — every frame is painted procedurally on a Skia canvas
+   (@napi-rs/canvas) and piped raw into ffmpeg → libx264 **MP4 master** with burned-in
+   **kinetic lyrics** (Karaoke, Kinetic, Impact, Neon, Typewriter, Minimal), title card,
+   film grain, vignette, poster frame and SRT/LRC sidecars.
+
+Fire it from the sidebar: **AI Director — Original** (default view), or
+`POST /api/agent-video/create { lyrics, ... }` and poll `/api/agent-video/status/:jobId`
+for the live director log. Render completely offline.
+
+## 🤖 OPUS AGENT — real autonomous director runtime (new)
+
+The sidebar **Opus Director Agent** is now a *real* agent — no canned replies,
+no API key needed. It plans multi-step work and executes actual tools with a
+live transcript (thinking → tool cards → artifacts → reply):
+
+- ✍️ **write_lyrics** — original songwriting engine (`server/lyricWriter.js`):
+  theme detection (13 banks), rhyme families, verse/chorus/bridge structure,
+  deterministic seeds for "regenerate" variations.
+- 🔍 **analyze_lyrics** — the full lyric-intelligence brief.
+- 🎬 **render_original_video** — launches the AI Director engine from chat.
+- 📡 **monitor_render** — babysits the render, streaming progress milestones.
+- 📖 **production_bible**, 💡 **suggest_concepts**, 📊 **get_render_status**,
+  🗂 **list_renders**, 🛑 **cancel_render**, 🎛 **set_preferences**.
+
+Chain commands naturally: *"Write a lo-fi song about midnight rain, then make
+the video — vertical, 1080p, karaoke captions"* → it writes, renders, monitors
+and hands you the playable master inline.
+
+API: `POST /api/opus/agent {message, sessionId?}` then poll
+`GET /api/opus/agent/session/:id` for the live transcript. The legacy
+`/api/opus-agent/chat` route now runs through the same brain.
+
+```bash
+npm run video-server
+
+```bash
+npm run video-server        # backend :4000
+npm run start:musicvid      # web app :3220 (proxies /api to :4000)
+npm run test:server         # includes originalEngine.test.js (end-to-end MP4 render test)
+```
+
 > **Astraea** is a sovereign, standalone esoteric super-application integrating the **Secret Language of Birthdays (366 Day Archetypes)**, **Astrological Birth Chart & Planetary Transits**, **The Grand Occult Grimoire (10 Portals)**, **Astral Dream Sanctuary**, **Pythagorean Numerology Matrix**, **Dual-Person Relationship Synastry & Twin Flame Quiz**, **Interactive 3-Card Tarot Spreads**, **78-Card Tarot Encyclopedia**, **Dual-Host Conversational Voice Podcast (Atlas & Luna)**, **60 FPS Motion Video Forecast Studio**, and **20+ Solfeggio Sacred Frequencies**.
 
 ---
@@ -117,3 +175,60 @@ Persist projects, video assets, and user presets seamlessly to Cloud Firestore w
 ---
 
 © 2026 Astraea Cosmic Studios. All rights reserved.
+
+## HappyHorse AI engine (optional real AI footage)
+
+Beyond the built-in procedural engine (original characters, storylines,
+lip-sync — works fully offline), the app can render videos from **real
+AI-model footage** using the [HappyHorse CLI](https://github.com/wonderwhy-er/DesktopCommanderMCP)
+(Alibaba HappyHorse 1.0 — text/image-to-video with native synchronized audio).
+
+**Install (Windows, on your own machine):**
+
+```powershell
+irm https://happyhorse-cli-releases.oss-accelerate.aliyuncs.com/happyhorse-cli/install.ps1 | iex
+```
+
+or run `scripts/install-happyhorse.ps1` from this repo. The installer verifies
+SHA256SUMS + Authenticode signatures before installing. Then run `happyhorse login`
+once. Linux/macOS users: place the binary on PATH or point `HH_CLI_PATH` at it.
+
+**Use it:** in the AI Director pick *Engine → HappyHorse AI video* (the UI warns
+if the CLI isn't detected), or tell the agent *"use happyhorse"*. The engine
+generates one AI clip per song section (2–15s each, cap by quality: draft 4 /
+standard 6 / master 8 clips), muxes your original or uploaded soundtrack,
+burns the lyrics, and writes the same poster + SRT/LRC sidecars as the
+procedural engine. If the CLI is missing or a clip fails, the render
+automatically falls back to the procedural engine — the job always completes.
+
+**Configuration:**
+
+| Env var | Purpose |
+|---|---|
+| `HH_CLI_PATH` | Full path to the CLI if not on PATH |
+| `HH_GEN_ARGS` | Override the generate command template (`{prompt} {duration} {resolution} {output}` placeholders) if your CLI version uses different flags |
+
+Status check: `GET /api/happyhorse/status` → `{available, version, path}`.
+
+## Vercel deployment (web studio)
+
+The Vercel deployment runs the **full web studio**: the complete UI, live
+lyrics analysis, the Opus agent (write/analyze/plan + short renders), and
+**real video rendering** — the original engine (cast, storylines, lip-sync,
+composed soundtrack, burned karaoke captions) executes inside the
+`/api/agent-video/create` serverless function (60s / 3GB config) and returns
+the finished master as a data URL. Serverless caps apply: **max 16s, 480p
+draft**. For full-length masters, a persistent render library and progress
+streaming, run the studio locally or as the desktop app:
+
+```bash
+npm install
+npm start        # web on :3220, render server on :4000
+```
+
+`vercel.json` builds the CRA bundle with `npm run react-build` (no Electron
+packaging), rewrites all routes to the SPA, and runs functions at 60s/3GB.
+Serverless functions: `/health`, `/api/server-status`,
+`/api/happyhorse/status`, `/api/agent-video/preview` (analysis),
+`/api/agent-video/create` (**full synchronous render**), agent turns +
+session reads, and a tolerant status endpoint (results ship with create).

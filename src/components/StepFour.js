@@ -13,6 +13,10 @@ import {
   Palette,
   Monitor,
   RotateCcw,
+  HardDrive,
+  Subtitles,
+  Loader2,
+  Type,
 } from 'lucide-react';
 
 import {
@@ -24,6 +28,15 @@ import {
   IMAGE_TO_VIDEO_MODES,
 } from '../services/VideoGenerator';
 import { audioEngine } from '../services/AudioEngine';
+import { renderVideoOnServer, triggerBrowserDownload } from '../services/LocalServerRenderService';
+import {
+  PLATFORM_PRESETS,
+  COLOR_LOOKS,
+  suggestLook,
+  buildServerRenderOptions,
+  defaultCinematicSettings,
+} from '../services/CinematicPresets';
+import BACKEND_URL from '../services/backendUrl';
 import { LyricsEngine } from '../services/LyricsEngine';
 import { lipSyncEngine } from '../services/LipSyncEngine';
 import { StoryDirector } from '../services/StoryDirector';
@@ -77,6 +90,8 @@ export default function StepFour({ onBack, project }) {
     saturation: 110,
     audioBoost: project.audioBoost || 100,
     lyricsStyle: project.lyricsStyle || 'neon',
+    // Cinematic master options (server FFmpeg pipeline)
+    ...defaultCinematicSettings(project),
   });
 
   // Export State
@@ -84,6 +99,23 @@ export default function StepFour({ onBack, project }) {
   const [exportProgress, setExportProgress] = useState(0);
   const [videoResult, setVideoResult] = useState(null);
   const [error, setError] = useState(null);
+
+  // Server MP4 Master (FFmpeg render with burned-in synced lyrics)
+  const [isServerRendering, setIsServerRendering] = useState(false);
+  const [serverRender, setServerRender] = useState({
+    progress: 0,
+    stage: '',
+    status: '',
+    videoUrl: null,
+    downloadUrl: null,
+    srtUrl: null,
+    lrcUrl: null,
+    gifUrl: null,
+    fileName: null,
+    error: null,
+  });
+  const [isExportingGif, setIsExportingGif] = useState(false);
+  const [cineOpen, setCineOpen] = useState(true);
 
   // DOM & Engine Refs
   const canvasRef = useRef(null);
@@ -93,15 +125,11 @@ export default function StepFour({ onBack, project }) {
   const loadedImagesRef = useRef([]);
   const parsedLyricsRef = useRef([]);
   const settingsRef = useRef(settings);
-  const lastUiUpdateTimeRef = useRef(0);
 
   useEffect(() => {
     settingsRef.current = settings;
     project.rendererEngine = settings.rendererEngine;
     project.renderStyle = settings.renderStyle;
-    if (generatorRef.current) {
-      generatorRef.current.settings = { ...generatorRef.current.settings, ...settings };
-    }
   }, [settings, project]);
 
   // Preload Images, Size Canvas, and Parse Lyrics on Mount
@@ -115,10 +143,9 @@ export default function StepFour({ onBack, project }) {
     }
 
     const generator = new VideoGenerator(project, settings);
-    generatorRef.current = generator;
     generator.loadImages().then((imgs) => {
       loadedImagesRef.current = imgs;
-      drawPreviewFrame(0, true);
+      drawPreviewFrame(0);
     });
 
     const parsed = LyricsEngine.parseLyrics(project.lyrics || '', duration);
@@ -142,48 +169,42 @@ export default function StepFour({ onBack, project }) {
     canvas.width = baseWidth;
     canvas.height = baseHeight;
 
-    drawPreviewFrame(currentTime, true);
+    drawPreviewFrame(currentTime);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings.aspectRatio]);
 
   // Redraw preview frame when settings change
   useEffect(() => {
     if (!isPlaying) {
-      drawPreviewFrame(currentTime, true);
+      drawPreviewFrame(currentTime);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings]);
 
   // Live Canvas Frame Drawer
-  const drawPreviewFrame = (elapsedTime, updateUi = true) => {
+  const drawPreviewFrame = (elapsedTime) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const images = loadedImagesRef.current;
     if (!images || images.length === 0) return;
 
-    let generator = generatorRef.current;
-    if (!generator) {
-      generator = new VideoGenerator(project, settingsRef.current);
-      generatorRef.current = generator;
-    }
+    const generator = new VideoGenerator(project, settingsRef.current);
     const audioMetrics = audioEngine.getAudioMetrics();
     const secondsPerImage = duration / images.length;
 
-    if (updateUi) {
-      const shot = StoryDirector.evaluateDirectorShot(
-        generator.screenplay,
-        elapsedTime,
-        settingsRef.current.directorMode || 'hybrid',
-        audioMetrics
-      );
-      const viseme = lipSyncEngine.extractViseme(audioMetrics);
-      setCurrentShotInfo({
-        isSingerShot: shot.isSingerShot,
-        viseme: viseme.viseme,
-        energy: Math.round(audioMetrics.mids * 100),
-      });
-    }
+    const shot = StoryDirector.evaluateDirectorShot(
+      generator.screenplay,
+      elapsedTime,
+      settingsRef.current.directorMode || 'hybrid',
+      audioMetrics
+    );
+    const viseme = lipSyncEngine.extractViseme(audioMetrics);
+    setCurrentShotInfo({
+      isSingerShot: shot.isSingerShot,
+      viseme: viseme.viseme,
+      energy: Math.round(audioMetrics.mids * 100),
+    });
 
     generator.renderCompositedFrame(
       ctx,
@@ -198,7 +219,7 @@ export default function StepFour({ onBack, project }) {
     );
   };
 
-  // Live Playback Loop (60 FPS Canvas with Throttled 15 FPS React UI Updates)
+  // Live Playback Loop (60 FPS)
   const startLivePlayback = () => {
     if (!liveAudioRef.current) return;
 
@@ -208,19 +229,11 @@ export default function StepFour({ onBack, project }) {
       .play()
       .then(() => {
         setIsPlaying(true);
-        lastUiUpdateTimeRef.current = 0;
         const loop = () => {
           if (liveAudioRef.current && !liveAudioRef.current.paused) {
             const t = liveAudioRef.current.currentTime;
-            const now = performance.now() / 1000;
-            // Throttle React UI updates to ~15 FPS to prevent main-thread UI lockups,
-            // while canvas frame rendering runs at full 60 FPS
-            const shouldUpdateUi = now - lastUiUpdateTimeRef.current >= 0.066;
-            if (shouldUpdateUi) {
-              lastUiUpdateTimeRef.current = now;
-              setCurrentTime(t);
-            }
-            drawPreviewFrame(t, shouldUpdateUi);
+            setCurrentTime(t);
+            drawPreviewFrame(t);
             liveAnimFrameRef.current = requestAnimationFrame(loop);
           } else {
             setIsPlaying(false);
@@ -237,7 +250,6 @@ export default function StepFour({ onBack, project }) {
     }
     if (liveAnimFrameRef.current) {
       cancelAnimationFrame(liveAnimFrameRef.current);
-      liveAnimFrameRef.current = null;
     }
     setIsPlaying(false);
   };
@@ -301,6 +313,115 @@ export default function StepFour({ onBack, project }) {
     link.href = videoResult.url;
     link.download = filename;
     link.click();
+  };
+
+  // ---- Server MP4 Master render (FFmpeg + burned-in synced lyrics) ----
+  const handleServerMasterRender = async () => {
+    stopLivePlayback();
+    setIsServerRendering(true);
+    setServerRender({
+      progress: 2,
+      stage: 'Contacting local render server...',
+      status: 'QUEUED',
+      videoUrl: null,
+      downloadUrl: null,
+      srtUrl: null,
+      lrcUrl: null,
+      gifUrl: null,
+      fileName: null,
+      error: null,
+    });
+
+    try {
+      const result = await renderVideoOnServer(
+        {
+          ...project,
+          // Guarantee the lyric burn-in config travels with the job
+          lyricsStyle: settings.lyricsStyle,
+          showLyrics: true,
+        },
+        buildServerRenderOptions(settings, project),
+        (update) => {
+          setServerRender((prev) => ({ ...prev, ...update }));
+        }
+      );
+
+      setServerRender((prev) => ({
+        ...prev,
+        progress: 100,
+        status: 'COMPLETED',
+        stage: 'Master MP4 rendered with burned-in synced lyrics',
+        videoUrl: result.videoUrl,
+        downloadUrl: result.downloadUrl,
+        srtUrl: result.srtUrl,
+        lrcUrl: result.lrcUrl,
+        fileName: result.outputFileName || null,
+      }));
+
+      // Kick off the MP4 download automatically
+      if (result.downloadUrl) {
+        triggerBrowserDownload(
+          result.downloadUrl,
+          `${(project.artistName || 'MusicVid').replace(/\s+/g, '_')}_Server_MP4_Master.mp4`
+        );
+      }
+    } catch (err) {
+      setServerRender((prev) => ({
+        ...prev,
+        status: 'FAILED',
+        error: err.message || 'Server render failed.',
+      }));
+    } finally {
+      setIsServerRendering(false);
+    }
+  };
+
+  // ---- Animated GIF preview export (shareable, palette-optimized) ----
+  const handleExportGif = async () => {
+    if (!serverRender.fileName) return;
+    setIsExportingGif(true);
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/server-render/gif`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fileName: serverRender.fileName, maxSeconds: 8, width: 480 }),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.error || 'GIF export failed');
+      setServerRender((prev) => ({ ...prev, gifUrl: `${BACKEND_URL}${data.gifUrl}` }));
+      triggerBrowserDownload(`${BACKEND_URL}${data.gifUrl}`, data.fileName);
+    } catch (err) {
+      alert('GIF export failed: ' + err.message);
+    } finally {
+      setIsExportingGif(false);
+    }
+  };
+
+  // ---- Auto-grade: pick the cinematic look from the song's energy profile ----
+  const handleAutoGrade = () => {
+    const look = suggestLook(project.songStructure?.sections || []);
+    setSettings((prev) => ({ ...prev, colorLook: look }));
+    const lookName = (COLOR_LOOKS.find((l) => l.id === look) || {}).name || look;
+    alert(`🎬 Auto-grade complete — applied "${lookName}" to match your track's energy profile.`);
+  };
+
+  // Space bar = play/pause the live studio monitor
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.code !== 'Space') return;
+      const tag = (e.target && e.target.tagName) || '';
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || (e.target && e.target.isContentEditable)) return;
+      e.preventDefault();
+      toggleLivePlay();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPlaying, currentTime]);
+
+  const downloadSidecar = (url, label) => {
+    if (!url) return;
+    triggerBrowserDownload(url, label);
   };
 
   const formatTime = (secs) => {
@@ -540,6 +661,215 @@ export default function StepFour({ onBack, project }) {
             )}
 
             {error && <div className="export-error-msg">❌ {error}</div>}
+          </div>
+
+          {/* SERVER MP4 MASTER — FFmpeg render with burned-in synced lyrics */}
+          <div className="server-master-card" style={{ marginTop: 16 }}>
+            <div className="smc-header">
+              <HardDrive size={17} style={{ color: '#34d399' }} />
+              <div>
+                <h4>Local Server MP4 Master (FFmpeg)</h4>
+                <p>
+                  Renders a real MP4 on your render server — scene cuts synced to beat drops and
+                  your <strong>{LyricsEngine.parseLyrics(project.lyrics || '', duration).length} lyric lines</strong> burned
+                  in as synced kinetic typography, plus SRT/LRC subtitle exports.
+                </p>
+              </div>
+              <button
+                className="btn btn-secondary btn-sm smc-collapse-btn"
+                onClick={() => setCineOpen((v) => !v)}
+              >
+                {cineOpen ? '▾ Hide Cinematic Controls' : '▸ Cinematic Controls'}
+              </button>
+            </div>
+
+            {/* CINEMATIC MASTER CONTROLS */}
+            {cineOpen && (
+              <div className="cine-controls">
+                {/* Platform presets */}
+                <div className="cine-section-label">
+                  <Monitor size={13} /> Platform Presets
+                </div>
+                <div className="cine-pill-row">
+                  {PLATFORM_PRESETS.map((p) => {
+                    const active =
+                      settings.aspectRatio === p.aspectRatio && settings.resolution === p.resolution;
+                    return (
+                      <button
+                        key={p.id}
+                        className={`cine-pill ${active ? 'active' : ''}`}
+                        title={p.hint}
+                        onClick={() =>
+                          setSettings({ ...settings, aspectRatio: p.aspectRatio, resolution: p.resolution })
+                        }
+                      >
+                        <span>{p.icon}</span> {p.name}
+                        <span className="cine-pill-spec font-mono">{p.aspectRatio}·{p.resolution}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Color look + auto grade */}
+                <div className="cine-section-label">
+                  <Palette size={13} /> Color Grade & Finishing
+                </div>
+                <div className="cine-look-row">
+                  <select
+                    className="cine-look-select"
+                    value={settings.colorLook}
+                    onChange={(e) => setSettings({ ...settings, colorLook: e.target.value })}
+                  >
+                    {COLOR_LOOKS.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.icon} {l.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleAutoGrade}
+                    title="Pick the color look that matches your song's energy profile"
+                  >
+                    <Zap size={13} /> Auto-Grade
+                  </button>
+                </div>
+
+                <div className="cine-toggle-grid">
+                  <label className="cine-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.cineTransitions}
+                      onChange={(e) => setSettings({ ...settings, cineTransitions: e.target.checked })}
+                    />
+                    <span>Fade transitions between scenes</span>
+                  </label>
+                  <label className="cine-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.cineBeatFlash}
+                      onChange={(e) => setSettings({ ...settings, cineBeatFlash: e.target.checked })}
+                    />
+                    <span>⚡ White flash on beat drops</span>
+                  </label>
+                  <label className="cine-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.cineVignette}
+                      onChange={(e) => setSettings({ ...settings, cineVignette: e.target.checked })}
+                    />
+                    <span>Cinema vignette</span>
+                  </label>
+                  <label className="cine-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.cineGrain}
+                      onChange={(e) => setSettings({ ...settings, cineGrain: e.target.checked })}
+                    />
+                    <span>Film grain overlay</span>
+                  </label>
+                  <label className="cine-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.cineTimecode}
+                      onChange={(e) => setSettings({ ...settings, cineTimecode: e.target.checked })}
+                    />
+                    <span>Running timecode (top-right)</span>
+                  </label>
+                  <label className="cine-toggle">
+                    <input
+                      type="checkbox"
+                      checked={settings.cineLoudness}
+                      onChange={(e) => setSettings({ ...settings, cineLoudness: e.target.checked })}
+                    />
+                    <span>🔊 Loudness-normalize audio (-14 LUFS)</span>
+                  </label>
+                </div>
+
+                <div className="cine-watermark-row">
+                  <label>
+                    <Type size={13} /> Watermark / corner tag:
+                  </label>
+                  <input
+                    className="cine-watermark-input"
+                    type="text"
+                    maxLength={40}
+                    placeholder={project.artistName || 'Your Artist Name'}
+                    value={settings.watermarkText}
+                    onChange={(e) => setSettings({ ...settings, watermarkText: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+
+            {isServerRendering ? (
+              <div className="smc-progress">
+                <Loader2 size={20} className="spin-icon text-cyan" />
+                <div className="smc-progress-body">
+                  <span className="smc-stage">{serverRender.stage || serverRender.status}</span>
+                  <div className="smc-bar">
+                    <div className="smc-bar-fill" style={{ width: `${serverRender.progress}%` }} />
+                  </div>
+                  <span className="smc-pct font-mono">{serverRender.progress}%</span>
+                </div>
+              </div>
+            ) : serverRender.status === 'COMPLETED' && serverRender.videoUrl ? (
+              <div className="smc-done">
+                <div className="smc-done-row">
+                  <CheckCircle size={18} color="#34d399" />
+                  <span>Master MP4 ready — synced lyrics burned in.</span>
+                </div>
+                <video
+                  src={serverRender.videoUrl}
+                  controls
+                  playsInline
+                  className="smc-preview-video"
+                />
+                <div className="smc-actions">
+                  <button className="btn btn-primary btn-sm" onClick={() => triggerBrowserDownload(serverRender.downloadUrl, 'Server_MP4_Master.mp4')}>
+                    <Download size={14} /> Download MP4
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => downloadSidecar(serverRender.srtUrl, 'lyrics.srt')}
+                    disabled={!serverRender.srtUrl}
+                  >
+                    <Subtitles size={14} /> SRT
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={() => downloadSidecar(serverRender.lrcUrl, 'lyrics.lrc')}
+                    disabled={!serverRender.lrcUrl}
+                  >
+                    <Type size={14} /> LRC
+                  </button>
+                  <button
+                    className="btn btn-secondary btn-sm"
+                    onClick={handleExportGif}
+                    disabled={!serverRender.fileName || isExportingGif}
+                    title="Export a shareable animated GIF preview of the first 8 seconds"
+                  >
+                    {isExportingGif ? <Loader2 size={14} className="spin-icon" /> : <Video size={14} />}
+                    {serverRender.gifUrl ? 'GIF ✓ (re-download)' : 'Export GIF'}
+                  </button>
+                  <button className="btn btn-secondary btn-sm" onClick={handleServerMasterRender}>
+                    <RotateCcw size={14} /> Re-render
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="smc-cta">
+                <button className="btn btn-primary btn-large" onClick={handleServerMasterRender}>
+                  <HardDrive size={18} /> Render Server MP4 with Synced Lyrics 🔥
+                </button>
+                <span className="smc-sub">
+                  Outputs 16:9 / 9:16 / 1:1 / 4K MP4 · AAC audio · beat-synced cuts
+                  {serverRender.error && (
+                    <span className="smc-err"> — last attempt failed: {serverRender.error}</span>
+                  )}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* HIGGSFIELD CINEMA DoP STUDIO CONTROLS */}

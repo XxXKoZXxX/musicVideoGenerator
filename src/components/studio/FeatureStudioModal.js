@@ -1055,7 +1055,7 @@ export default function FeatureStudioModal({
                   <span>Dedicated Local Backend Video Server (Express + FFmpeg)</span>
                 </h4>
                 <p className="text-xs text-slate-300">
-                  Generate, composite, and export pristine MP4/WebM video files directly on your local backend (<code className="text-emerald-400">http://localhost:4000/api/server-render</code>).
+                  Generate, composite, and export pristine MP4/WebM video files directly on your local video server (<code className="text-emerald-400">/api/server-render</code>).
                 </p>
               </div>
 

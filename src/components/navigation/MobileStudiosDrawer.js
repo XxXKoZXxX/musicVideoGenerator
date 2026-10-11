@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { 
   X, Sparkles, Compass, BookOpen, Zap, Key, Eye, Headphones, 
-  Calculator, HeartHandshake, Radio, Film, MessageSquare, FileText, Palette, ChevronRight, Moon, Flame, Search, Edit3, Share2
+  Calculator, HeartHandshake, Radio, MessageSquare, FileText, Palette, ChevronRight, Moon, Flame, Search, Edit3, Share2
 } from 'lucide-react';
 
 export const ALL_STUDIO_MODULES = [
