@@ -21,7 +21,9 @@ async function readJsonBody(req) {
   try { return JSON.parse(Buffer.concat(chunks).toString('utf8')); } catch (_) { return {}; }
 }
 
-module.exports = async (req, res) => {
+// 60s is the Hobby-plan function ceiling; declared in-code (schema-safe)
+// rather than via vercel.json functions config.
+const handler = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ success: false, error: 'POST only' });
   const started = Date.now();
   let job = null;
@@ -195,3 +197,7 @@ module.exports = async (req, res) => {
     });
   }
 };
+
+handler.maxDuration = 60;
+
+module.exports = handler;
